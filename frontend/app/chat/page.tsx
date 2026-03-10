@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
 import MessageContent from "@/components/MessageContent";
@@ -8,6 +9,9 @@ import { createSession, listSessions, getMessages, deleteSession, streamChat } f
 import type { Session, Message } from "@/lib/types";
 
 export default function ChatPage() {
+  const { data: authSession } = useSession();
+  const userId = authSession?.user?.id;
+
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,8 +20,9 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listSessions().then(setSessions).catch(console.error);
-  }, []);
+    if (!userId) return;
+    listSessions(userId).then(setSessions).catch(console.error);
+  }, [userId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,10 +48,11 @@ export default function ChatPage() {
   }
 
   async function handleSubmit(content: string) {
+    if (!userId) return;
     // セッションがなければ新規作成
     let sessionId = activeId;
     if (!sessionId) {
-      const session = await createSession(content.slice(0, 60));
+      const session = await createSession(userId, content.slice(0, 60));
       setSessions((prev) => [session, ...prev]);
       setActiveId(session.id);
       sessionId = session.id;
@@ -83,6 +89,7 @@ export default function ChatPage() {
         onSelect={handleSelect}
         onDelete={handleDelete}
         onNew={handleNew}
+        userEmail={authSession?.user?.email}
       />
 
       {/* メインエリア */}

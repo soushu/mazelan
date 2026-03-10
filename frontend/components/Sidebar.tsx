@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import type { Session } from "@/lib/types";
 
 type Props = {
@@ -9,9 +10,10 @@ type Props = {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onNew: () => void;
+  userEmail?: string;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail }: Props) {
   const [query, setQuery] = useState("");
 
   const filtered = sessions.filter((s) =>
@@ -71,6 +73,19 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew 
           ))
         )}
       </div>
+
+      {/* ユーザー情報 */}
+      {userEmail && (
+        <div className="p-3 border-t border-slate-800">
+          <p className="text-xs text-slate-500 truncate mb-2">{userEmail}</p>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full py-1.5 px-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-sm transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

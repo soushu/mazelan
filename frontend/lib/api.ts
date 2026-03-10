@@ -2,20 +2,17 @@ import type { Session, Message } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-// 仮の user_id（STEP5 で認証後に差し替え）
-const TEMP_USER_ID = "00000000-0000-0000-0000-000000000001";
-
-export async function createSession(title: string): Promise<Session> {
+export async function createSession(userId: string, title: string): Promise<Session> {
   const res = await fetch(
-    `${BACKEND}/sessions?user_id=${TEMP_USER_ID}&title=${encodeURIComponent(title)}`,
+    `${BACKEND}/sessions?user_id=${userId}&title=${encodeURIComponent(title)}`,
     { method: "POST" }
   );
   if (!res.ok) throw new Error("Failed to create session");
   return res.json();
 }
 
-export async function listSessions(): Promise<Session[]> {
-  const res = await fetch(`${BACKEND}/sessions?user_id=${TEMP_USER_ID}`);
+export async function listSessions(userId: string): Promise<Session[]> {
+  const res = await fetch(`${BACKEND}/sessions?user_id=${userId}`);
   if (!res.ok) throw new Error("Failed to fetch sessions");
   return res.json();
 }
