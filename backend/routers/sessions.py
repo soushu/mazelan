@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import ChatSession, Message
+from backend.models import ChatSession
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
