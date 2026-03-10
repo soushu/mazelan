@@ -45,20 +45,24 @@ export const authOptions: NextAuthOptions = {
       if (!email || email !== ALLOWED_EMAIL) return false;
 
       if (account?.provider === "google") {
-        const res = await fetch(`${BACKEND_URL}/auth/upsert-user`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email,
-            name: user.name,
-            google_id: account.providerAccountId,
-          }),
-        });
+        try {
+          const res = await fetch(`${BACKEND_URL}/auth/upsert-user`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name,
+              google_id: account.providerAccountId,
+            }),
+          });
 
-        if (!res.ok) return false;
+          if (!res.ok) return false;
 
-        const dbUser = await res.json();
-        user.id = dbUser.id;
+          const dbUser = await res.json();
+          user.id = dbUser.id;
+        } catch {
+          return false;
+        }
       }
 
       return true;

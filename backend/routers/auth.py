@@ -1,4 +1,3 @@
-import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
@@ -10,8 +9,6 @@ from backend.models import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-ALLOWED_EMAIL = os.getenv("ALLOWED_EMAIL", "")
 
 
 class UpsertUserRequest(BaseModel):

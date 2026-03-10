@@ -9,7 +9,7 @@ import { createSession, listSessions, getMessages, deleteSession, streamChat } f
 import type { Session, Message } from "@/lib/types";
 
 export default function ChatPage() {
-  const { data: authSession } = useSession();
+  const { data: authSession, status } = useSession();
   const userId = authSession?.user?.id;
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -149,7 +149,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <ChatInput onSubmit={handleSubmit} disabled={streaming} />
+        <ChatInput onSubmit={handleSubmit} disabled={streaming || status === "loading"} />
       </div>
     </div>
   );
