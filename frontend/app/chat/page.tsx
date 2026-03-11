@@ -1,12 +1,30 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
-import MessageContent from "@/components/MessageContent";
+import QAPairBlock from "@/components/QAPairBlock";
 import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
-import type { Session, Message } from "@/lib/types";
+import type { Session, Message, QAPair } from "@/lib/types";
+
+function groupIntoPairs(messages: Message[]): QAPair[] {
+  const pairs: QAPair[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    if (m.role === "user") {
+      const next = messages[i + 1];
+      if (next?.role === "assistant") {
+        pairs.push({ user: m, assistant: next });
+        i++; // skip the assistant message
+      } else {
+        pairs.push({ user: m, assistant: null });
+      }
+    }
+    // skip orphan assistant messages (shouldn't happen normally)
+  }
+  return pairs;
+}
 
 export default function ChatPage() {
   const { data: authSession, status } = useSession();
@@ -16,7 +34,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const pairs = useMemo(() => groupIntoPairs(messages), [messages]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -30,6 +51,7 @@ export default function ChatPage() {
   async function handleSelect(id: string) {
     setActiveId(id);
     setStreamingText("");
+    setManualToggles(new Set());
     const msgs = await getMessages(id);
     setMessages(msgs);
   }
@@ -38,6 +60,7 @@ export default function ChatPage() {
     setActiveId(null);
     setMessages([]);
     setStreamingText("");
+    setManualToggles(new Set());
   }
 
   async function handleDelete(id: string) {
@@ -79,6 +102,29 @@ export default function ChatPage() {
     }
   }
 
+  function isCollapsed(pairIndex: number): boolean {
+    const isLastPair = pairIndex === pairs.length - 1 && !streaming;
+    const isStreamingPair = pairIndex === pairs.length - 1 && streaming;
+    // Last pair and streaming pair are always expanded by default
+    if (isLastPair || isStreamingPair) {
+      return manualToggles.has(pairIndex); // toggled = collapsed
+    }
+    // Other pairs are collapsed by default
+    return !manualToggles.has(pairIndex); // toggled = expanded
+  }
+
+  function handleToggle(pairIndex: number) {
+    setManualToggles((prev) => {
+      const next = new Set(prev);
+      if (next.has(pairIndex)) {
+        next.delete(pairIndex);
+      } else {
+        next.add(pairIndex);
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#020509" }}>
       <Sidebar
@@ -101,41 +147,28 @@ export default function ChatPage() {
               </p>
             )}
 
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {m.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs flex-shrink-0 mt-1">
-                    C
-                  </div>
-                )}
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                    m.role === "user"
-                      ? "bg-slate-700 text-slate-100 rounded-br-sm"
-                      : "bg-slate-800/60 text-slate-200 rounded-bl-sm"
-                  }`}
-                >
-                  {m.role === "assistant" ? (
-                    <MessageContent content={m.content} />
-                  ) : (
-                    <p className="whitespace-pre-wrap">{m.content}</p>
-                  )}
-                </div>
-              </div>
-            ))}
+            {pairs.map((pair, i) => {
+              const isLastAndStreaming = i === pairs.length - 1 && streaming && !pair.assistant;
+              return (
+                <QAPairBlock
+                  key={i}
+                  pair={pair}
+                  collapsed={isCollapsed(i)}
+                  onToggle={() => handleToggle(i)}
+                  streamingText={isLastAndStreaming ? streamingText : undefined}
+                />
+              );
+            })}
 
-            {/* ストリーミング中 */}
-            {streaming && (
+            {/* Streaming for brand new pair (user message just sent, not yet in pairs) */}
+            {streaming && pairs.length > 0 && pairs[pairs.length - 1].assistant !== null && (
               <div className="flex gap-3 justify-start">
                 <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs flex-shrink-0 mt-1">
                   C
                 </div>
                 <div className="max-w-[80%] bg-slate-800/60 text-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 text-sm">
                   {streamingText ? (
-                    <MessageContent content={streamingText} />
+                    <span>{streamingText}</span>
                   ) : (
                     <span className="animate-pulse text-slate-500">▋</span>
                   )}

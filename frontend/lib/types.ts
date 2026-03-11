@@ -9,3 +9,8 @@ export type Message = {
   content: string;
   created_at: string;
 };
+
+export type QAPair = {
+  user: Message;
+  assistant: Message | null;
+};
