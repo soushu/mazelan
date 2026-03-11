@@ -37,6 +37,7 @@ const config: Config = {
           muted: "var(--color-text-muted)",
           faint: "var(--color-text-faint)",
           placeholder: "var(--color-text-placeholder)",
+          "user-bubble": "var(--color-text-user-bubble)",
         },
         accent: {
           DEFAULT: "var(--color-accent)",

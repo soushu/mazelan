@@ -13,6 +13,7 @@
   --color-bg-active: #334155;     /* slate-700 */
   --color-bg-input: #1e293b;      /* slate-800 */
   --color-bg-user-bubble: #334155;/* slate-700 */
+  --color-text-user-bubble: #f1f5f9; /* slate-100 */
   --color-bg-assistant-bubble: rgba(30,41,59,0.6); /* slate-800/60 */
   --color-bg-avatar: #334155;     /* slate-700 */
   --color-bg-overlay: rgba(0,0,0,0.6);
@@ -51,6 +52,7 @@
   --color-bg-active: #a5f3fc;      /* cyan-200 */
   --color-bg-input: #ffffff;
   --color-bg-user-bubble: #0891b2; /* cyan-600 */
+  --color-text-user-bubble: #ffffff; /* white */
   --color-bg-assistant-bubble: #edfeff;
   --color-bg-avatar: #0e7490;      /* cyan-700 */
   --color-bg-overlay: rgba(0,0,0,0.3);
