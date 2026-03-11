@@ -183,7 +183,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#020509" }}>
+    <div className="flex h-dvh overflow-hidden" style={{ background: "#020509" }}>
       <Sidebar
         sessions={sessions}
         activeId={activeId}
