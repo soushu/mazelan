@@ -126,22 +126,6 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
           </div>
         )}
 
-        {/* Model selector */}
-        <div className="flex items-center mb-1">
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-            disabled={disabled}
-            className="bg-slate-800 text-slate-400 text-xs rounded-lg px-2 py-1 border border-slate-700 outline-none focus:ring-1 focus:ring-slate-600 disabled:opacity-50 cursor-pointer"
-          >
-            {MODEL_OPTIONS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="flex items-end gap-2">
           {/* Paperclip button */}
           <button
@@ -199,9 +183,24 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
           </div>
         )}
-        <p className="text-xs text-slate-600 mt-1 text-right hidden md:block">
-          Enter to send / Shift+Enter for newline / Attach images via drag & drop, paste, or clip
-        </p>
+        <div className="flex items-center justify-between mt-1 ml-11">
+          {/* Model selector */}
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+            disabled={disabled}
+            className="bg-transparent text-slate-500 text-xs outline-none disabled:opacity-50 cursor-pointer"
+          >
+            {MODEL_OPTIONS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-600 text-right hidden md:block">
+            Enter to send / Shift+Enter for newline / Attach images via drag & drop, paste, or clip
+          </p>
+        </div>
       </div>
     </div>
   );
