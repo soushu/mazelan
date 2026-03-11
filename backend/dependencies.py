@@ -6,6 +6,7 @@ from fastapi_nextauth_jwt import NextAuthJWTv4
 
 JWT = NextAuthJWTv4(
     csrf_prevention_enabled=False,
+    cookie_name="__Secure-next-auth.session-token",
 )
 
 
