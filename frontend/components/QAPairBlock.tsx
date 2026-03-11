@@ -1,7 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import type { QAPair } from "@/lib/types";
 import MessageContent from "@/components/MessageContent";
+
+function MessageCopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy message"
+      className="opacity-0 group-hover/msg:opacity-100 p-1 rounded text-t-muted hover:text-t-secondary hover:bg-theme-hover transition-all text-xs"
+    >
+      {copied ? (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 type Props = {
   pair: QAPair;
@@ -67,12 +96,15 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText }
 
             {/* Assistant bubble */}
             {pair.assistant && (
-              <div className="flex gap-3 justify-start">
+              <div className="flex gap-3 justify-start group/msg">
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
                 </div>
                 <div className="max-w-[95%] md:max-w-[80%] bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <MessageContent content={pair.assistant.content} />
+                </div>
+                <div className="flex items-end pb-2">
+                  <MessageCopyButton text={pair.assistant.content} />
                 </div>
               </div>
             )}
