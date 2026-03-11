@@ -43,6 +43,7 @@ async def stream_response(session_id: uuid.UUID, content: str):
             model="claude-sonnet-4-6",
             max_tokens=4096,
             messages=messages,
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
         ) as stream:
             async for text in stream.text_stream:
                 full_response += text
