@@ -8,7 +8,7 @@ import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
 import { getApiKey } from "@/lib/apiKeyStore";
-import type { Session, Message, QAPair, ImageAttachment } from "@/lib/types";
+import type { Session, Message, QAPair, ImageAttachment, ModelId } from "@/lib/types";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
   const pairs: QAPair[] = [];
@@ -119,7 +119,7 @@ export default function ChatPage() {
     });
   }
 
-  async function handleSubmit(content: string, imageFiles: File[]) {
+  async function handleSubmit(content: string, imageFiles: File[], model: ModelId) {
     let sessionId = activeId;
     if (!sessionId) {
       const session = await createSession(content.slice(0, 60) || "Image question");
@@ -152,7 +152,7 @@ export default function ChatPage() {
         setApiKeyModalOpen(true);
         return;
       }
-      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey)) {
+      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model)) {
         full += chunk;
         setStreamingText(full);
       }

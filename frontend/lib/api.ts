@@ -1,4 +1,4 @@
-import type { Session, Message, ImageAttachment } from "./types";
+import type { Session, Message, ImageAttachment, ModelId } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -36,9 +36,13 @@ export async function* streamChat(
   sessionId: string,
   content: string,
   images?: ImageAttachment[],
-  apiKey?: string | null
+  apiKey?: string | null,
+  model?: ModelId
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
+  if (model) {
+    body.model = model;
+  }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));
   }

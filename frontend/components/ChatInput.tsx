@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback, KeyboardEvent, DragEvent } from "react";
+import { MODEL_OPTIONS, type ModelId } from "@/lib/types";
 
 type Props = {
-  onSubmit: (content: string, images: File[]) => void;
+  onSubmit: (content: string, images: File[], model: ModelId) => void;
   disabled: boolean;
 };
 
@@ -15,6 +16,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelId>("claude-sonnet-4-6");
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   function submit() {
     const value = ref.current?.value.trim();
     if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages]);
+    onSubmit(value || "", [...attachedImages], selectedModel);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
@@ -123,6 +125,22 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             ))}
           </div>
         )}
+
+        {/* Model selector */}
+        <div className="flex items-center mb-1">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+            disabled={disabled}
+            className="bg-slate-800 text-slate-400 text-xs rounded-lg px-2 py-1 border border-slate-700 outline-none focus:ring-1 focus:ring-slate-600 disabled:opacity-50 cursor-pointer"
+          >
+            {MODEL_OPTIONS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="flex items-end gap-2">
           {/* Paperclip button */}

@@ -19,12 +19,20 @@ class ImageAttachment(BaseModel):
     data: str  # base64-encoded
 
 
+ALLOWED_MODELS = {
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+}
+
+
 class ChatRequest(BaseModel):
     content: str
     images: list[ImageAttachment] = []
+    model: str = "claude-sonnet-4-6"
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6"):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -69,7 +77,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         client = AsyncAnthropic(api_key=api_key)
 
         async with client.messages.stream(
-            model="claude-sonnet-4-6",
+            model=model,
             max_tokens=4096,
             messages=messages,
             tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
@@ -111,7 +119,9 @@ async def chat(
     if not x_api_key:
         raise HTTPException(status_code=400, detail="APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。")
 
+    model = req.model if req.model in ALLOWED_MODELS else "claude-sonnet-4-6"
+
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model),
         media_type="text/plain",
     )
