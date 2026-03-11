@@ -39,13 +39,19 @@ export default function ChatPage() {
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const pairs = useMemo(() => groupIntoPairs(messages), [messages]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    listSessions().then(setSessions).catch(console.error);
+    setLoadingSessions(true);
+    listSessions()
+      .then(setSessions)
+      .catch(console.error)
+      .finally(() => setLoadingSessions(false));
   }, [status]);
 
   useEffect(() => {
@@ -66,11 +72,19 @@ export default function ChatPage() {
 
   async function handleSelect(id: string) {
     setActiveId(id);
+    setMessages([]);
     setStreamingText("");
     setManualToggles(new Set());
     setSidebarOpen(false);
-    const msgs = await getMessages(id);
-    setMessages(msgs);
+    setLoadingMessages(true);
+    try {
+      const msgs = await getMessages(id);
+      setMessages(msgs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMessages(false);
+    }
   }
 
   async function handleNew() {
@@ -195,6 +209,7 @@ export default function ChatPage() {
         apiKeyModalOpen={apiKeyModalOpen}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        loading={loadingSessions}
       />
       <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
 
@@ -216,7 +231,19 @@ export default function ChatPage() {
         {/* Message list */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
-            {messages.length === 0 && !streaming && (
+            {status === "loading" && (
+              <div className="flex justify-center mt-20">
+                <div className="w-6 h-6 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
+              </div>
+            )}
+
+            {loadingMessages && (
+              <div className="flex justify-center mt-20">
+                <div className="w-6 h-6 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
+              </div>
+            )}
+
+            {messages.length === 0 && !streaming && !loadingMessages && status !== "loading" && (
               <p className="text-slate-600 text-center mt-20 text-sm">
                 Start a conversation
               </p>

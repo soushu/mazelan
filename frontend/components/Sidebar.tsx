@@ -16,9 +16,10 @@ type Props = {
   apiKeyModalOpen: boolean;
   open: boolean;
   onClose: () => void;
+  loading?: boolean;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail, onOpenApiKeyModal, apiKeyModalOpen, open, onClose }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail, onOpenApiKeyModal, apiKeyModalOpen, open, onClose, loading }: Props) {
   const [query, setQuery] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
 
@@ -85,7 +86,11 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew,
 
         {/* Session list */}
         <div className="flex-1 overflow-y-auto py-2">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center mt-8">
+              <div className="w-5 h-5 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin" />
+            </div>
+          ) : filtered.length === 0 ? (
             <p className="text-slate-500 text-sm text-center mt-8">No history</p>
           ) : (
             filtered.map((s) => (
