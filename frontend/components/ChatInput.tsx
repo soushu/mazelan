@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, KeyboardEvent } from "react";
+import { useRef, useEffect, useState, useCallback, KeyboardEvent, DragEvent } from "react";
 
 type Props = {
   onSubmit: (content: string, images: File[]) => void;
@@ -14,6 +14,8 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const dragCounter = useRef(0);
 
   useEffect(() => {
     if (!disabled) ref.current?.focus();
@@ -57,8 +59,49 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
     }
   }
 
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer?.types.includes("Files")) {
+      setDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragging(false);
+    handleFiles(e.dataTransfer?.files || null);
+  }, []);
+
   return (
-    <div className="p-4 border-t border-slate-800">
+    <div
+      className={`p-4 border-t transition-colors ${
+        dragging
+          ? "border-blue-500 bg-blue-500/10"
+          : "border-slate-800"
+      }`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="relative max-w-3xl mx-auto">
         {/* Image previews */}
         {previews.length > 0 && (
@@ -121,8 +164,13 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             className="flex-1 bg-slate-800 text-slate-200 placeholder-slate-500 text-sm px-4 py-3 rounded-xl resize-none outline-none focus:ring-1 focus:ring-slate-600 disabled:opacity-50 font-sans"
           />
         </div>
+        {dragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-xl pointer-events-none z-10">
+            <p className="text-blue-400 text-sm font-medium">画像をドロップして添付</p>
+          </div>
+        )}
         <p className="text-xs text-slate-600 mt-1 text-right">
-          Enter で送信 · Shift+Enter で改行 · 画像はペースト or クリップで添付
+          Enter で送信 · Shift+Enter で改行 · 画像はドラッグ&ドロップ / ペースト / クリップで添付
         </p>
       </div>
     </div>
