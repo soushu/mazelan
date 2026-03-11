@@ -35,19 +35,27 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export async function* streamChat(
   sessionId: string,
   content: string,
-  images?: ImageAttachment[]
+  images?: ImageAttachment[],
+  apiKey?: string | null
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));
   }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
   const res = await fetch(`${BACKEND}/chat/${sessionId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
     credentials: "include",
   });
-  if (!res.ok || !res.body) throw new Error("Stream failed");
+  if (!res.ok || !res.body) {
+    if (res.status === 401) throw new Error("API_KEY_INVALID");
+    throw new Error("Stream failed");
+  }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

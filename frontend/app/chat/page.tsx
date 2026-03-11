@@ -5,7 +5,9 @@ import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
 import QAPairBlock from "@/components/QAPairBlock";
+import ApiKeyModal from "@/components/ApiKeyModal";
 import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
+import { getApiKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment } from "@/lib/types";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
@@ -35,6 +37,7 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const pairs = useMemo(() => groupIntoPairs(messages), [messages]);
@@ -111,7 +114,8 @@ export default function ChatPage() {
 
     let full = "";
     try {
-      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined)) {
+      const apiKey = getApiKey();
+      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey)) {
         full += chunk;
         setStreamingText(full);
       }
@@ -119,6 +123,15 @@ export default function ChatPage() {
         ...prev,
         { role: "assistant", content: full, created_at: new Date().toISOString() },
       ]);
+    } catch (err) {
+      if (err instanceof Error && err.message === "API_KEY_INVALID") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。", created_at: new Date().toISOString() },
+        ]);
+      } else {
+        throw err;
+      }
     } finally {
       setStreaming(false);
       setStreamingText("");
@@ -157,7 +170,10 @@ export default function ChatPage() {
         onDelete={handleDelete}
         onNew={handleNew}
         userEmail={authSession?.user?.email}
+        onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
+        apiKeyModalOpen={apiKeyModalOpen}
       />
+      <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
 
       {/* メインエリア */}
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -1,18 +1,19 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, AuthenticationError
 
 from backend.database import get_db, SessionLocal
 from backend.dependencies import get_current_user_id
 from backend.models import ChatSession, Message
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+_default_api_key = os.getenv("ANTHROPIC_API_KEY")
 
 
 class ImageAttachment(BaseModel):
@@ -25,7 +26,7 @@ class ChatRequest(BaseModel):
     images: list[ImageAttachment] = []
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = []):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -63,6 +64,12 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
                 {"type": "text", "text": content},
             ]
 
+        effective_key = api_key or _default_api_key
+        if not effective_key:
+            yield "\n\n[ERROR: APIキーが設定されていません]"
+            return
+        client = AsyncAnthropic(api_key=effective_key)
+
         async with client.messages.stream(
             model="claude-sonnet-4-6",
             max_tokens=4096,
@@ -76,6 +83,10 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         assistant_msg = Message(session_id=session_id, role="assistant", content=full_response)
         db.add(assistant_msg)
         db.commit()
+
+    except AuthenticationError:
+        db.rollback()
+        yield "\n\n[ERROR: APIキーが無効です。正しいキーを設定してください]"
 
     except Exception:
         db.rollback()
@@ -91,6 +102,7 @@ async def chat(
     req: ChatRequest,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
+    x_api_key: str | None = Header(None),
 ):
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -98,7 +110,11 @@ async def chat(
     if session.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
+    # Validate that at least one API key source is available
+    if not x_api_key and not _default_api_key:
+        raise HTTPException(status_code=400, detail="APIキーが設定されていません")
+
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key),
         media_type="text/plain",
     )
