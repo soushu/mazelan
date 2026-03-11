@@ -38,6 +38,7 @@ export default function ChatPage() {
   const [streamingText, setStreamingText] = useState("");
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const pairs = useMemo(() => groupIntoPairs(messages), [messages]);
@@ -51,10 +52,23 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingText]);
 
+  // Prevent body scroll when sidebar is open on mobile (iOS Safari fix)
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
   async function handleSelect(id: string) {
     setActiveId(id);
     setStreamingText("");
     setManualToggles(new Set());
+    setSidebarOpen(false);
     const msgs = await getMessages(id);
     setMessages(msgs);
   }
@@ -64,6 +78,7 @@ export default function ChatPage() {
     setMessages([]);
     setStreamingText("");
     setManualToggles(new Set());
+    setSidebarOpen(false);
   }
 
   async function handleDelete(id: string) {
@@ -77,7 +92,7 @@ export default function ChatPage() {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        // data:image/png;base64,xxxx → extract base64 part
+        // data:image/png;base64,xxxx -> extract base64 part
         const data = result.split(",")[1];
         resolve({
           media_type: file.type,
@@ -91,16 +106,14 @@ export default function ChatPage() {
   }
 
   async function handleSubmit(content: string, imageFiles: File[]) {
-    // セッションがなければ新規作成
     let sessionId = activeId;
     if (!sessionId) {
-      const session = await createSession(content.slice(0, 60) || "画像の質問");
+      const session = await createSession(content.slice(0, 60) || "Image question");
       setSessions((prev) => [session, ...prev]);
       setActiveId(session.id);
       sessionId = session.id;
     }
 
-    // Convert files to base64
     const images: ImageAttachment[] = await Promise.all(
       imageFiles.map(fileToBase64)
     );
@@ -118,7 +131,7 @@ export default function ChatPage() {
       if (!apiKey) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "APIキーが設定されていません。サイドバーの「API Key 設定」からAnthropicのAPIキーを設定してください。", created_at: new Date().toISOString() },
+          { role: "assistant", content: "API key is not set. Please set your Anthropic API key from 'API Key' in the sidebar.", created_at: new Date().toISOString() },
         ]);
         setStreaming(false);
         setStreamingText("");
@@ -137,7 +150,7 @@ export default function ChatPage() {
       if (err instanceof Error && err.message === "API_KEY_INVALID") {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。", created_at: new Date().toISOString() },
+          { role: "assistant", content: "API key is invalid. Please set a valid key from 'API Key' in the sidebar.", created_at: new Date().toISOString() },
         ]);
       } else {
         throw err;
@@ -151,12 +164,10 @@ export default function ChatPage() {
   function isCollapsed(pairIndex: number): boolean {
     const isLastPair = pairIndex === pairs.length - 1 && !streaming;
     const isStreamingPair = pairIndex === pairs.length - 1 && streaming;
-    // Last pair and streaming pair are always expanded by default
     if (isLastPair || isStreamingPair) {
-      return manualToggles.has(pairIndex); // toggled = collapsed
+      return manualToggles.has(pairIndex);
     }
-    // Other pairs are collapsed by default
-    return !manualToggles.has(pairIndex); // toggled = expanded
+    return !manualToggles.has(pairIndex);
   }
 
   function handleToggle(pairIndex: number) {
@@ -182,17 +193,32 @@ export default function ChatPage() {
         userEmail={authSession?.user?.email}
         onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
         apiKeyModalOpen={apiKeyModalOpen}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
 
-      {/* メインエリア */}
+      {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* メッセージ一覧 */}
+        {/* Mobile header bar */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-slate-800">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          <h1 className="text-base font-semibold text-slate-100">claudia</h1>
+        </div>
+
+        {/* Message list */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
             {messages.length === 0 && !streaming && (
               <p className="text-slate-600 text-center mt-20 text-sm">
-                質問を入力して会話を始めましょう
+                Start a conversation
               </p>
             )}
 
@@ -215,11 +241,11 @@ export default function ChatPage() {
                 <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs flex-shrink-0 mt-1">
                   C
                 </div>
-                <div className="max-w-[80%] bg-slate-800/60 text-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 text-sm">
+                <div className="max-w-[95%] md:max-w-[80%] bg-slate-800/60 text-slate-200 rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   {streamingText ? (
                     <span>{streamingText}</span>
                   ) : (
-                    <span className="animate-pulse text-slate-500">▋</span>
+                    <span className="animate-pulse text-slate-500">cursor</span>
                   )}
                 </div>
               </div>

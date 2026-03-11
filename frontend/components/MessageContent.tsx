@@ -24,6 +24,7 @@ export default function MessageContent({ content }: { content: string }) {
               language={match[1]}
               PreTag="div"
               className="rounded-lg text-sm my-2"
+              customStyle={{ overflowX: "auto", maxWidth: "100%" }}
             >
               {String(children).replace(/\n$/, "")}
             </SyntaxHighlighter>

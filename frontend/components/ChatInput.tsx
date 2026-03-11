@@ -92,7 +92,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
 
   return (
     <div
-      className={`p-4 border-t transition-colors ${
+      className={`p-2 md:p-4 border-t transition-colors ${
         dragging
           ? "border-blue-500 bg-blue-500/10"
           : "border-slate-800"
@@ -110,14 +110,14 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
               <div key={i} className="relative group">
                 <img
                   src={url}
-                  alt={`添付 ${i + 1}`}
+                  alt={`attach ${i + 1}`}
                   className="w-16 h-16 object-cover rounded-lg border border-slate-700"
                 />
                 <button
                   onClick={() => removeImage(i)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-600 hover:bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1.5 -right-1.5 w-6 h-6 md:w-5 md:h-5 bg-slate-600 hover:bg-red-500 text-white rounded-full text-xs flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 >
-                  ×
+                  x
                 </button>
               </div>
             ))}
@@ -130,7 +130,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             onClick={() => fileRef.current?.click()}
             disabled={disabled}
             className="p-2 text-slate-500 hover:text-slate-300 disabled:opacity-50 transition-colors flex-shrink-0 mb-1"
-            title="画像を添付"
+            title="Attach image"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
@@ -159,18 +159,30 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
                 handleFiles(files);
               }
             }}
-            placeholder="質問を入力... (Enter で送信 / Shift+Enter で改行)"
-            rows={3}
+            placeholder="Type a message..."
+            rows={2}
             className="flex-1 bg-slate-800 text-slate-200 placeholder-slate-500 text-sm px-4 py-3 rounded-xl resize-none outline-none focus:ring-1 focus:ring-slate-600 disabled:opacity-50 font-sans"
           />
+
+          {/* Send button */}
+          <button
+            onClick={submit}
+            disabled={disabled}
+            className="p-2 text-slate-500 hover:text-slate-300 disabled:opacity-50 transition-colors flex-shrink-0 mb-1"
+            title="Send"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          </button>
         </div>
         {dragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-xl pointer-events-none z-10">
-            <p className="text-blue-400 text-sm font-medium">画像をドロップして添付</p>
+            <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
           </div>
         )}
-        <p className="text-xs text-slate-600 mt-1 text-right">
-          Enter で送信 · Shift+Enter で改行 · 画像はドラッグ&ドロップ / ペースト / クリップで添付
+        <p className="text-xs text-slate-600 mt-1 text-right hidden md:block">
+          Enter to send / Shift+Enter for newline / Attach images via drag & drop, paste, or clip
         </p>
       </div>
     </div>
