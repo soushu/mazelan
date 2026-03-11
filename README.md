@@ -1,3 +1,4 @@
+    ```mermaid
 flowchart TD
     A([🚀 アプリ起動]) --> B[スプラッシュ画面]
     B --> C{初回起動?}
@@ -47,3 +48,4 @@ flowchart TD
     style R fill:#7c3aed,color:#fff
     style Q fill:#0ea5e9,color:#fff
     style Y fill:#f59e0b,color:#fff
+```
