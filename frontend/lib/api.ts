@@ -1,4 +1,4 @@
-import type { Session, Message, ImageAttachment, ModelId } from "./types";
+import type { Session, Message, ImageAttachment, ModelId, SystemPromptResponse } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -68,4 +68,42 @@ export async function* streamChat(
     if (done) break;
     yield decoder.decode(value, { stream: true });
   }
+}
+
+export async function getUserSystemPrompt(): Promise<SystemPromptResponse> {
+  const res = await fetch(`${BACKEND}/sessions/user/system-prompt`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch system prompt");
+  return res.json();
+}
+
+export async function updateUserSystemPrompt(systemPrompt: string | null): Promise<SystemPromptResponse> {
+  const res = await fetch(`${BACKEND}/sessions/user/system-prompt`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system_prompt: systemPrompt }),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to update system prompt");
+  return res.json();
+}
+
+export async function getSessionSystemPrompt(sessionId: string): Promise<SystemPromptResponse> {
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}/system-prompt`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch session system prompt");
+  return res.json();
+}
+
+export async function updateSessionSystemPrompt(sessionId: string, systemPrompt: string | null): Promise<SystemPromptResponse> {
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}/system-prompt`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system_prompt: systemPrompt }),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to update session system prompt");
+  return res.json();
 }

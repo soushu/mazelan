@@ -29,3 +29,7 @@ export type QAPair = {
   user: Message;
   assistant: Message | null;
 };
+
+export type SystemPromptResponse = {
+  system_prompt: string | null;
+};

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.dependencies import get_current_user_id
-from backend.models import ChatSession, Message
+from backend.models import ChatSession, Message, User
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -95,3 +95,63 @@ def delete_session(
         raise HTTPException(status_code=403, detail="Forbidden")
     db.delete(session)
     db.commit()
+
+
+class SystemPromptRequest(BaseModel):
+    system_prompt: str | None = None
+
+
+@router.get("/user/system-prompt")
+def get_user_system_prompt(
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"system_prompt": user.system_prompt}
+
+
+@router.put("/user/system-prompt")
+def update_user_system_prompt(
+    req: SystemPromptRequest,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.system_prompt = req.system_prompt
+    db.commit()
+    return {"system_prompt": user.system_prompt}
+
+
+@router.get("/{session_id}/system-prompt")
+def get_session_system_prompt(
+    session_id: uuid.UUID,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return {"system_prompt": session.system_prompt}
+
+
+@router.put("/{session_id}/system-prompt")
+def update_session_system_prompt(
+    session_id: uuid.UUID,
+    req: SystemPromptRequest,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    session.system_prompt = req.system_prompt
+    db.commit()
+    return {"system_prompt": session.system_prompt}

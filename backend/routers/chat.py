@@ -8,7 +8,7 @@ from anthropic import AsyncAnthropic, AuthenticationError
 
 from backend.database import get_db, SessionLocal
 from backend.dependencies import get_current_user_id
-from backend.models import ChatSession, Message
+from backend.models import ChatSession, Message, User
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -32,7 +32,7 @@ class ChatRequest(BaseModel):
     model: str = "claude-sonnet-4-6"
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6"):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -76,12 +76,16 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             return
         client = AsyncAnthropic(api_key=api_key)
 
-        async with client.messages.stream(
+        stream_kwargs: dict = dict(
             model=model,
             max_tokens=4096,
             messages=messages,
             tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
-        ) as stream:
+        )
+        if system_prompt:
+            stream_kwargs["system"] = system_prompt
+
+        async with client.messages.stream(**stream_kwargs) as stream:
             async for text in stream.text_stream:
                 full_response += text
                 yield text
@@ -121,7 +125,14 @@ async def chat(
 
     model = req.model if req.model in ALLOWED_MODELS else "claude-sonnet-4-6"
 
+    # Resolve system prompt: session-specific > user global > none
+    system_prompt = session.system_prompt
+    if not system_prompt:
+        user = db.query(User).filter(User.id == current_user_id).first()
+        if user:
+            system_prompt = user.system_prompt
+
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt),
         media_type="text/plain",
     )

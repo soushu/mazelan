@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
 import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
+import SystemPromptModal from "@/components/SystemPromptModal";
 import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
 import { getApiKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId } from "@/lib/types";
@@ -38,6 +39,7 @@ export default function ChatPage() {
   const [streamingText, setStreamingText] = useState("");
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [systemPromptModalOpen, setSystemPromptModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
@@ -207,12 +209,14 @@ export default function ChatPage() {
         onNew={handleNew}
         userEmail={authSession?.user?.email}
         onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
+        onOpenSystemPromptModal={() => setSystemPromptModalOpen(true)}
         apiKeyModalOpen={apiKeyModalOpen}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         loading={loadingSessions}
       />
       <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
+      <SystemPromptModal open={systemPromptModalOpen} onClose={() => setSystemPromptModalOpen(false)} activeSessionId={activeId} />
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">

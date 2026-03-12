@@ -15,6 +15,7 @@ class User(Base):
     name = Column(String, nullable=True)
     password_hash = Column(String, nullable=True)
     auth_provider = Column(String, nullable=False)  # 'google' or 'email'
+    system_prompt = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete")
@@ -26,6 +27,7 @@ class ChatSession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(String(60), nullable=False)
+    system_prompt = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="sessions")
