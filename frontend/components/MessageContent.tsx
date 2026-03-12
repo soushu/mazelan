@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, coldarkCold } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useTheme } from "@/lib/themeContext";
@@ -31,6 +32,7 @@ export default function MessageContent({ content }: { content: string }) {
 
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || "");
@@ -75,6 +77,22 @@ export default function MessageContent({ content }: { content: string }) {
         },
         h3({ children }) {
           return <h3 className="text-base font-semibold mb-1 mt-3">{children}</h3>;
+        },
+        table({ children }) {
+          return (
+            <div className="overflow-x-auto mb-3">
+              <table className="min-w-full border-collapse text-sm">{children}</table>
+            </div>
+          );
+        },
+        thead({ children }) {
+          return <thead className="border-b-2 border-border-primary">{children}</thead>;
+        },
+        th({ children }) {
+          return <th className="px-3 py-2 text-left font-semibold text-t-primary">{children}</th>;
+        },
+        td({ children }) {
+          return <td className="px-3 py-2 border-t border-border-primary text-t-secondary">{children}</td>;
         },
       }}
     >
