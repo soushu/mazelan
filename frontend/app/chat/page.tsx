@@ -9,8 +9,9 @@ import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
 import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
-import { getApiKey } from "@/lib/apiKeyStore";
+import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId } from "@/lib/types";
+import { getProviderForModel } from "@/lib/types";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
   const pairs: QAPair[] = [];
@@ -146,18 +147,21 @@ export default function ChatPage() {
 
     let full = "";
     try {
-      const apiKey = getApiKey();
+      const provider = getProviderForModel(model);
+      const apiKey = getApiKeyForProvider(provider);
+      const anthropicKey = provider !== "anthropic" ? getApiKeyForProvider("anthropic") : null;
       if (!apiKey) {
+        const providerNames: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "API key is not set. Please set your Anthropic API key from 'API Key' in the sidebar.", created_at: new Date().toISOString() },
+          { role: "assistant", content: `${providerNames[provider]} API key is not set. Please set your API key from 'API Key' in the sidebar.`, created_at: new Date().toISOString() },
         ]);
         setStreaming(false);
         setStreamingText("");
         setApiKeyModalOpen(true);
         return;
       }
-      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model)) {
+      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey)) {
         full += chunk;
         setStreamingText(full);
       }

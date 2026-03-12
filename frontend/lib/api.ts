@@ -37,7 +37,8 @@ export async function* streamChat(
   content: string,
   images?: ImageAttachment[],
   apiKey?: string | null,
-  model?: ModelId
+  model?: ModelId,
+  anthropicKey?: string | null,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
@@ -49,6 +50,9 @@ export async function* streamChat(
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) {
     headers["X-API-Key"] = apiKey;
+  }
+  if (anthropicKey) {
+    headers["X-Anthropic-Key"] = anthropicKey;
   }
   const res = await fetch(`${BACKEND}/chat/${sessionId}`, {
     method: "POST",

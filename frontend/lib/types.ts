@@ -1,10 +1,63 @@
-export type ModelId = "claude-opus-4-6" | "claude-sonnet-4-6" | "claude-haiku-4-5-20251001";
+export type Provider = "anthropic" | "openai" | "google";
 
-export const MODEL_OPTIONS: { id: ModelId; label: string }[] = [
-  { id: "claude-sonnet-4-6", label: "Sonnet" },
-  { id: "claude-opus-4-6", label: "Opus" },
-  { id: "claude-haiku-4-5-20251001", label: "Haiku" },
+export type ModelId =
+  | "claude-opus-4-6"
+  | "claude-sonnet-4-6"
+  | "claude-haiku-4-5-20251001"
+  | "gpt-4o"
+  | "gpt-4o-mini"
+  | "o3-mini"
+  | "gemini-2.0-flash"
+  | "gemini-2.0-pro"
+  | "gemini-2.5-pro";
+
+export type ModelOption = { id: ModelId; label: string };
+
+export type ModelGroup = {
+  provider: Provider;
+  label: string;
+  models: ModelOption[];
+};
+
+export const MODEL_GROUPS: ModelGroup[] = [
+  {
+    provider: "anthropic",
+    label: "Anthropic",
+    models: [
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet" },
+      { id: "claude-opus-4-6", label: "Claude Opus" },
+      { id: "claude-haiku-4-5-20251001", label: "Claude Haiku" },
+    ],
+  },
+  {
+    provider: "openai",
+    label: "OpenAI",
+    models: [
+      { id: "gpt-4o", label: "GPT-4o" },
+      { id: "gpt-4o-mini", label: "GPT-4o mini" },
+      { id: "o3-mini", label: "o3-mini" },
+    ],
+  },
+  {
+    provider: "google",
+    label: "Google",
+    models: [
+      { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+      { id: "gemini-2.0-pro", label: "Gemini 2.0 Pro" },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+    ],
+  },
 ];
+
+// Backward-compatible flat list
+export const MODEL_OPTIONS: ModelOption[] = MODEL_GROUPS.flatMap((g) => g.models);
+
+export function getProviderForModel(modelId: ModelId): Provider {
+  for (const group of MODEL_GROUPS) {
+    if (group.models.some((m) => m.id === modelId)) return group.provider;
+  }
+  return "anthropic";
+}
 
 export type Session = {
   id: string;

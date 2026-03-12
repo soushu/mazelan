@@ -1,49 +1,70 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getApiKey, setApiKey, clearApiKey } from "@/lib/apiKeyStore";
+import type { Provider } from "@/lib/types";
+import {
+  getApiKeyForProvider,
+  setApiKeyForProvider,
+  clearApiKeyForProvider,
+  validateApiKey,
+} from "@/lib/apiKeyStore";
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
 
+const TABS: { provider: Provider; label: string; placeholder: string }[] = [
+  { provider: "anthropic", label: "Anthropic", placeholder: "sk-ant-api03-..." },
+  { provider: "openai", label: "OpenAI", placeholder: "sk-proj-..." },
+  { provider: "google", label: "Google", placeholder: "AIza..." },
+];
+
 export default function ApiKeyModal({ open, onClose }: Props) {
-  const [key, setKey] = useState("");
+  const [activeTab, setActiveTab] = useState<Provider>("anthropic");
+  const [keys, setKeys] = useState<Record<Provider, string>>({ anthropic: "", openai: "", google: "" });
+  const [saved, setSaved] = useState<Record<Provider, boolean>>({ anthropic: false, openai: false, google: false });
   const [showKey, setShowKey] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
-      const stored = getApiKey();
-      setKey(stored ?? "");
-      setSaved(!!stored);
+      const newKeys: Record<Provider, string> = { anthropic: "", openai: "", google: "" };
+      const newSaved: Record<Provider, boolean> = { anthropic: false, openai: false, google: false };
+      for (const tab of TABS) {
+        const stored = getApiKeyForProvider(tab.provider);
+        newKeys[tab.provider] = stored ?? "";
+        newSaved[tab.provider] = !!stored;
+      }
+      setKeys(newKeys);
+      setSaved(newSaved);
       setShowKey(false);
       setError("");
     }
   }, [open]);
 
   function handleSave() {
-    const trimmed = key.trim();
-    if (!trimmed.startsWith("sk-ant-")) {
-      setError("APIキーは sk-ant- で始まる必要があります");
+    const trimmed = keys[activeTab].trim();
+    const validationError = validateApiKey(activeTab, trimmed);
+    if (validationError) {
+      setError(validationError);
       return;
     }
-    setApiKey(trimmed);
-    setSaved(true);
+    setApiKeyForProvider(activeTab, trimmed);
+    setSaved((prev) => ({ ...prev, [activeTab]: true }));
     setError("");
-    onClose();
   }
 
   function handleClear() {
-    clearApiKey();
-    setKey("");
-    setSaved(false);
+    clearApiKeyForProvider(activeTab);
+    setKeys((prev) => ({ ...prev, [activeTab]: "" }));
+    setSaved((prev) => ({ ...prev, [activeTab]: false }));
     setError("");
   }
 
   if (!open) return null;
+
+  const currentTab = TABS.find((t) => t.provider === activeTab)!;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay" onClick={onClose}>
@@ -53,15 +74,36 @@ export default function ApiKeyModal({ open, onClose }: Props) {
       >
         <h2 className="text-lg font-semibold text-t-primary mb-1">API Key 設定</h2>
         <p className="text-xs text-t-tertiary mb-4">
-          Anthropic APIキーを設定すると、自分のキーでClaudeを利用できます。キーはブラウザのlocalStorageにのみ保存されます。
+          各プロバイダーのAPIキーを設定してください。キーはブラウザのlocalStorageにのみ保存されます。
         </p>
 
+        {/* Tabs */}
+        <div className="flex gap-1 mb-4 bg-theme-surface rounded-lg p-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.provider}
+              onClick={() => { setActiveTab(tab.provider); setError(""); setShowKey(false); }}
+              className={`flex-1 py-1.5 px-2 rounded-md text-sm transition-colors flex items-center justify-center gap-1.5 ${
+                activeTab === tab.provider
+                  ? "bg-theme-elevated text-t-primary shadow-sm"
+                  : "text-t-tertiary hover:text-t-secondary"
+              }`}
+            >
+              {tab.label}
+              {saved[tab.provider] && (
+                <span className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Key input */}
         <div className="relative">
           <input
             type={showKey ? "text" : "password"}
-            value={key}
-            onChange={(e) => { setKey(e.target.value); setError(""); }}
-            placeholder="sk-ant-api03-..."
+            value={keys[activeTab]}
+            onChange={(e) => { setKeys((prev) => ({ ...prev, [activeTab]: e.target.value })); setError(""); }}
+            placeholder={currentTab.placeholder}
             className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary pr-16"
           />
           <button
@@ -78,12 +120,12 @@ export default function ApiKeyModal({ open, onClose }: Props) {
         <div className="flex gap-2 mt-4">
           <button
             onClick={handleSave}
-            disabled={!key.trim()}
+            disabled={!keys[activeTab].trim()}
             className="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm transition-colors"
           >
             保存
           </button>
-          {saved && (
+          {saved[activeTab] && (
             <button
               onClick={handleClear}
               className="py-2 px-4 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-sm transition-colors"

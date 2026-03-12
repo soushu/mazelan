@@ -8,3 +8,5 @@ anthropic
 passlib[bcrypt]
 fastapi-nextauth-jwt
 python-multipart
+openai
+google-genai

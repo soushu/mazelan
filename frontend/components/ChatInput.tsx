@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback, KeyboardEvent, DragEvent } from "react";
-import { MODEL_OPTIONS, type ModelId } from "@/lib/types";
+import { MODEL_GROUPS, type ModelId } from "@/lib/types";
 
 type Props = {
   onSubmit: (content: string, images: File[], model: ModelId) => void;
@@ -191,10 +191,14 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             disabled={disabled}
             className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
           >
-            {MODEL_OPTIONS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
+            {MODEL_GROUPS.map((g) => (
+              <optgroup key={g.provider} label={g.label}>
+                {g.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <p className="text-xs text-t-faint text-right hidden md:block">

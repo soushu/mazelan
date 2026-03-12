@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import type { Session } from "@/lib/types";
-import { getApiKey } from "@/lib/apiKeyStore";
+import { hasAnyApiKey as checkAnyApiKey } from "@/lib/apiKeyStore";
 import { useTheme } from "@/lib/themeContext";
 
 type Props = {
@@ -30,7 +30,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew,
   // Refresh API key status on mount and when modal closes
   useEffect(() => {
     if (!apiKeyModalOpen) {
-      setHasApiKey(!!getApiKey());
+      setHasApiKey(checkAnyApiKey());
     }
   }, [apiKeyModalOpen]);
 

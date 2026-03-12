@@ -5,12 +5,18 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from anthropic import AsyncAnthropic, AuthenticationError
 
 from backend.database import get_db, SessionLocal
 from backend.dependencies import get_current_user_id
 from backend.models import ChatSession, Context, Message, User
 from backend.context_extractor import extract_contexts
+from backend.providers import (
+    ALLOWED_MODELS,
+    get_provider,
+    stream_provider,
+    ProviderAuthError,
+    ProviderError,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -21,20 +27,13 @@ class ImageAttachment(BaseModel):
     data: str  # base64-encoded
 
 
-ALLOWED_MODELS = {
-    "claude-opus-4-6",
-    "claude-sonnet-4-6",
-    "claude-haiku-4-5-20251001",
-}
-
-
 class ChatRequest(BaseModel):
     content: str
     images: list[ImageAttachment] = []
     model: str = "claude-sonnet-4-6"
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -76,35 +75,29 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         if not api_key:
             yield "\n\n[ERROR: APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください]"
             return
-        client = AsyncAnthropic(api_key=api_key)
 
-        stream_kwargs: dict = dict(
-            model=model,
-            max_tokens=4096,
-            messages=messages,
-            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
-        )
-        if system_prompt:
-            stream_kwargs["system"] = system_prompt
-
-        async with client.messages.stream(**stream_kwargs) as stream:
-            async for text in stream.text_stream:
-                full_response += text
-                yield text
+        async for text in stream_provider(model, messages, api_key, system_prompt):
+            full_response += text
+            yield text
 
         assistant_msg = Message(session_id=session_id, role="assistant", content=full_response)
         db.add(assistant_msg)
         db.commit()
 
-        # Fire-and-forget context extraction
-        if user_id and api_key and full_response:
+        # Fire-and-forget context extraction (always uses Anthropic key)
+        extraction_key = anthropic_key or (api_key if get_provider(model) == "anthropic" else None)
+        if user_id and extraction_key and full_response:
             asyncio.create_task(
-                extract_contexts(user_id, session_id, content, full_response, api_key)
+                extract_contexts(user_id, session_id, content, full_response, extraction_key)
             )
 
-    except AuthenticationError:
+    except ProviderAuthError:
         db.rollback()
         yield "\n\n[ERROR: APIキーが無効です。正しいキーを設定してください]"
+
+    except ProviderError:
+        db.rollback()
+        yield "\n\n[ERROR: メッセージの生成中にエラーが発生しました]"
 
     except Exception:
         db.rollback()
@@ -121,6 +114,7 @@ async def chat(
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
     x_api_key: str | None = Header(None),
+    x_anthropic_key: str | None = Header(None),
 ):
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -156,6 +150,6 @@ async def chat(
             system_prompt = context_block
 
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key),
         media_type="text/plain",
     )
