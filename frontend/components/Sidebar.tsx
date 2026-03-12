@@ -15,13 +15,14 @@ type Props = {
   userEmail?: string;
   onOpenApiKeyModal: () => void;
   onOpenSystemPromptModal: () => void;
+  onOpenContextModal: () => void;
   apiKeyModalOpen: boolean;
   open: boolean;
   onClose: () => void;
   loading?: boolean;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, apiKeyModalOpen, open, onClose, loading }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, apiKeyModalOpen, open, onClose, loading }: Props) {
   const [query, setQuery] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const { theme, toggleTheme, themeLabel } = useTheme();
@@ -144,6 +145,16 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew,
                 <path fillRule="evenodd" d="M4.5 2A2.5 2.5 0 0 0 2 4.5v3.879a2.5 2.5 0 0 0 .732 1.767l7.5 7.5a2.5 2.5 0 0 0 3.536 0l3.878-3.878a2.5 2.5 0 0 0 0-3.536l-7.5-7.5A2.5 2.5 0 0 0 8.38 2H4.5ZM5 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
               </svg>
               System Prompt
+            </button>
+            {/* Context Memory */}
+            <button
+              onClick={onOpenContextModal}
+              className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors mt-1 flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06ZM14.95 3.05a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0ZM3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8ZM14 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8ZM7.172 13.828a.75.75 0 0 1-1.061-1.06l1.06-1.06a.75.75 0 0 1 1.061 1.06l-1.06 1.06ZM10.828 10.172a.75.75 0 0 1 0 1.061l1.06 1.06a.75.75 0 1 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06l1.06-1.061ZM10 14a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 14ZM10 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+              </svg>
+              Context Memory
             </button>
             {/* Theme toggle */}
             <button

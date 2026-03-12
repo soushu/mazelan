@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -8,7 +9,8 @@ from anthropic import AsyncAnthropic, AuthenticationError
 
 from backend.database import get_db, SessionLocal
 from backend.dependencies import get_current_user_id
-from backend.models import ChatSession, Message, User
+from backend.models import ChatSession, Context, Message, User
+from backend.context_extractor import extract_contexts
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -32,7 +34,7 @@ class ChatRequest(BaseModel):
     model: str = "claude-sonnet-4-6"
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -94,6 +96,12 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         db.add(assistant_msg)
         db.commit()
 
+        # Fire-and-forget context extraction
+        if user_id and api_key and full_response:
+            asyncio.create_task(
+                extract_contexts(user_id, session_id, content, full_response, api_key)
+            )
+
     except AuthenticationError:
         db.rollback()
         yield "\n\n[ERROR: APIキーが無効です。正しいキーを設定してください]"
@@ -132,7 +140,22 @@ async def chat(
         if user:
             system_prompt = user.system_prompt
 
+    # Inject active context memories into system prompt
+    active_contexts = (
+        db.query(Context)
+        .filter(Context.user_id == current_user_id, Context.is_active == True)
+        .order_by(Context.category)
+        .all()
+    )
+    if active_contexts:
+        context_lines = [f"- {c.content}" for c in active_contexts]
+        context_block = "<context_memory>\nHere are things you know about the user:\n" + "\n".join(context_lines) + "\n</context_memory>"
+        if system_prompt:
+            system_prompt = system_prompt + "\n\n" + context_block
+        else:
+            system_prompt = context_block
+
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id),
         media_type="text/plain",
     )

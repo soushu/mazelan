@@ -1,0 +1,258 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { listContexts, createContext, updateContext, deleteContext, toggleContext } from "@/lib/api";
+import type { ContextItem } from "@/lib/types";
+
+const CATEGORIES = [
+  { value: "preferences", label: "Preferences" },
+  { value: "skills", label: "Skills" },
+  { value: "projects", label: "Projects" },
+  { value: "personal", label: "Personal" },
+  { value: "general", label: "General" },
+];
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export default function ContextModal({ open, onClose }: Props) {
+  const [grouped, setGrouped] = useState<Record<string, ContextItem[]>>({});
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] = useState("general");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    loadContexts();
+  }, [open]);
+
+  async function loadContexts() {
+    setLoading(true);
+    try {
+      const data = await listContexts();
+      setGrouped(data.contexts);
+      setTotal(data.total);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAdd() {
+    if (!newContent.trim()) return;
+    setAdding(true);
+    try {
+      await createContext(newContent.trim(), newCategory);
+      setNewContent("");
+      await loadContexts();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleToggle(id: string) {
+    try {
+      await toggleContext(id);
+      await loadContexts();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteContext(id);
+      await loadContexts();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleEditSave(id: string) {
+    if (!editContent.trim()) return;
+    try {
+      await updateContext(id, { content: editContent.trim() });
+      setEditingId(null);
+      await loadContexts();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  if (!open) return null;
+
+  const categoryOrder = CATEGORIES.map((c) => c.value);
+  const sortedCategories = Object.keys(grouped).sort(
+    (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay" onClick={onClose}>
+      <div
+        className="bg-theme-elevated rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold text-t-primary">Context Memory</h2>
+          <span className="text-xs text-t-muted">{total} items</span>
+        </div>
+        <p className="text-xs text-t-tertiary mb-4">
+          AIが会話から自動学習した情報です。手動で追加・編集もできます。有効な項目はシステムプロンプトに自動反映されます。
+        </p>
+
+        {/* Add form */}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={newContent}
+            onChange={(e) => setNewContent(e.target.value)}
+            placeholder="新しいコンテキストを追加..."
+            className="flex-1 bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary"
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          />
+          <select
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            className="bg-theme-surface text-t-secondary text-sm px-2 py-2 rounded-lg outline-none"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleAdd}
+            disabled={adding || !newContent.trim()}
+            className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm transition-colors"
+          >
+            追加
+          </button>
+        </div>
+
+        {/* Context list */}
+        <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-5 h-5 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+            </div>
+          ) : sortedCategories.length === 0 ? (
+            <p className="text-t-muted text-sm text-center py-8">
+              まだコンテキストがありません。会話するとAIが自動的に学習します。
+            </p>
+          ) : (
+            sortedCategories.map((cat) => (
+              <div key={cat}>
+                <h3 className="text-xs font-medium text-t-tertiary uppercase tracking-wider mb-2">
+                  {CATEGORIES.find((c) => c.value === cat)?.label ?? cat}
+                </h3>
+                <div className="space-y-1.5">
+                  {grouped[cat].map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-start gap-2 px-3 py-2 rounded-lg transition-colors ${
+                        item.is_active ? "bg-theme-surface" : "bg-theme-surface opacity-50"
+                      }`}
+                    >
+                      {/* Toggle */}
+                      <button
+                        onClick={() => handleToggle(item.id)}
+                        className={`mt-0.5 w-8 h-4 rounded-full flex-shrink-0 transition-colors relative ${
+                          item.is_active ? "bg-accent" : "bg-theme-hover"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                            item.is_active ? "left-4" : "left-0.5"
+                          }`}
+                        />
+                      </button>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {editingId === item.id ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              className="flex-1 bg-theme-input text-t-secondary text-sm px-2 py-1 rounded outline-none"
+                              onKeyDown={(e) => e.key === "Enter" && handleEditSave(item.id)}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleEditSave(item.id)}
+                              className="text-xs text-accent hover:text-accent-hover px-1"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-xs text-t-muted hover:text-t-secondary px-1"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-t-secondary break-words">{item.content}</p>
+                        )}
+                        <span className={`text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded ${
+                          item.source === "auto"
+                            ? "bg-theme-hover text-t-muted"
+                            : "bg-accent/20 text-accent"
+                        }`}>
+                          {item.source}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      {editingId !== item.id && (
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => { setEditingId(item.id); setEditContent(item.content); }}
+                            className="text-t-muted hover:text-t-secondary text-xs p-1"
+                            title="Edit"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                              <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.22 10.306a1 1 0 0 0-.258.438l-.89 3.117a.5.5 0 0 0 .617.617l3.116-.89a1 1 0 0 0 .438-.257L14 5.488a1.75 1.75 0 0 0 0-2.475l-.512-.5Z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="text-t-muted hover:text-danger text-xs p-1"
+                            title="Delete"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                              <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.286a1.5 1.5 0 0 0 1.492-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5A.75.75 0 0 1 9.95 6Z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-4 pt-3 border-t border-border-primary">
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-sm transition-colors"
+          >
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

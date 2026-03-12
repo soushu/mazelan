@@ -1,4 +1,4 @@
-import type { Session, Message, ImageAttachment, ModelId, SystemPromptResponse } from "./types";
+import type { Session, Message, ImageAttachment, ModelId, SystemPromptResponse, ContextItem, ContextsResponse } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -105,5 +105,51 @@ export async function updateSessionSystemPrompt(sessionId: string, systemPrompt:
     credentials: "include",
   });
   if (!res.ok) throw new Error("Failed to update session system prompt");
+  return res.json();
+}
+
+// ---- Context Memory ----
+
+export async function listContexts(): Promise<ContextsResponse> {
+  const res = await fetch(`${BACKEND}/contexts`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch contexts");
+  return res.json();
+}
+
+export async function createContext(content: string, category: string): Promise<ContextItem> {
+  const res = await fetch(`${BACKEND}/contexts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, category }),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to create context");
+  return res.json();
+}
+
+export async function updateContext(id: string, data: { content?: string; category?: string }): Promise<ContextItem> {
+  const res = await fetch(`${BACKEND}/contexts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to update context");
+  return res.json();
+}
+
+export async function deleteContext(id: string): Promise<void> {
+  await fetch(`${BACKEND}/contexts/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+}
+
+export async function toggleContext(id: string): Promise<ContextItem> {
+  const res = await fetch(`${BACKEND}/contexts/${id}/toggle`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to toggle context");
   return res.json();
 }

@@ -33,3 +33,18 @@ export type QAPair = {
 export type SystemPromptResponse = {
   system_prompt: string | null;
 };
+
+export type ContextItem = {
+  id: string;
+  content: string;
+  category: string;
+  source: "auto" | "manual";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContextsResponse = {
+  contexts: Record<string, ContextItem[]>;
+  total: number;
+};
