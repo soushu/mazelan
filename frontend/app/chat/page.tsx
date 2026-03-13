@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
@@ -34,7 +34,20 @@ function groupIntoPairs(messages: Message[]): QAPair[] {
 export default function ChatPage() {
   const { data: authSession, status } = useSession();
 
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessionsRaw] = useState<Session[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const cached = localStorage.getItem("claudia_sessions");
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const setSessions = useCallback((update: Session[] | ((prev: Session[]) => Session[])) => {
+    setSessionsRaw((prev) => {
+      const next = typeof update === "function" ? update(prev) : update;
+      try { localStorage.setItem("claudia_sessions", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
@@ -58,11 +71,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    setLoadingSessions(true);
+    // If we have cached sessions, show them immediately and skip loading state
+    const hasCached = sessions.length > 0;
+    if (!hasCached) setLoadingSessions(true);
     listSessions()
       .then(setSessions)
       .catch(console.error)
       .finally(() => setLoadingSessions(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   useEffect(() => {
