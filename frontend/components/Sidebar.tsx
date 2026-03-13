@@ -42,11 +42,12 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
     const rect = buttonEl.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     const flipUp = spaceBelow < menuHeight + 8;
-    // Align menu's right edge to button's right edge
-    const right = window.innerWidth - rect.right;
+    // Align menu's right edge to button's right edge using left
+    const menuWidth = 140;
+    const left = rect.right - menuWidth;
     setMenuStyle(flipUp
-      ? { bottom: window.innerHeight - rect.top + 4, right }
-      : { top: rect.bottom + 4, right }
+      ? { bottom: window.innerHeight - rect.top + 4, left }
+      : { top: rect.bottom + 4, left }
     );
     setMenuOpenId(sessionId);
   }, [menuOpenId]);
