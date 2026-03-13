@@ -213,11 +213,12 @@ async def stream_google(
         config.system_instruction = system_prompt
 
     try:
-        async for chunk in client.aio.models.generate_content_stream(
+        stream = await client.aio.models.generate_content_stream(
             model=model,
             contents=gemini_contents,
             config=config,
-        ):
+        )
+        async for chunk in stream:
             if chunk.text:
                 yield chunk.text
     except Exception as e:
