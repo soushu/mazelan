@@ -8,10 +8,10 @@ import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
-import { createSession, listSessions, getMessages, deleteSession, streamChat } from "@/lib/api";
+import { createSession, listSessions, getMessages, deleteSession, streamChat, streamDebate } from "@/lib/api";
 import { getApiKeyForProvider } from "@/lib/apiKeyStore";
-import type { Session, Message, QAPair, ImageAttachment, ModelId } from "@/lib/types";
-import { getProviderForModel } from "@/lib/types";
+import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
+import { getProviderForModel, parseDebateContent } from "@/lib/types";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
   const pairs: QAPair[] = [];
@@ -46,6 +46,12 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [streamingDebate, setStreamingDebate] = useState<{
+    modelA: string;
+    modelB: string;
+    currentStep: DebateStepId | null;
+    rawText: string;
+  } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const pairs = useMemo(() => groupIntoPairs(messages), [messages]);
@@ -124,9 +130,10 @@ export default function ChatPage() {
     });
   }
 
-  async function handleSubmit(content: string, imageFiles: File[], model: ModelId) {
+  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId) {
     setStreaming(true);
     setStreamingText("");
+    setStreamingDebate(debateMode ? { modelA: model, modelB: secondModel!, currentStep: null, rawText: "" } : null);
 
     let sessionId = activeId;
     if (!sessionId) {
@@ -147,28 +154,72 @@ export default function ChatPage() {
 
     let full = "";
     try {
-      const provider = getProviderForModel(model);
-      const apiKey = getApiKeyForProvider(provider);
-      const anthropicKey = provider !== "anthropic" ? getApiKeyForProvider("anthropic") : null;
-      if (!apiKey) {
+      if (debateMode && secondModel) {
+        // ── Debate mode ──
+        const providerA = getProviderForModel(model);
+        const providerB = getProviderForModel(secondModel);
+        const apiKeyA = getApiKeyForProvider(providerA);
+        const apiKeyB = getApiKeyForProvider(providerB);
+        const anthropicKey = providerA !== "anthropic" && providerB !== "anthropic"
+          ? getApiKeyForProvider("anthropic") : null;
+
         const providerNames: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
+        if (!apiKeyA) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `${providerNames[providerA]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+          ]);
+          setStreaming(false);
+          setStreamingText("");
+          setStreamingDebate(null);
+          setApiKeyModalOpen(true);
+          return;
+        }
+        if (!apiKeyB) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `${providerNames[providerB]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+          ]);
+          setStreaming(false);
+          setStreamingText("");
+          setStreamingDebate(null);
+          setApiKeyModalOpen(true);
+          return;
+        }
+
+        for await (const chunk of streamDebate(sessionId, content, model, secondModel, apiKeyA, apiKeyB, images.length > 0 ? images : undefined, anthropicKey)) {
+          full += chunk;
+          setStreamingText(full);
+        }
+
+        // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
+        const msgs = await getMessages(sessionId);
+        setMessages(msgs);
+      } else {
+        // ── Normal mode ──
+        const provider = getProviderForModel(model);
+        const apiKey = getApiKeyForProvider(provider);
+        const anthropicKey = provider !== "anthropic" ? getApiKeyForProvider("anthropic") : null;
+        if (!apiKey) {
+          const providerNames: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `${providerNames[provider]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+          ]);
+          setStreaming(false);
+          setStreamingText("");
+          setApiKeyModalOpen(true);
+          return;
+        }
+        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey)) {
+          full += chunk;
+          setStreamingText(full);
+        }
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `${providerNames[provider]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+          { role: "assistant", content: full, created_at: new Date().toISOString() },
         ]);
-        setStreaming(false);
-        setStreamingText("");
-        setApiKeyModalOpen(true);
-        return;
       }
-      for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey)) {
-        full += chunk;
-        setStreamingText(full);
-      }
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: full, created_at: new Date().toISOString() },
-      ]);
     } catch (err) {
       if (err instanceof Error && err.message === "API_KEY_INVALID") {
         setMessages((prev) => [
@@ -181,6 +232,7 @@ export default function ChatPage() {
     } finally {
       setStreaming(false);
       setStreamingText("");
+      setStreamingDebate(null);
     }
   }
 
@@ -278,6 +330,7 @@ export default function ChatPage() {
                   collapsed={isCollapsed(i)}
                   onToggle={() => handleToggle(i)}
                   streamingText={isLastAndStreaming ? streamingText : undefined}
+                  streamingDebate={isLastAndStreaming ? streamingDebate : null}
                 />
               );
             })}

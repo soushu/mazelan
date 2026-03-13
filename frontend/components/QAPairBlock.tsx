@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { QAPair } from "@/lib/types";
+import type { QAPair, DebateStepId } from "@/lib/types";
+import { parseDebateContent } from "@/lib/types";
 import MessageContent from "@/components/MessageContent";
+import DebateDisplay from "@/components/DebateDisplay";
 
 function MessageCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -37,10 +39,20 @@ type Props = {
   collapsed: boolean;
   onToggle: () => void;
   streamingText?: string;
+  /** If set, this pair is streaming a debate response */
+  streamingDebate?: {
+    modelA: string;
+    modelB: string;
+    currentStep: DebateStepId | null;
+    rawText: string;
+  } | null;
 };
 
-export default function QAPairBlock({ pair, collapsed, onToggle, streamingText }: Props) {
+export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate }: Props) {
   const isStreaming = streamingText !== undefined;
+
+  // Check if assistant content is a debate
+  const debateData = pair.assistant ? parseDebateContent(pair.assistant.content) : null;
 
   return (
     <div>
@@ -94,8 +106,26 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText }
               </div>
             </div>
 
-            {/* Assistant bubble */}
-            {pair.assistant && (
+            {/* Assistant bubble — debate or normal */}
+            {pair.assistant && debateData && (
+              <div className="flex gap-3 justify-start group/msg">
+                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
+                  🔀
+                </div>
+                <div className="max-w-[95%] md:max-w-[80%] bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                  <DebateDisplay
+                    modelA={debateData.modelA}
+                    modelB={debateData.modelB}
+                    steps={debateData.steps}
+                  />
+                </div>
+                <div className="flex items-end pb-2">
+                  <MessageCopyButton text={debateData.steps.find(s => s.id === "final")?.content || pair.assistant.content} />
+                </div>
+              </div>
+            )}
+
+            {pair.assistant && !debateData && (
               <div className="flex gap-3 justify-start group/msg">
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
@@ -109,8 +139,20 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText }
               </div>
             )}
 
-            {/* Streaming response */}
-            {isStreaming && !pair.assistant && (
+            {/* Streaming response — debate mode */}
+            {isStreaming && !pair.assistant && streamingDebate && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
+                  🔀
+                </div>
+                <div className="max-w-[95%] md:max-w-[80%] bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                  <StreamingDebateView rawText={streamingText || ""} modelA={streamingDebate.modelA} modelB={streamingDebate.modelB} />
+                </div>
+              </div>
+            )}
+
+            {/* Streaming response — normal mode */}
+            {isStreaming && !pair.assistant && !streamingDebate && (
               <div className="flex gap-3 justify-start">
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
@@ -128,5 +170,42 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText }
         </div>
       </div>
     </div>
+  );
+}
+
+/** Parse streaming debate text into steps for real-time display */
+function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; modelA: string; modelB: string }) {
+  const completedSteps: { id: DebateStepId; content: string }[] = [];
+  let currentStepId: DebateStepId | null = null;
+  let currentContent = "";
+
+  // Split by step markers: \n[STEP:xxx]\n
+  const parts = rawText.split(/\n\[STEP:(\w+)\]\n/);
+  // parts[0] = text before first marker (usually empty)
+  // parts[1] = step id, parts[2] = content, ...
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const stepId = parts[i] as DebateStepId;
+    const content = (parts[i + 1] || "").trim();
+    if (i + 2 < parts.length) {
+      completedSteps.push({ id: stepId, content });
+    } else {
+      currentStepId = stepId;
+      currentContent = content;
+    }
+  }
+
+  if (!currentStepId && completedSteps.length === 0) {
+    return <span className="animate-pulse text-t-muted">議論を開始中...</span>;
+  }
+
+  return (
+    <DebateDisplay
+      modelA={modelA}
+      modelB={modelB}
+      steps={completedSteps}
+      streamingStepId={currentStepId || undefined}
+      streamingContent={currentContent}
+    />
   );
 }

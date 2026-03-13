@@ -101,3 +101,64 @@ export type ContextsResponse = {
   contexts: Record<string, ContextItem[]>;
   total: number;
 };
+
+export type DebateStepId =
+  | "model_a_answer"
+  | "model_b_answer"
+  | "model_a_critique"
+  | "model_b_critique"
+  | "final";
+
+export type DebateStep = {
+  id: DebateStepId;
+  content: string;
+};
+
+export type DebateData = {
+  modelA: string;
+  modelB: string;
+  steps: DebateStep[];
+};
+
+/** Parse debate content from <!--DEBATE:...--> format */
+export function parseDebateContent(content: string): DebateData | null {
+  const headerMatch = content.match(/^<!--DEBATE:([^:]+):([^-]+)-->/);
+  if (!headerMatch) return null;
+
+  const modelA = headerMatch[1];
+  const modelB = headerMatch[2];
+
+  const stepIds: DebateStepId[] = [
+    "model_a_answer", "model_b_answer",
+    "model_a_critique", "model_b_critique",
+    "final",
+  ];
+
+  const steps: DebateStep[] = [];
+  for (let i = 0; i < stepIds.length; i++) {
+    const stepId = stepIds[i];
+    const marker = `<!--STEP:${stepId}-->`;
+    const startIdx = content.indexOf(marker);
+    if (startIdx === -1) continue;
+
+    const contentStart = startIdx + marker.length + 1; // +1 for newline
+    const nextMarker = i < stepIds.length - 1 ? `<!--STEP:${stepIds[i + 1]}-->` : null;
+    const endIdx = nextMarker ? content.indexOf(nextMarker) : content.length;
+
+    steps.push({
+      id: stepId,
+      content: content.slice(contentStart, endIdx).trim(),
+    });
+  }
+
+  return { modelA, modelB, steps };
+}
+
+/** Get model label from MODEL_REGISTRY */
+export function getModelLabel(modelId: string): string {
+  for (const group of MODEL_GROUPS) {
+    const model = group.models.find((m) => m.id === modelId);
+    if (model) return model.label;
+  }
+  return modelId;
+}

@@ -18,11 +18,12 @@ app.add_middleware(
 )
 
 
-from backend.routers import auth, chat, contexts, sessions
+from backend.routers import auth, chat, contexts, debate, sessions
 
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(contexts.router)
+app.include_router(debate.router)
 app.include_router(sessions.router)
 
 

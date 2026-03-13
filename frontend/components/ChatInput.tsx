@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback, KeyboardEvent, DragEvent } fr
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId) => void;
   disabled: boolean;
 };
 
@@ -17,6 +17,8 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>("claude-sonnet-4-6");
+  const [debateMode, setDebateMode] = useState(false);
+  const [secondModel, setSecondModel] = useState<ModelId>("gpt-4o");
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   function submit() {
     const value = ref.current?.value.trim();
     if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages], selectedModel);
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
@@ -184,25 +186,64 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
           </div>
         )}
-        <div className="flex items-center justify-between mt-1 ml-11">
-          {/* Model selector */}
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value as ModelId)}
-            disabled={disabled}
-            className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
-          >
-            {MODEL_GROUPS.map((g) => (
-              <optgroup key={g.provider} label={g.label}>
-                {g.models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <p className="text-xs text-t-faint text-right hidden md:block">
+        <div className="flex items-center justify-between mt-1 ml-11 gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Model selector */}
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+              disabled={disabled}
+              className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+            >
+              {MODEL_GROUPS.map((g) => (
+                <optgroup key={g.provider} label={g.label}>
+                  {g.models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+
+            {/* Debate mode toggle */}
+            <button
+              onClick={() => setDebateMode(!debateMode)}
+              disabled={disabled}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                debateMode
+                  ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
+                  : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+              }`}
+              title="議論モード"
+            >
+              🔀 議論
+            </button>
+
+            {/* Second model selector (debate mode) */}
+            {debateMode && (
+              <>
+                <span className="text-t-muted text-xs">vs</span>
+                <select
+                  value={secondModel}
+                  onChange={(e) => setSecondModel(e.target.value as ModelId)}
+                  disabled={disabled}
+                  className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+                >
+                  {MODEL_GROUPS.map((g) => (
+                    <optgroup key={g.provider} label={g.label}>
+                      {g.models.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-t-faint text-right hidden md:block flex-shrink-0">
             Cmd+Enter で送信 / 画像はドラッグ&ドロップ、ペースト、クリップで添付
           </p>
         </div>

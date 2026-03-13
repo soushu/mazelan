@@ -112,6 +112,47 @@ export async function updateSessionSystemPrompt(sessionId: string, systemPrompt:
   return res.json();
 }
 
+// ---- Debate Mode ----
+
+export async function* streamDebate(
+  sessionId: string,
+  content: string,
+  modelA: ModelId,
+  modelB: ModelId,
+  apiKeyA?: string | null,
+  apiKeyB?: string | null,
+  images?: ImageAttachment[],
+  anthropicKey?: string | null,
+): AsyncGenerator<string> {
+  const body: Record<string, unknown> = { content, model_a: modelA, model_b: modelB };
+  if (images && images.length > 0) {
+    body.images = images.map(({ media_type, data }) => ({ media_type, data }));
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKeyA) headers["X-API-Key-A"] = apiKeyA;
+  if (apiKeyB) headers["X-API-Key-B"] = apiKeyB;
+  if (anthropicKey) headers["X-Anthropic-Key"] = anthropicKey;
+
+  const res = await fetch(`${BACKEND}/debate/${sessionId}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!res.ok || !res.body) {
+    if (res.status === 401) throw new Error("API_KEY_INVALID");
+    throw new Error("Stream failed");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    yield decoder.decode(value, { stream: true });
+  }
+}
+
 // ---- Context Memory ----
 
 export async function listContexts(): Promise<ContextsResponse> {
