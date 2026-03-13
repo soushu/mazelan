@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { signOut } from "next-auth/react";
 import type { Session } from "@/lib/types";
 import { hasAnyApiKey as checkAnyApiKey } from "@/lib/apiKeyStore";
@@ -30,7 +30,24 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuHeight = 148; // approximate menu height in px
+
+  const openMenu = useCallback((sessionId: string, buttonEl: HTMLButtonElement) => {
+    if (menuOpenId === sessionId) {
+      setMenuOpenId(null);
+      return;
+    }
+    const rect = buttonEl.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const flipUp = spaceBelow < menuHeight + 8;
+    setMenuStyle(flipUp
+      ? { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }
+      : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+    );
+    setMenuOpenId(sessionId);
+  }, [menuOpenId]);
 
   // Refresh API key status on mount and when modal closes
   useEffect(() => {
@@ -39,16 +56,21 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
     }
   }, [apiKeyModalOpen]);
 
-  // Close menu on outside click
+  // Close menu on outside click or scroll
   useEffect(() => {
     if (!menuOpenId) return;
-    const handler = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpenId(null);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const handleScroll = () => setMenuOpenId(null);
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("scroll", handleScroll, true);
+    };
   }, [menuOpenId]);
 
   const filtered = sessions.filter((s) =>
@@ -157,7 +179,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setMenuOpenId(menuOpenId === s.id ? null : s.id);
+                        openMenu(s.id, e.currentTarget);
                       }}
                       className="md:opacity-0 md:group-hover:opacity-100 text-t-muted hover:text-t-secondary transition-opacity text-sm p-1 flex-shrink-0"
                     >
@@ -170,55 +192,6 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                   </>
                 )}
 
-                {/* Dropdown menu */}
-                {menuOpenId === s.id && (
-                  <div
-                    ref={menuRef}
-                    className="absolute right-0 top-full z-50 mt-1 min-w-[140px] bg-theme-elevated rounded-lg shadow-lg border border-border-primary py-1"
-                  >
-                    <button
-                      className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpenId(null);
-                        setEditingId(s.id);
-                        setEditingTitle(s.title);
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                      </svg>
-                      Rename
-                    </button>
-                    <button
-                      className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left opacity-50 cursor-not-allowed"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // TODO: Star feature (backend not implemented yet)
-                        setMenuOpenId(null);
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                      </svg>
-                      Star
-                    </button>
-                    <div className="border-t border-border-primary my-1" />
-                    <button
-                      className="w-full px-3 py-2 text-sm text-danger hover:bg-theme-hover flex items-center gap-2 text-left"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpenId(null);
-                        onDelete(s.id);
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-                      Delete
-                    </button>
-                  </div>
-                )}
               </div>
             ))
           )}
@@ -279,6 +252,61 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
               className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors mt-1"
             >
               Sign out
+            </button>
+          </div>
+        )}
+        {/* Fixed-position dropdown menu (rendered outside scroll container) */}
+        {menuOpenId && (
+          <div
+            ref={menuRef}
+            className="fixed z-[60] min-w-[140px] bg-theme-elevated rounded-lg shadow-lg border border-border-primary py-1"
+            style={menuStyle}
+          >
+            <button
+              className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                const id = menuOpenId;
+                const session = sessions.find((s) => s.id === id);
+                setMenuOpenId(null);
+                if (session) {
+                  setEditingId(id);
+                  setEditingTitle(session.title);
+                }
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+              </svg>
+              Rename
+            </button>
+            <button
+              className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left opacity-50 cursor-not-allowed"
+              onClick={(e) => {
+                e.stopPropagation();
+                // TODO: Star feature (backend not implemented yet)
+                setMenuOpenId(null);
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+              </svg>
+              Star
+            </button>
+            <div className="border-t border-border-primary my-1" />
+            <button
+              className="w-full px-3 py-2 text-sm text-danger hover:bg-theme-hover flex items-center gap-2 text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                const id = menuOpenId;
+                setMenuOpenId(null);
+                onDelete(id);
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+              </svg>
+              Delete
             </button>
           </div>
         )}
