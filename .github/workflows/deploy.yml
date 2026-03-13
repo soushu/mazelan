@@ -36,10 +36,7 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 10
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://claudia.soushu.biz/health)
-          if [ "$STATUS" != "200" ]; then
-            echo "Health check failed with status $STATUS"
-            exit 1
-          fi
-          echo "Health check passed"
+          gcloud compute ssh yutookiguchi@bitpoint-bot \
+            --zone=us-west1-b \
+            --tunnel-through-iap \
+            --command="curl -sf http://127.0.0.1:8000/health"
