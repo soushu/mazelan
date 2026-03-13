@@ -16,9 +16,15 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<ModelId>("claude-sonnet-4-6");
+  const [selectedModel, setSelectedModel] = useState<ModelId>(() => {
+    if (typeof window === "undefined") return "claude-sonnet-4-6";
+    return (localStorage.getItem("claudia_model") as ModelId) || "claude-sonnet-4-6";
+  });
   const [debateMode, setDebateMode] = useState(false);
-  const [secondModel, setSecondModel] = useState<ModelId>("gpt-4o");
+  const [secondModel, setSecondModel] = useState<ModelId>(() => {
+    if (typeof window === "undefined") return "gpt-4o";
+    return (localStorage.getItem("claudia_model2") as ModelId) || "gpt-4o";
+  });
   const dragCounter = useRef(0);
 
   useEffect(() => {
@@ -191,7 +197,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
             {/* Model selector */}
             <select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value as ModelId)}
+              onChange={(e) => { const v = e.target.value as ModelId; setSelectedModel(v); localStorage.setItem("claudia_model", v); }}
               disabled={disabled}
               className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
             >
@@ -226,7 +232,7 @@ export default function ChatInput({ onSubmit, disabled }: Props) {
                 <span className="text-t-muted text-xs">vs</span>
                 <select
                   value={secondModel}
-                  onChange={(e) => setSecondModel(e.target.value as ModelId)}
+                  onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); localStorage.setItem("claudia_model2", v); }}
                   disabled={disabled}
                   className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
                 >
