@@ -78,7 +78,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             ]
 
         if not api_key:
-            yield "\n\n[ERROR: APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください]"
+            yield "\n\n⚠️ APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
             return
 
         async for text in stream_provider(model, messages, api_key, system_prompt):
@@ -98,25 +98,25 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
 
     except ProviderAuthError:
         db.rollback()
-        yield "\n\n[ERROR: APIキーが無効です。正しいキーを設定してください]"
+        yield "\n\n⚠️ APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。"
 
     except ProviderRateLimitError:
         db.rollback()
-        yield "\n\n[ERROR: レート制限に達しました。しばらく待ってから再度お試しください]"
+        yield "\n\n⚠️ レート制限に達しました。リクエストの送信頻度が高すぎます。しばらく待ってから再度お試しください。"
 
     except ProviderSpendLimitError:
         db.rollback()
-        yield "\n\n[ERROR: APIの月額利用上限に達しました。プロバイダーのダッシュボードで上限設定を引き上げてください]"
+        yield "\n\n⚠️ APIの月額利用上限に達しました。プロバイダーのダッシュボードで上限設定を引き上げてください。"
 
     except ProviderError as e:
         db.rollback()
         logger.error("ProviderError: %s", e)
-        yield "\n\n[ERROR: メッセージの生成中にエラーが発生しました]"
+        yield "\n\n⚠️ メッセージの生成中にエラーが発生しました。しばらく待ってから再度お試しください。"
 
     except Exception as e:
         db.rollback()
         logger.error("Unexpected error in stream_response: %s", e, exc_info=True)
-        yield "\n\n[ERROR: メッセージの生成中にエラーが発生しました]"
+        yield "\n\n⚠️ メッセージの生成中にエラーが発生しました。しばらく待ってから再度お試しください。"
 
     finally:
         db.close()
