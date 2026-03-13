@@ -7,8 +7,8 @@ import base64
 import logging
 from typing import AsyncGenerator
 
-from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError
-from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError
+from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError, BadRequestError as AnthropicBadRequestError
+from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
 
@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 
 class ProviderAuthError(Exception):
     """Invalid or missing API key for the provider."""
+    pass
+
+
+class ProviderRateLimitError(Exception):
+    """API usage limit reached."""
     pass
 
 
@@ -81,6 +86,11 @@ async def stream_anthropic(
                 yield text
     except AnthropicAuthError:
         raise ProviderAuthError("Anthropic API key is invalid")
+    except AnthropicBadRequestError as e:
+        msg = str(e)
+        if "usage limit" in msg.lower():
+            raise ProviderRateLimitError(msg)
+        raise ProviderError(f"Anthropic error: {msg}")
 
 
 # ── OpenAI (GPT) ────────────────────────────────────────────
@@ -153,6 +163,8 @@ async def stream_openai(
                 yield delta.content
     except OpenAIAuthError:
         raise ProviderAuthError("OpenAI API key is invalid")
+    except OpenAIRateLimitError as e:
+        raise ProviderRateLimitError(str(e))
 
 
 # ── Google (Gemini) ─────────────────────────────────────────
@@ -225,6 +237,8 @@ async def stream_google(
         err_str = str(e).lower()
         if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
             raise ProviderAuthError("Google API key is invalid")
+        if "rate limit" in err_str or "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
+            raise ProviderRateLimitError(str(e))
         raise ProviderError(f"Gemini error: {e}")
 
 

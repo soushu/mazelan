@@ -18,6 +18,7 @@ from backend.providers import (
     get_provider,
     stream_provider,
     ProviderAuthError,
+    ProviderRateLimitError,
     ProviderError,
 )
 
@@ -97,6 +98,10 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
     except ProviderAuthError:
         db.rollback()
         yield "\n\n[ERROR: APIキーが無効です。正しいキーを設定してください]"
+
+    except ProviderRateLimitError:
+        db.rollback()
+        yield "\n\n[ERROR: APIの利用上限に達しました。プロバイダーのダッシュボードで上限設定を確認してください]"
 
     except ProviderError as e:
         db.rollback()
