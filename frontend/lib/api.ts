@@ -25,6 +25,17 @@ export async function getMessages(sessionId: string): Promise<Message[]> {
   return res.json();
 }
 
+export async function updateSession(sessionId: string, title: string): Promise<Session> {
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to update session");
+  return res.json();
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   await fetch(`${BACKEND}/sessions/${sessionId}`, {
     method: "DELETE",

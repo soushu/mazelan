@@ -8,7 +8,7 @@ import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
-import { createSession, listSessions, getMessages, deleteSession, streamChat, streamDebate } from "@/lib/api";
+import { createSession, listSessions, getMessages, deleteSession, updateSession, streamChat, streamDebate } from "@/lib/api";
 import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
 import { getProviderForModel, parseDebateContent } from "@/lib/types";
@@ -146,6 +146,17 @@ export default function ChatPage() {
     await deleteSession(id);
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (activeId === id) handleNew();
+  }
+
+  async function handleRename(id: string, newTitle: string) {
+    try {
+      const updated = await updateSession(id, newTitle);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, title: updated.title } : s))
+      );
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   async function fileToBase64(file: File): Promise<ImageAttachment> {
@@ -304,6 +315,7 @@ export default function ChatPage() {
         activeId={activeId}
         onSelect={handleSelect}
         onDelete={handleDelete}
+        onRename={handleRename}
         onNew={handleNew}
         userEmail={authSession?.user?.email}
         onOpenApiKeyModal={() => setApiKeyModalOpen(true)}

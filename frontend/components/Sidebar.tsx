@@ -11,6 +11,7 @@ type Props = {
   activeId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
   onNew: () => void;
   userEmail?: string;
   onOpenApiKeyModal: () => void;
@@ -22,10 +23,12 @@ type Props = {
   loading?: boolean;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, apiKeyModalOpen, open, onClose, loading }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, apiKeyModalOpen, open, onClose, loading }: Props) {
   const [query, setQuery] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const { theme, toggleTheme, themeLabel } = useTheme();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   // Refresh API key status on mount and when modal closes
   useEffect(() => {
@@ -106,17 +109,50 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onNew,
                     : "text-t-tertiary hover:bg-theme-hover hover:text-t-secondary"
                 }`}
                 onClick={() => onSelect(s.id)}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  setEditingId(s.id);
+                  setEditingTitle(s.title);
+                }}
               >
-                <span className="flex-1 text-sm truncate">{s.title}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(s.id);
-                  }}
-                  className="md:opacity-0 md:group-hover:opacity-100 text-t-muted hover:text-danger transition-opacity text-xs p-1"
-                >
-                  X
-                </button>
+                {editingId === s.id ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const trimmed = editingTitle.trim();
+                        if (trimmed) onRename(s.id, trimmed);
+                        setEditingId(null);
+                      } else if (e.key === "Escape") {
+                        setEditingId(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      const trimmed = editingTitle.trim();
+                      if (trimmed && trimmed !== s.title) onRename(s.id, trimmed);
+                      setEditingId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                    className="flex-1 text-sm bg-theme-input text-t-primary px-1 py-0 rounded outline-none focus:ring-1 focus:ring-border-secondary min-w-0"
+                  />
+                ) : (
+                  <span className="flex-1 text-sm truncate">{s.title}</span>
+                )}
+                {editingId !== s.id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(s.id);
+                    }}
+                    className="md:opacity-0 md:group-hover:opacity-100 text-t-muted hover:text-danger transition-opacity text-xs p-1"
+                  >
+                    X
+                  </button>
+                )}
               </div>
             ))
           )}

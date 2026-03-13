@@ -82,6 +82,32 @@ def get_messages(
     ]
 
 
+class SessionUpdateRequest(BaseModel):
+    title: str
+
+
+@router.put("/{session_id}", response_model=SessionResponse)
+def update_session(
+    session_id: uuid.UUID,
+    req: SessionUpdateRequest,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    session.title = req.title[:60]
+    db.commit()
+    db.refresh(session)
+    return SessionResponse(
+        id=session.id,
+        title=session.title,
+        created_at=session.created_at.isoformat(),
+    )
+
+
 @router.delete("/{session_id}", status_code=204)
 def delete_session(
     session_id: uuid.UUID,
