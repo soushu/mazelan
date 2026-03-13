@@ -99,14 +99,34 @@ export default function ChatPage() {
 
   async function handleSelect(id: string) {
     setActiveId(id);
-    setMessages([]);
     setStreamingText("");
     setManualToggles(new Set());
     setSidebarOpen(false);
-    setLoadingMessages(true);
+
+    // Show cached messages immediately if available
+    const cacheKey = `claudia_msgs_${id}`;
+    let hasCached = false;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setMessages(JSON.parse(cached));
+        hasCached = true;
+      } else {
+        setMessages([]);
+      }
+    } catch {
+      setMessages([]);
+    }
+
+    if (!hasCached) setLoadingMessages(true);
     try {
       const msgs = await getMessages(id);
       setMessages(msgs);
+      // Cache without image data to save localStorage space
+      try {
+        const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+        localStorage.setItem(cacheKey, JSON.stringify(light));
+      } catch {}
     } catch (err) {
       console.error(err);
     } finally {
@@ -211,6 +231,10 @@ export default function ChatPage() {
         // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
         const msgs = await getMessages(sessionId);
         setMessages(msgs);
+        try {
+          const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+          localStorage.setItem(`claudia_msgs_${sessionId}`, JSON.stringify(light));
+        } catch {}
       } else {
         // ── Normal mode ──
         const provider = getProviderForModel(model);
