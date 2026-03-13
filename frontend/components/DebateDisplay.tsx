@@ -244,27 +244,27 @@ function ProgressBar({
     : null;
 
   return (
-    <div className="space-y-1.5">
-      {/* Dots */}
-      <div className="flex items-center gap-1">
+    <div className="space-y-2">
+      {/* Progress dots */}
+      <div className="flex items-center">
         {ALL_STEP_IDS.map((id, i) => {
           const isCompleted = completedIds.has(id);
           const isCurrent = i === currentIndex;
           return (
             <div key={id} className="flex items-center">
               <div
-                className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                className={`w-3 h-3 rounded-full transition-colors ${
                   isCompleted
-                    ? "bg-accent-primary"
+                    ? "bg-blue-500"
                     : isCurrent
-                    ? "bg-accent-primary animate-pulse"
-                    : "bg-border-secondary"
+                    ? "bg-blue-400 animate-pulse shadow-[0_0_6px_rgba(96,165,250,0.6)]"
+                    : "bg-neutral-600"
                 }`}
               />
               {i < stepCount - 1 && (
                 <div
-                  className={`w-4 h-0.5 ${
-                    isCompleted ? "bg-accent-primary" : "bg-border-secondary"
+                  className={`w-6 h-[3px] rounded-full ${
+                    isCompleted ? "bg-blue-500" : "bg-neutral-600"
                   }`}
                 />
               )}
@@ -274,7 +274,7 @@ function ProgressBar({
       </div>
       {/* Step label */}
       {streamingStepId && (
-        <div className="text-xs text-t-muted">
+        <div className="text-xs text-t-secondary">
           ステップ {currentIndex + 1}/{stepCount}: {currentLabel}
         </div>
       )}

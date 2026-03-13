@@ -122,7 +122,7 @@ export type DebateData = {
 
 /** Parse debate content from <!--DEBATE:...--> format */
 export function parseDebateContent(content: string): DebateData | null {
-  const headerMatch = content.match(/^<!--DEBATE:([^:]+):([^-]+)-->/);
+  const headerMatch = content.match(/^<!--DEBATE:([^:]+):(.+?)-->/);
   if (!headerMatch) return null;
 
   const modelA = headerMatch[1];
