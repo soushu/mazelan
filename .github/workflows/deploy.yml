@@ -29,10 +29,10 @@ jobs:
 
       - name: Deploy to production
         run: |
-          gcloud compute ssh bitpoint-bot \
+          gcloud compute ssh yutookiguchi@bitpoint-bot \
             --zone=us-west1-b \
             --tunnel-through-iap \
-            --command="sudo bash /home/yutookiguchi/claudia/deploy/deploy-prod.sh"
+            --command="bash /home/yutookiguchi/claudia/deploy/deploy-prod.sh"
 
       - name: Health check
         run: |
