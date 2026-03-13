@@ -40,3 +40,18 @@ jobs:
             --zone=us-west1-b \
             --tunnel-through-iap \
             --command="curl -sf http://127.0.0.1:8002/health"
+
+      - name: Slack notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            EMOJI="✅"
+            STATUS="成功"
+          else
+            EMOJI="❌"
+            STATUS="失敗"
+          fi
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -1)
+          curl -sX POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"${EMOJI} *claudia ステージング* デプロイ${STATUS}\n>${COMMIT_MSG}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Actions>\"}"
