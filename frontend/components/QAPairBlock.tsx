@@ -214,7 +214,11 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                   {streamingText ? (
                     <MessageContent content={streamingText} />
                   ) : (
-                    <span className="animate-pulse text-t-muted">cursor</span>
+                    <span className="inline-flex gap-1 items-center py-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
+                    </span>
                   )}
                 </div>
               </div>
