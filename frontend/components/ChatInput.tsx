@@ -281,7 +281,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                 }`}
                 title="議論モード"
               >
-                議論
+                🔀 議論
               </button>
             </div>
 
