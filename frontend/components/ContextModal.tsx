@@ -5,11 +5,11 @@ import { listContexts, createContext, updateContext, deleteContext, toggleContex
 import type { ContextItem } from "@/lib/types";
 
 const CATEGORIES = [
-  { value: "preferences", label: "Preferences" },
-  { value: "skills", label: "Skills" },
-  { value: "projects", label: "Projects" },
-  { value: "personal", label: "Personal" },
-  { value: "general", label: "General" },
+  { value: "preferences", label: "好み・設定" },
+  { value: "skills", label: "スキル・専門" },
+  { value: "projects", label: "プロジェクト" },
+  { value: "personal", label: "個人情報" },
+  { value: "general", label: "その他" },
 ];
 
 type Props = {
@@ -106,7 +106,7 @@ export default function ContextModal({ open, onClose }: Props) {
           <span className="text-xs text-t-muted">{total} items</span>
         </div>
         <p className="text-xs text-t-tertiary mb-4">
-          AIが会話から自動学習した情報です。手動で追加・編集もできます。有効な項目はシステムプロンプトに自動反映されます。
+          AIがあなたのことを覚えておくためのメモです。例えば「プログラマー」「日本語で回答希望」などを登録しておくと、毎回伝えなくてもAIがそれを踏まえて回答します。会話中にAIが自動で学習することもあります。不要な項目はOFFにできます。
         </p>
 
         {/* Add form */}
@@ -115,7 +115,7 @@ export default function ContextModal({ open, onClose }: Props) {
             type="text"
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
-            placeholder="新しいコンテキストを追加..."
+            placeholder="例: Webエンジニア / 東京在住 / 敬語不要"
             className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary"
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
@@ -147,7 +147,7 @@ export default function ContextModal({ open, onClose }: Props) {
             </div>
           ) : sortedCategories.length === 0 ? (
             <p className="text-t-muted text-sm text-center py-8">
-              まだコンテキストがありません。会話するとAIが自動的に学習します。
+              まだ何も登録されていません。上のフォームから追加するか、会話を続けるとAIが自動的に学習します。
             </p>
           ) : (
             sortedCategories.map((cat) => (
