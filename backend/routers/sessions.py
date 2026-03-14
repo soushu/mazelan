@@ -14,6 +14,7 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 class SessionResponse(BaseModel):
     id: uuid.UUID
     title: str
+    is_starred: bool = False
     created_at: str
 
     class Config:
@@ -33,6 +34,7 @@ def create_session(
     return SessionResponse(
         id=session.id,
         title=session.title,
+        is_starred=session.is_starred,
         created_at=session.created_at.isoformat(),
     )
 
@@ -45,11 +47,11 @@ def list_sessions(
     sessions = (
         db.query(ChatSession)
         .filter(ChatSession.user_id == current_user_id)
-        .order_by(ChatSession.updated_at.desc().nullslast(), ChatSession.created_at.desc())
+        .order_by(ChatSession.is_starred.desc(), ChatSession.updated_at.desc().nullslast(), ChatSession.created_at.desc())
         .all()
     )
     return [
-        SessionResponse(id=s.id, title=s.title, created_at=s.created_at.isoformat())
+        SessionResponse(id=s.id, title=s.title, is_starred=s.is_starred, created_at=s.created_at.isoformat())
         for s in sessions
     ]
 
@@ -105,6 +107,7 @@ def update_session(
     return SessionResponse(
         id=session.id,
         title=session.title,
+        is_starred=session.is_starred,
         created_at=session.created_at.isoformat(),
     )
 
@@ -122,6 +125,28 @@ def delete_session(
         raise HTTPException(status_code=403, detail="Forbidden")
     db.delete(session)
     db.commit()
+
+
+@router.put("/{session_id}/star", response_model=SessionResponse)
+def toggle_star(
+    session_id: uuid.UUID,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    session.is_starred = not session.is_starred
+    db.commit()
+    db.refresh(session)
+    return SessionResponse(
+        id=session.id,
+        title=session.title,
+        is_starred=session.is_starred,
+        created_at=session.created_at.isoformat(),
+    )
 
 
 class SystemPromptRequest(BaseModel):

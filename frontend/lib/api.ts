@@ -36,6 +36,15 @@ export async function updateSession(sessionId: string, title: string): Promise<S
   return res.json();
 }
 
+export async function toggleSessionStar(sessionId: string): Promise<Session> {
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}/star`, {
+    method: "PUT",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to toggle star");
+  return res.json();
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   await fetch(`${BACKEND}/sessions/${sessionId}`, {
     method: "DELETE",

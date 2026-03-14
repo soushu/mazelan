@@ -62,6 +62,7 @@ export function getProviderForModel(modelId: ModelId): Provider {
 export type Session = {
   id: string;
   title: string;
+  is_starred: boolean;
   created_at: string;
 };
 

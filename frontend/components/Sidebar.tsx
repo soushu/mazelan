@@ -17,13 +17,14 @@ type Props = {
   onOpenApiKeyModal: () => void;
   onOpenSystemPromptModal: () => void;
   onOpenContextModal: () => void;
+  onToggleStar: (id: string) => void;
   apiKeyModalOpen: boolean;
   open: boolean;
   onClose: () => void;
   loading?: boolean;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, apiKeyModalOpen, open, onClose, loading }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, onToggleStar, apiKeyModalOpen, open, onClose, loading }: Props) {
   const [query, setQuery] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const { theme, toggleTheme, themeLabel } = useTheme();
@@ -177,6 +178,11 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                   />
                 ) : (
                   <>
+                    {s.is_starred && (
+                      <svg className="w-3 h-3 text-yellow-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                      </svg>
+                    )}
                     <span className="flex-1 text-sm truncate">{s.title}</span>
                     {/* Three-dot menu button */}
                     <button
@@ -285,19 +291,32 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
             </svg>
             Rename
           </button>
-          <button
-            className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left opacity-50 cursor-not-allowed"
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Star feature (backend not implemented yet)
-              setMenuOpenId(null);
-            }}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-            </svg>
-            Star
-          </button>
+          {(() => {
+            const starSession = sessions.find((s) => s.id === menuOpenId);
+            const isStarred = starSession?.is_starred ?? false;
+            return (
+              <button
+                className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const id = menuOpenId;
+                  setMenuOpenId(null);
+                  if (id) onToggleStar(id);
+                }}
+              >
+                {isStarred ? (
+                  <svg className="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                )}
+                {isStarred ? "Unstar" : "Star"}
+              </button>
+            );
+          })()}
           <div className="border-t border-border-primary my-1" />
           <button
             className="w-full px-3 py-2 text-sm text-danger hover:bg-theme-hover flex items-center gap-2 text-left"

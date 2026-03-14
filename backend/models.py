@@ -29,6 +29,7 @@ class ChatSession(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(String(60), nullable=False)
     system_prompt = Column(Text, nullable=True)
+    is_starred = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
