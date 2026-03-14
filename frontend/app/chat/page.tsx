@@ -106,6 +106,19 @@ export default function ChatPage() {
     }
   }, [streamingText]);
 
+  // Re-scroll on viewport resize (mobile keyboard dismiss changes viewport height)
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    function handleResize() {
+      if (needsStreamingScroll.current && lastPairRef.current) {
+        lastPairRef.current.scrollIntoView({ behavior: "instant", block: "start" });
+      }
+    }
+    vv.addEventListener("resize", handleResize);
+    return () => vv.removeEventListener("resize", handleResize);
+  }, []);
+
   // Dynamic spacer: use layoutEffect to set height before paint, avoiding flicker
   useLayoutEffect(() => {
     if (!scrollContainerRef.current || !lastPairRef.current || !spacerRef.current) return;
@@ -366,7 +379,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v31.3
+          DEV v31.4
         </div>
       )}
 
