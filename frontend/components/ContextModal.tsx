@@ -117,7 +117,7 @@ export default function ContextModal({ open, onClose }: Props) {
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="例: Webエンジニア / 東京在住 / 敬語不要"
             className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary"
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+
           />
           <div className="flex gap-2">
             <select
