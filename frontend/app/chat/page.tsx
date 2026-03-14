@@ -236,9 +236,18 @@ export default function ChatPage() {
   async function handleToggleStar(id: string) {
     try {
       const updated = await toggleSessionStar(id);
-      setSessions((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, is_starred: updated.is_starred } : s))
-      );
+      setSessions((prev) => {
+        const toggled = prev.map((s) => (s.id === id ? { ...s, is_starred: updated.is_starred } : s));
+        const target = toggled.find((s) => s.id === id)!;
+        const rest = toggled.filter((s) => s.id !== id);
+        const starred = rest.filter((s) => s.is_starred);
+        const unstarred = rest.filter((s) => !s.is_starred);
+        if (target.is_starred) {
+          return [target, ...starred, ...unstarred];
+        } else {
+          return [...starred, target, ...unstarred];
+        }
+      });
     } catch (err) {
       console.error(err);
     }
@@ -426,7 +435,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v33.3
+          DEV v33.4
         </div>
       )}
 
