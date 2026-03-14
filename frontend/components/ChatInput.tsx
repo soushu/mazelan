@@ -191,8 +191,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
             rows={2}
             className="w-full bg-transparent text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 resize-none outline-none disabled:opacity-50 font-sans"
           />
-          {/* Toolbar row inside the box: paperclip, mode selector, send */}
-          <div className="flex items-center justify-between px-2 pb-2">
+          {/* Toolbar row inside the box: paperclip, mode selector + send */}
+          <div className="flex items-center px-2 pb-2">
             {/* Left: paperclip */}
             <button
               onClick={() => fileRef.current?.click()}
@@ -217,7 +217,10 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               }}
             />
 
-            {/* Center: mode selector (Gemini-style) */}
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Right group: mode selector + send */}
             {supportsThinking && (
               <div className="relative" ref={modeMenuRef}>
                 <button
@@ -236,7 +239,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                 </button>
 
                 {modeMenuOpen && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
+                  <div className="absolute bottom-full right-0 mb-2 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
                     <button
                       onClick={() => { setThinking(false); setModeMenuOpen(false); }}
                       className={`w-full text-left px-4 py-3 transition-colors ${!thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
