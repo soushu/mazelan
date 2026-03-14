@@ -5,8 +5,12 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -129,7 +133,9 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
 
 
 @router.post("/{session_id}")
+@limiter.limit("20/minute")
 async def chat(
+    request: Request,
     session_id: uuid.UUID,
     req: ChatRequest,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
