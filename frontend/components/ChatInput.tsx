@@ -22,7 +22,6 @@ function getSessionModel(sessionId: string | null): { model: ModelId; model2: Mo
       if (data[sessionId]) return { model: data[sessionId].model || DEFAULT_MODEL, model2: data[sessionId].model2 || DEFAULT_MODEL2 };
     } catch {}
   }
-  // Fallback to global last-used
   return {
     model: (localStorage.getItem("claudia_model") as ModelId) || DEFAULT_MODEL,
     model2: (localStorage.getItem("claudia_model2") as ModelId) || DEFAULT_MODEL2,
@@ -63,23 +62,18 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
     return false;
   }, [selectedModel]);
 
-  // Do NOT auto-focus after streaming ends — on mobile this opens the keyboard
-
-  // Load per-session model when session changes
   useEffect(() => {
     const { model, model2 } = getSessionModel(sessionId);
     setSelectedModel(model);
     setSecondModel(model2);
   }, [sessionId]);
 
-  // Clean up object URLs on unmount or change
   useEffect(() => {
     return () => {
       previews.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [previews]);
 
-  // Close mode menu on outside click
   useEffect(() => {
     if (!modeMenuOpen) return;
     function handleClick(e: MouseEvent) {
@@ -116,7 +110,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Cmd+Enter (Mac) or Ctrl+Enter (Win) to send
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       submit();
@@ -127,18 +120,14 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current++;
-    if (e.dataTransfer?.types.includes("Files")) {
-      setDragging(true);
-    }
+    if (e.dataTransfer?.types.includes("Files")) setDragging(true);
   }, []);
 
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current--;
-    if (dragCounter.current === 0) {
-      setDragging(false);
-    }
+    if (dragCounter.current === 0) setDragging(false);
   }, []);
 
   const handleDragOver = useCallback((e: DragEvent) => {
@@ -159,9 +148,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   return (
     <div
       className={`p-2 md:p-4 border-t transition-colors ${
-        dragging
-          ? "border-blue-500 bg-blue-500/10"
-          : "border-border-primary"
+        dragging ? "border-blue-500 bg-blue-500/10" : "border-border-primary"
       }`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -190,76 +177,159 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          {/* Paperclip button */}
-          <button
-            onClick={() => fileRef.current?.click()}
+        {/* Input box — textarea + toolbar inside one rounded container */}
+        <div className="bg-theme-input rounded-xl focus-within:ring-1 focus-within:ring-border-secondary">
+          <textarea
+            ref={ref}
             disabled={disabled}
-            className="p-2 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors flex-shrink-0 mb-1"
-            title="Attach image"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-            </svg>
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              handleFiles(e.target.files);
-              e.target.value = "";
+            onKeyDown={handleKeyDown}
+            onPaste={(e) => {
+              const files = e.clipboardData?.files;
+              if (files && files.length > 0) handleFiles(files);
             }}
+            placeholder="Type a message..."
+            rows={2}
+            className="w-full bg-transparent text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 resize-none outline-none disabled:opacity-50 font-sans"
           />
-
-          <div className="flex-1 relative">
-            <textarea
-              ref={ref}
+          {/* Toolbar row inside the box: paperclip, mode selector, send */}
+          <div className="flex items-center justify-between px-2 pb-2">
+            {/* Left: paperclip */}
+            <button
+              onClick={() => fileRef.current?.click()}
               disabled={disabled}
-              onKeyDown={handleKeyDown}
-              onPaste={(e) => {
-                const files = e.clipboardData?.files;
-                if (files && files.length > 0) {
-                  handleFiles(files);
-                }
+              className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
+              title="Attach image"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+              </svg>
+            </button>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = "";
               }}
-              placeholder="Type a message..."
-              rows={2}
-              className="w-full bg-theme-input text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 pr-12 rounded-xl resize-none outline-none focus:ring-1 focus:ring-border-secondary disabled:opacity-50 font-sans"
             />
-            {/* Send button — bottom-right inside textarea */}
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
-              <button
-                onClick={submit}
-                disabled={disabled}
-                className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
-                title="Send"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              </button>
-            </div>
+
+            {/* Center: mode selector (Gemini-style) */}
+            {supportsThinking && (
+              <div className="relative" ref={modeMenuRef}>
+                <button
+                  onClick={() => setModeMenuOpen(!modeMenuOpen)}
+                  disabled={disabled}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                    thinking
+                      ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                      : "text-t-muted hover:text-t-secondary bg-theme-hover/50"
+                  }`}
+                >
+                  {modeLabel}
+                  <svg className={`w-3 h-3 transition-transform ${modeMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {modeMenuOpen && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
+                    <button
+                      onClick={() => { setThinking(false); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${!thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-t-secondary">高速モード</span>
+                        {!thinking && (
+                          <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <p className="text-xs text-t-muted mt-0.5">素早く回答</p>
+                    </button>
+                    <button
+                      onClick={() => { setThinking(true); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-t-secondary">思考モード</span>
+                        {thinking && (
+                          <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <p className="text-xs text-t-muted mt-0.5">複雑な問題を解決</p>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Right: send */}
+            <button
+              onClick={submit}
+              disabled={disabled}
+              className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
+              title="Send"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            </button>
           </div>
         </div>
+
         {dragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-xl pointer-events-none z-10">
             <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
           </div>
         )}
-        <div className="flex items-start justify-between mt-1 ml-11 gap-2">
-          <div className="flex flex-col gap-0.5 min-w-0">
-            {/* Row 1: model1 + debate toggle */}
-            <div className="flex items-center gap-1.5">
-              {debateMode && <span className="text-t-muted text-[10px] select-none w-3 shrink-0">{"\u00A0"}</span>}
+
+        {/* Model selector + debate — below the input box */}
+        <div className="flex items-center gap-2 mt-1.5 ml-1 flex-wrap">
+          <select
+            value={selectedModel}
+            onChange={(e) => { const v = e.target.value as ModelId; setSelectedModel(v); saveSessionModel(sessionId, v, secondModel); }}
+            disabled={disabled}
+            className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+          >
+            {MODEL_GROUPS.map((g) => (
+              <optgroup key={g.provider} label={g.label}>
+                {g.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setDebateMode(!debateMode)}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+              debateMode
+                ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
+                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+            }`}
+            title="議論モード"
+          >
+            🔀 議論
+          </button>
+
+          {debateMode && (
+            <>
+              <span className="text-t-muted text-xs select-none">vs</span>
               <select
-                value={selectedModel}
-                onChange={(e) => { const v = e.target.value as ModelId; setSelectedModel(v); saveSessionModel(sessionId, v, secondModel); }}
+                value={secondModel}
+                onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
                 disabled={disabled}
-                className="bg-transparent text-t-muted text-[11px] outline-none disabled:opacity-50 cursor-pointer min-w-0"
+                className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
               >
                 {MODEL_GROUPS.map((g) => (
                   <optgroup key={g.provider} label={g.label}>
@@ -271,107 +341,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   </optgroup>
                 ))}
               </select>
-              <button
-                onClick={() => setDebateMode(!debateMode)}
-                disabled={disabled}
-                className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] transition-colors disabled:opacity-50 ${
-                  debateMode
-                    ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
-                    : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-                }`}
-                title="議論モード"
-              >
-                🔀 議論
-              </button>
-            </div>
-
-            {/* Row 2: vs + model2 (only in debate mode) */}
-            {debateMode && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-t-muted text-[10px] select-none w-3 shrink-0 text-right">vs</span>
-                <select
-                  value={secondModel}
-                  onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
-                  disabled={disabled}
-                  className="bg-transparent text-t-muted text-[11px] outline-none disabled:opacity-50 cursor-pointer min-w-0"
-                >
-                  {MODEL_GROUPS.map((g) => (
-                    <optgroup key={g.provider} label={g.label}>
-                      {g.models.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Mode selector — Gemini-style dropdown */}
-          {supportsThinking && (
-            <div className="relative flex-shrink-0" ref={modeMenuRef}>
-              <button
-                onClick={() => setModeMenuOpen(!modeMenuOpen)}
-                disabled={disabled}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                  thinking
-                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/40"
-                    : "text-t-muted hover:text-t-secondary border border-border-secondary"
-                }`}
-              >
-                {modeLabel}
-                <svg className={`w-3 h-3 transition-transform ${modeMenuOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {/* Dropdown menu */}
-              {modeMenuOpen && (
-                <div className="absolute bottom-full right-0 mb-1 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
-                  {/* Fast mode */}
-                  <button
-                    onClick={() => { setThinking(false); setModeMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-3 transition-colors ${
-                      !thinking
-                        ? "bg-theme-hover"
-                        : "hover:bg-theme-hover"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-t-secondary">高速モード</span>
-                      {!thinking && (
-                        <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <p className="text-xs text-t-muted mt-0.5">素早く回答</p>
-                  </button>
-
-                  {/* Thinking mode */}
-                  <button
-                    onClick={() => { setThinking(true); setModeMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-3 transition-colors ${
-                      thinking
-                        ? "bg-theme-hover"
-                        : "hover:bg-theme-hover"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-t-secondary">思考モード</span>
-                      {thinking && (
-                        <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <p className="text-xs text-t-muted mt-0.5">複雑な問題を解決</p>
-                  </button>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </div>
       </div>
