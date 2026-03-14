@@ -108,8 +108,8 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
             {/* Assistant bubble — debate or normal */}
             {pair.assistant && debateData && (
-              <div className="flex gap-2 md:gap-3 justify-start group/msg overflow-hidden">
-                <div className="hidden md:flex w-7 h-7 rounded-full bg-theme-avatar items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
+              <div className="flex gap-3 justify-start group/msg">
+                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   🔀
                 </div>
                 <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
@@ -119,7 +119,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                     steps={debateData.steps}
                   />
                 </div>
-                <div className="hidden md:flex items-end pb-2">
+                <div className="flex items-end pb-2">
                   <MessageCopyButton text={debateData.steps.find(s => s.id === "final")?.content || pair.assistant.content} />
                 </div>
               </div>
@@ -130,7 +130,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
                 </div>
-                <div className="max-w-[95%] md:max-w-[80%] bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <MessageContent content={pair.assistant.content} />
                 </div>
                 <div className="flex items-end pb-2">
@@ -141,8 +141,8 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
             {/* Streaming response — debate mode */}
             {isStreaming && !pair.assistant && streamingDebate && (
-              <div className="flex gap-2 md:gap-3 justify-start overflow-hidden">
-                <div className="hidden md:flex w-7 h-7 rounded-full bg-theme-avatar items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
+              <div className="flex gap-3 justify-start">
+                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   🔀
                 </div>
                 <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
@@ -157,7 +157,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
                 </div>
-                <div className="max-w-[95%] md:max-w-[80%] bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   {streamingText ? (
                     <MessageContent content={streamingText} />
                   ) : (
