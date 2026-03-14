@@ -19,6 +19,7 @@ main(本番) → develop(統合) → feature/*(機能) の3層構成。
 feature/* を develop にマージする前に必ず以下を実行:
 1. TypeScript型チェック: `npx tsc --noEmit`
 2. ロジックのダブルチェック（全変更ファイルを読み直し、全パターン確認）
+3. DEV バッジバージョンのインクリメント（`frontend/app/chat/page.tsx` 内の `DEV vX.X` を +0.1）
 
 ## コーディングルール
 
