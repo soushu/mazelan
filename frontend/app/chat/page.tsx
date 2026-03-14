@@ -88,7 +88,7 @@ export default function ChatPage() {
   // When user sends a message, scroll so the question appears at the top of the viewport
   useEffect(() => {
     if (shouldScrollToQuestion.current && lastPairRef.current) {
-      lastPairRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      lastPairRef.current.scrollIntoView({ behavior: "instant", block: "start" });
       shouldScrollToQuestion.current = false;
     }
   });
