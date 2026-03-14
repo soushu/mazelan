@@ -251,18 +251,15 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
           </div>
         )}
         <div className="flex items-start justify-between mt-1 ml-11 gap-2">
-          <div>
-            {/* Model selectors — aligned by model name */}
-            <div className="grid items-center" style={{ gridTemplateColumns: "auto 1fr auto" }}>
-              {/* Row 1: model1 + debate toggle */}
-              <span className="text-t-muted text-xs text-right pr-1.5 select-none">
-                {debateMode ? "\u00A0" : ""}
-              </span>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            {/* Row 1: model1 + debate toggle */}
+            <div className="flex items-center gap-1.5">
+              {debateMode && <span className="text-t-muted text-[10px] select-none w-3 shrink-0">{"\u00A0"}</span>}
               <select
                 value={selectedModel}
                 onChange={(e) => { const v = e.target.value as ModelId; setSelectedModel(v); saveSessionModel(sessionId, v, secondModel); }}
                 disabled={disabled}
-                className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+                className="bg-transparent text-t-muted text-[11px] outline-none disabled:opacity-50 cursor-pointer min-w-0"
               >
                 {MODEL_GROUPS.map((g) => (
                   <optgroup key={g.provider} label={g.label}>
@@ -277,7 +274,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <button
                 onClick={() => setDebateMode(!debateMode)}
                 disabled={disabled}
-                className={`ml-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] transition-colors disabled:opacity-50 ${
                   debateMode
                     ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
                     : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
@@ -286,31 +283,30 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               >
                 議論
               </button>
-
-              {/* Row 2: vs + model2 (only in debate mode) */}
-              {debateMode && (
-                <>
-                  <span className="text-t-muted text-xs text-right pr-1.5 select-none">vs</span>
-                  <select
-                    value={secondModel}
-                    onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
-                    disabled={disabled}
-                    className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
-                  >
-                    {MODEL_GROUPS.map((g) => (
-                      <optgroup key={g.provider} label={g.label}>
-                        {g.models.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <span />
-                </>
-              )}
             </div>
+
+            {/* Row 2: vs + model2 (only in debate mode) */}
+            {debateMode && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-t-muted text-[10px] select-none w-3 shrink-0 text-right">vs</span>
+                <select
+                  value={secondModel}
+                  onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
+                  disabled={disabled}
+                  className="bg-transparent text-t-muted text-[11px] outline-none disabled:opacity-50 cursor-pointer min-w-0"
+                >
+                  {MODEL_GROUPS.map((g) => (
+                    <optgroup key={g.provider} label={g.label}>
+                      {g.models.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Mode selector — Gemini-style dropdown */}
