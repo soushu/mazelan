@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { QAPair, DebateStepId } from "@/lib/types";
 import { parseDebateContent, getProviderFromModelId } from "@/lib/types";
 import MessageContent from "@/components/MessageContent";
@@ -32,6 +32,64 @@ function MessageCopyButton({ text }: { text: string }) {
         </svg>
       )}
     </button>
+  );
+}
+
+function UserBubble({ user }: { user: QAPair["user"] }) {
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    // Check if content exceeds 5 lines (compare scrollHeight vs clamped height)
+    setClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [user.content]);
+
+  return (
+    <div className="flex gap-3 justify-end">
+      <div className="max-w-[95%] md:max-w-[80%] rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm bg-theme-user-bubble text-t-user-bubble rounded-br-sm">
+        {user.images && user.images.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {user.images.map((img, i) => (
+              <img
+                key={i}
+                src={img.preview_url || `data:${img.media_type};base64,${img.data}`}
+                alt={`attach ${i + 1}`}
+                className="max-w-[150px] max-h-[150px] md:max-w-[200px] md:max-h-[200px] object-contain rounded-lg"
+              />
+            ))}
+          </div>
+        )}
+        {user.content && (
+          <div className="relative">
+            <p
+              ref={textRef}
+              className={`whitespace-pre-wrap ${!expanded ? "line-clamp-5" : ""}`}
+            >
+              {user.content}
+            </p>
+            {clamped && !expanded && (
+              <button
+                onClick={() => setExpanded(true)}
+                className="absolute bottom-0 right-0 pl-8 bg-gradient-to-l from-[var(--color-bg-user-bubble)] from-60% text-t-user-bubble/70 hover:text-t-user-bubble text-xs"
+              >
+                ...more
+              </button>
+            )}
+            {expanded && clamped && (
+              <button
+                onClick={() => setExpanded(false)}
+                className="text-t-user-bubble/70 hover:text-t-user-bubble text-xs mt-1"
+              >
+                show less
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -89,25 +147,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
         <div className="overflow-hidden">
           <div className="space-y-6 pt-4">
             {/* User bubble */}
-            <div className="flex gap-3 justify-end">
-              <div className="max-w-[95%] md:max-w-[80%] rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm bg-theme-user-bubble text-t-user-bubble rounded-br-sm">
-                {pair.user.images && pair.user.images.length > 0 && (
-                  <div className="flex gap-2 flex-wrap mb-2">
-                    {pair.user.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img.preview_url || `data:${img.media_type};base64,${img.data}`}
-                        alt={`attach ${i + 1}`}
-                        className="max-w-[150px] max-h-[150px] md:max-w-[200px] md:max-h-[200px] object-contain rounded-lg"
-                      />
-                    ))}
-                  </div>
-                )}
-                {pair.user.content && (
-                  <p className="whitespace-pre-wrap">{pair.user.content}</p>
-                )}
-              </div>
-            </div>
+            <UserBubble user={pair.user} />
 
             {/* Assistant bubble — debate or normal */}
             {pair.assistant && debateData && (
