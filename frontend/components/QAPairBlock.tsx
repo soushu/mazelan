@@ -113,7 +113,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {pair.assistant && debateData && (
               <div className="group/msg">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                  <div className="w-6 h-6 flex items-center justify-center text-xs flex-shrink-0 text-t-secondary">
                     🔀
                   </div>
                   <span className="text-xs font-medium text-t-muted">議論モード</span>
@@ -134,7 +134,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {pair.assistant && !debateData && (
               <div className="group/msg">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center flex-shrink-0 text-t-primary">
+                  <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 text-t-secondary">
                     <ProviderIcon provider={getProviderFromModelId(pair.assistant.model)} />
                   </div>
                 </div>
@@ -151,7 +151,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {isStreaming && !pair.assistant && streamingDebate && (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                  <div className="w-6 h-6 flex items-center justify-center text-xs flex-shrink-0 text-t-secondary">
                     🔀
                   </div>
                   <span className="text-xs font-medium text-t-muted">議論モード</span>
@@ -166,7 +166,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {isStreaming && !pair.assistant && !streamingDebate && (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center flex-shrink-0 text-t-primary">
+                  <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 text-t-secondary">
                     <ProviderIcon provider={getProviderFromModelId(streamingModel)} />
                   </div>
                 </div>
