@@ -81,9 +81,17 @@ export default function ChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
+  // Scroll to bottom only when messages array changes (new message added / session switch),
+  // NOT during streaming — mimics Gemini behavior where streaming doesn't push viewport.
+  const prevMessagesLenRef = useRef(messages.length);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingText]);
+    const prev = prevMessagesLenRef.current;
+    prevMessagesLenRef.current = messages.length;
+    // Scroll when messages are added (user sent or response saved) or session switched (prev was different length)
+    if (messages.length !== prev) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Prevent body scroll when sidebar is open on mobile (iOS Safari fix)
   useEffect(() => {
