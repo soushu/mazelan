@@ -76,7 +76,18 @@ export type Message = {
   content: string;
   created_at: string;
   images?: ImageAttachment[];
+  model?: string;
 };
+
+/** Get provider from a model ID stored in the message (handles debate format too) */
+export function getProviderFromModelId(modelId: string | undefined): Provider | null {
+  if (!modelId) return null;
+  if (modelId.startsWith("debate:")) return null;
+  for (const group of MODEL_GROUPS) {
+    if (group.models.some((m) => m.id === modelId)) return group.provider;
+  }
+  return null;
+}
 
 export type QAPair = {
   user: Message;

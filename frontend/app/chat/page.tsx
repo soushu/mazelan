@@ -52,6 +52,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [streamingModel, setStreamingModel] = useState<string | undefined>(undefined);
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [systemPromptModalOpen, setSystemPromptModalOpen] = useState(false);
@@ -198,6 +199,7 @@ export default function ChatPage() {
   async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
     setStreaming(true);
     setStreamingText("");
+    setStreamingModel(model);
     setStreamingDebate(debateMode ? { modelA: model, modelB: secondModel!, currentStep: null, rawText: "" } : null);
 
     let sessionId = activeId;
@@ -287,7 +289,7 @@ export default function ChatPage() {
         }
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: full, created_at: new Date().toISOString() },
+          { role: "assistant", content: full, created_at: new Date().toISOString(), model },
         ]);
       }
     } catch (err) {
@@ -302,6 +304,7 @@ export default function ChatPage() {
     } finally {
       setStreaming(false);
       setStreamingText("");
+      setStreamingModel(undefined);
       setStreamingDebate(null);
     }
   }
@@ -352,7 +355,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v30.9
+          DEV v31.0
         </div>
       )}
 
@@ -403,6 +406,7 @@ export default function ChatPage() {
                     onToggle={() => handleToggle(i)}
                     streamingText={isLastAndStreaming ? streamingText : undefined}
                     streamingDebate={isLastAndStreaming ? streamingDebate : null}
+                    streamingModel={isLastAndStreaming ? streamingModel : undefined}
                   />
                 </div>
               );

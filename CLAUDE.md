@@ -48,3 +48,9 @@ feature/* を develop にマージする前に必ず以下を実行:
 
 GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
 全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
+
+## DEV バッジバージョン
+
+ステージング環境の DEV バッジにバージョン番号を表示する（`frontend/app/chat/page.tsx` 内）。
+- develop にマージするたびにパッチ番号をインクリメントする（例: v30.4 → v30.5）
+- 現在のバージョン: **v30.4**

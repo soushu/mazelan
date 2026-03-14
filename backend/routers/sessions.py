@@ -77,6 +77,7 @@ def get_messages(
             "content": m.content,
             "created_at": m.created_at.isoformat(),
             **({"images": m.images} if m.images else {}),
+            **({"model": m.model} if m.model else {}),
         }
         for m in messages
     ]

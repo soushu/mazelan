@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import type { QAPair, DebateStepId } from "@/lib/types";
-import { parseDebateContent } from "@/lib/types";
+import { parseDebateContent, getProviderFromModelId } from "@/lib/types";
 import MessageContent from "@/components/MessageContent";
 import DebateDisplay from "@/components/DebateDisplay";
+import ProviderIcon from "@/components/ProviderIcon";
 
 function MessageCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -46,9 +47,11 @@ type Props = {
     currentStep: DebateStepId | null;
     rawText: string;
   } | null;
+  /** Model ID for the streaming response (used to show correct provider icon) */
+  streamingModel?: string;
 };
 
-export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate }: Props) {
+export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate, streamingModel }: Props) {
   const isStreaming = streamingText !== undefined;
 
   // Check if assistant content is a debate
@@ -131,10 +134,9 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {pair.assistant && !debateData && (
               <div className="group/msg">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
-                    C
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center flex-shrink-0 text-t-primary">
+                    <ProviderIcon provider={getProviderFromModelId(pair.assistant.model)} />
                   </div>
-                  <span className="text-xs font-medium text-t-muted">claudia</span>
                 </div>
                 <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <MessageContent content={pair.assistant.content} />
@@ -164,10 +166,9 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
             {isStreaming && !pair.assistant && !streamingDebate && (
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
-                    C
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center flex-shrink-0 text-t-primary">
+                    <ProviderIcon provider={getProviderFromModelId(streamingModel)} />
                   </div>
-                  <span className="text-xs font-medium text-t-muted">claudia</span>
                 </div>
                 <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   {streamingText ? (
