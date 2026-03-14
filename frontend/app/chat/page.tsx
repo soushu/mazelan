@@ -87,6 +87,8 @@ export default function ChatPage() {
   const spacerRef = useRef<HTMLDivElement>(null);
   // Flag: scroll the latest question into view on next render
   const shouldScrollToQuestion = useRef(false);
+  // Track if we need to re-scroll when first streaming chunk arrives (mobile keyboard dismiss fix)
+  const needsStreamingScroll = useRef(false);
 
   // When user sends a message, scroll so the question appears at the top of the viewport
   useLayoutEffect(() => {
@@ -95,6 +97,14 @@ export default function ChatPage() {
       shouldScrollToQuestion.current = false;
     }
   });
+
+  // Re-scroll when first streaming chunk arrives (keyboard may have closed, changing viewport)
+  useLayoutEffect(() => {
+    if (needsStreamingScroll.current && streamingText && lastPairRef.current) {
+      lastPairRef.current.scrollIntoView({ behavior: "instant", block: "start" });
+      needsStreamingScroll.current = false;
+    }
+  }, [streamingText]);
 
   // Dynamic spacer: use layoutEffect to set height before paint, avoiding flicker
   useLayoutEffect(() => {
@@ -219,6 +229,7 @@ export default function ChatPage() {
       { role: "user", content, created_at: new Date().toISOString(), images: images.length > 0 ? images : undefined },
     ]);
     shouldScrollToQuestion.current = true;
+    needsStreamingScroll.current = true;
 
     let full = "";
     try {
@@ -355,7 +366,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v31.2
+          DEV v31.3
         </div>
       )}
 
