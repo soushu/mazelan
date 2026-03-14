@@ -265,23 +265,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               🔀 議論
             </button>
 
-            {/* Thinking mode toggle */}
-            {supportsThinking && (
-              <button
-                onClick={() => setThinking(!thinking)}
-                disabled={disabled}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                  thinking
-                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/40"
-                    : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-                }`}
-                title="思考モード"
-              >
-                🧠 思考
-              </button>
-            )}
-
-            {/* Second model selector (debate mode) */}
+            {/* Second model selector (debate mode) — placed right after toggle */}
             {debateMode && (
               <>
                 <span className="text-t-muted text-xs">vs</span>
@@ -302,6 +286,22 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   ))}
                 </select>
               </>
+            )}
+
+            {/* Thinking mode toggle */}
+            {supportsThinking && (
+              <button
+                onClick={() => setThinking(!thinking)}
+                disabled={disabled}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                  thinking
+                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/40"
+                    : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+                }`}
+                title="思考モード"
+              >
+                🧠 思考
+              </button>
             )}
           </div>
           <p className="text-xs text-t-faint text-right hidden md:block flex-shrink-0">
