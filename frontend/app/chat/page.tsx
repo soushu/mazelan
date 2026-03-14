@@ -82,6 +82,8 @@ export default function ChatPage() {
 
   // Ref to the last QAPairBlock element — used to scroll the user's question to the top
   const lastPairRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   // Flag: scroll the latest question into view on next render
   const shouldScrollToQuestion = useRef(false);
 
@@ -91,6 +93,14 @@ export default function ChatPage() {
       lastPairRef.current.scrollIntoView({ behavior: "instant", block: "start" });
       shouldScrollToQuestion.current = false;
     }
+  });
+
+  // Dynamic spacer: shrinks as the last pair (question + response) grows
+  useEffect(() => {
+    if (!scrollContainerRef.current || !lastPairRef.current || !spacerRef.current) return;
+    const viewportH = scrollContainerRef.current.clientHeight;
+    const pairH = lastPairRef.current.clientHeight;
+    spacerRef.current.style.height = `${Math.max(0, viewportH - pairH)}px`;
   });
 
   // Prevent body scroll when sidebar is open on mobile (iOS Safari fix)
@@ -342,7 +352,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV
+          DEV v30.3
         </div>
       )}
 
@@ -362,7 +372,7 @@ export default function ChatPage() {
         </div>
 
         {/* Message list */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
             {status === "loading" && (
               <div className="flex justify-center mt-20">
@@ -421,8 +431,8 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Spacer: ensures the last question can scroll to the top of the viewport */}
-            <div className="h-[70dvh]" />
+            {/* Dynamic spacer: shrinks as the response grows */}
+            <div ref={spacerRef} />
           </div>
         </div>
 
