@@ -1,12 +1,16 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 from passlib.context import CryptContext
 
 from backend.database import get_db
 from backend.models import User
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
@@ -65,7 +69,8 @@ def upsert_user(
 
 
 @router.post("/register")
-def register(req: RegisterRequest, db: DBSession = Depends(get_db)):
+@limiter.limit("3/minute")
+def register(request: Request, req: RegisterRequest, db: DBSession = Depends(get_db)):
     """メール/パスワードで新規ユーザー登録。"""
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
@@ -84,7 +89,8 @@ def register(req: RegisterRequest, db: DBSession = Depends(get_db)):
 
 
 @router.post("/login")
-def login(req: LoginRequest, db: DBSession = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, req: LoginRequest, db: DBSession = Depends(get_db)):
     """CredentialsProvider から呼ばれる。email+password を検証する。"""
     user = db.query(User).filter(User.email == req.email).first()
 
