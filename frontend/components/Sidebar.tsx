@@ -144,8 +144,8 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                 key={s.id}
                 className={`group relative flex items-center gap-2 px-3 py-3 md:py-2 mx-2 rounded-lg cursor-pointer transition-colors ${
                   activeId === s.id
-                    ? "bg-theme-active text-t-primary"
-                    : "text-t-tertiary hover:bg-theme-hover hover:text-t-secondary"
+                    ? "bg-theme-active text-t-primary font-medium border-l-2 border-accent"
+                    : "text-t-tertiary hover:bg-theme-hover hover:text-t-secondary border-l-2 border-transparent"
                 }`}
                 onClick={() => {
                   if (editingId !== s.id) onSelect(s.id);
