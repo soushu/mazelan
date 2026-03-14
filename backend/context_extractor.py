@@ -35,7 +35,8 @@ Return a JSON array of objects with "content" and "category" fields. If nothing 
 Example output:
 [{{"content": "Prefers Python over JavaScript", "category": "preferences"}}, {{"content": "Works at a startup in Tokyo", "category": "personal"}}]
 
-IMPORTANT: Return ONLY the JSON array, no other text."""
+IMPORTANT: Return ONLY the JSON array, no other text.
+IMPORTANT: Write the "content" field in the SAME LANGUAGE the user is using in the conversation. If the user writes in Japanese, extract facts in Japanese. If in English, use English."""
 
 MAX_INPUT_CHARS = 2000
 
