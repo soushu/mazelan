@@ -37,9 +37,10 @@ class ChatRequest(BaseModel):
     content: str
     images: list[ImageAttachment] = []
     model: str = "claude-sonnet-4-6"
+    thinking: bool = False
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -82,7 +83,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             yield "\n\n⚠️ APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
             return
 
-        async for text in stream_provider(model, messages, api_key, system_prompt):
+        async for text in stream_provider(model, messages, api_key, system_prompt, thinking=thinking):
             full_response += text
             yield text
 
@@ -170,6 +171,6 @@ async def chat(
             system_prompt = context_block
 
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking),
         media_type="text/plain",
     )

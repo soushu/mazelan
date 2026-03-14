@@ -41,9 +41,9 @@ class ProviderError(Exception):
 
 MODEL_REGISTRY: dict[str, dict] = {
     # Anthropic
-    "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet",  "supports_images": True,  "supports_web_search": True},
-    "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus",    "supports_images": True,  "supports_web_search": True},
-    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku",   "supports_images": True,  "supports_web_search": True},
+    "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet 4.6",  "supports_images": True,  "supports_web_search": True},
+    "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus 4.6",    "supports_images": True,  "supports_web_search": True},
+    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku 4.5",   "supports_images": True,  "supports_web_search": True},
     # OpenAI
     "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False},
     "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": False},
@@ -72,6 +72,7 @@ async def stream_anthropic(
     messages: list[dict],
     api_key: str,
     system_prompt: str | None = None,
+    thinking: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = AsyncAnthropic(api_key=api_key)
     kwargs: dict = dict(
@@ -79,6 +80,10 @@ async def stream_anthropic(
         max_tokens=4096,
         messages=messages,
     )
+    # Extended thinking
+    if thinking:
+        kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
+        kwargs["max_tokens"] = 16000
     # Web search tool (Claude only)
     if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
         kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
@@ -220,6 +225,7 @@ async def stream_google(
     messages: list[dict],
     api_key: str,
     system_prompt: str | None = None,
+    thinking: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = genai.Client(api_key=api_key)
 
@@ -228,6 +234,8 @@ async def stream_google(
         return
 
     config = genai_types.GenerateContentConfig(max_output_tokens=4096)
+    if thinking:
+        config.thinking_config = genai_types.ThinkingConfig(thinking_budget=10000)
     if system_prompt:
         config.system_instruction = system_prompt
 
@@ -256,16 +264,17 @@ async def stream_provider(
     messages: list[dict],
     api_key: str,
     system_prompt: str | None = None,
+    thinking: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Route to the correct provider's streaming function."""
     provider = get_provider(model)
 
     if provider == "anthropic":
-        gen = stream_anthropic(model, messages, api_key, system_prompt)
+        gen = stream_anthropic(model, messages, api_key, system_prompt, thinking=thinking)
     elif provider == "openai":
         gen = stream_openai(model, messages, api_key, system_prompt)
     elif provider == "google":
-        gen = stream_google(model, messages, api_key, system_prompt)
+        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking)
     else:
         raise ProviderError(f"Unsupported provider: {provider}")
 

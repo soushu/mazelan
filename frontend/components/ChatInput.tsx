@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, KeyboardEvent, DragEvent } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo, KeyboardEvent, DragEvent } from "react";
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
   disabled: boolean;
   sessionId: string | null;
 };
@@ -50,7 +50,16 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => getSessionModel(null).model);
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
+  const [thinking, setThinking] = useState(false);
   const dragCounter = useRef(0);
+
+  const supportsThinking = useMemo(() => {
+    for (const g of MODEL_GROUPS) {
+      const m = g.models.find((m) => m.id === selectedModel);
+      if (m) return !!m.supports_thinking;
+    }
+    return false;
+  }, [selectedModel]);
 
   useEffect(() => {
     if (!disabled) ref.current?.focus();
@@ -87,7 +96,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   function submit() {
     const value = ref.current?.value.trim();
     if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined);
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
@@ -257,6 +266,22 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
             >
               🔀 議論
             </button>
+
+            {/* Thinking mode toggle */}
+            {supportsThinking && (
+              <button
+                onClick={() => setThinking(!thinking)}
+                disabled={disabled}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                  thinking
+                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/40"
+                    : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+                }`}
+                title="思考モード"
+              >
+                🧠 思考
+              </button>
+            )}
 
             {/* Second model selector (debate mode) */}
             {debateMode && (

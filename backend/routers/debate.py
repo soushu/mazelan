@@ -38,6 +38,7 @@ class DebateRequest(BaseModel):
     images: list[ImageAttachment] = []
     model_a: str = "claude-sonnet-4-6"
     model_b: str = "gpt-4o"
+    thinking: bool = False
 
 
 # ── Debate prompts ──────────────────────────────────────
@@ -77,6 +78,7 @@ async def stream_debate(
     system_prompt: str | None = None,
     user_id: uuid.UUID | None = None,
     anthropic_key: str | None = None,
+    thinking: bool = False,
 ):
     db = SessionLocal()
     step_contents: dict[str, str] = {}
@@ -121,7 +123,7 @@ async def stream_debate(
         # ── Step 1: Model A answers ──
         yield f"\n[STEP:model_a_answer]\n"
         step_text = ""
-        async for text in stream_provider(model_a, messages, api_key_a, system_prompt):
+        async for text in stream_provider(model_a, messages, api_key_a, system_prompt, thinking=thinking):
             step_text += text
             yield text
         step_contents["model_a_answer"] = step_text
@@ -129,7 +131,7 @@ async def stream_debate(
         # ── Step 2: Model B answers ──
         yield f"\n[STEP:model_b_answer]\n"
         step_text = ""
-        async for text in stream_provider(model_b, messages, api_key_b, system_prompt):
+        async for text in stream_provider(model_b, messages, api_key_b, system_prompt, thinking=thinking):
             step_text += text
             yield text
         step_contents["model_b_answer"] = step_text
@@ -141,7 +143,7 @@ async def stream_debate(
             {"role": "user", "content": _critique_prompt(model_b_label, step_contents["model_b_answer"])},
         ]
         step_text = ""
-        async for text in stream_provider(model_a, critique_msg_a, api_key_a, system_prompt):
+        async for text in stream_provider(model_a, critique_msg_a, api_key_a, system_prompt, thinking=thinking):
             step_text += text
             yield text
         step_contents["model_a_critique"] = step_text
@@ -153,7 +155,7 @@ async def stream_debate(
             {"role": "user", "content": _critique_prompt(model_a_label, step_contents["model_a_answer"])},
         ]
         step_text = ""
-        async for text in stream_provider(model_b, critique_msg_b, api_key_b, system_prompt):
+        async for text in stream_provider(model_b, critique_msg_b, api_key_b, system_prompt, thinking=thinking):
             step_text += text
             yield text
         step_contents["model_b_critique"] = step_text
@@ -169,7 +171,7 @@ async def stream_debate(
             )},
         ]
         step_text = ""
-        async for text in stream_provider(model_a, final_msg, api_key_a, system_prompt):
+        async for text in stream_provider(model_a, final_msg, api_key_a, system_prompt, thinking=thinking):
             step_text += text
             yield text
         step_contents["final"] = step_text
@@ -279,6 +281,7 @@ async def debate(
             system_prompt=system_prompt,
             user_id=current_user_id,
             anthropic_key=x_anthropic_key,
+            thinking=req.thinking,
         ),
         media_type="text/plain",
     )
