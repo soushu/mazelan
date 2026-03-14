@@ -33,6 +33,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const menuHeight = 148; // approximate menu height in px
 
   const openMenu = useCallback((sessionId: string, buttonEl: HTMLButtonElement) => {
@@ -209,10 +210,23 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
         {/* User info */}
         {userEmail && (
           <div className="p-3 border-t border-border-primary">
-            <p className="text-xs text-t-muted truncate mb-2">{userEmail}</p>
+            {/* Header row: email + settings toggle (mobile) / always expanded (desktop) */}
+            <button
+              onClick={() => setSettingsOpen((v) => !v)}
+              className="md:hidden w-full flex items-center justify-between py-1"
+            >
+              <span className="text-xs text-t-muted truncate">{userEmail}</span>
+              <svg className={`w-4 h-4 text-t-muted transition-transform ${settingsOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+            <p className="hidden md:block text-xs text-t-muted truncate mb-2">{userEmail}</p>
+
+            {/* Settings menu: always visible on desktop, accordion on mobile */}
+            <div className={`md:block ${settingsOpen ? "block" : "hidden"}`}>
             <button
               onClick={onOpenApiKeyModal}
-              className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors flex items-center gap-2"
+              className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors flex items-center gap-2 mt-1"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
@@ -262,6 +276,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
             >
               Sign out
             </button>
+            </div>
           </div>
         )}
       </aside>
