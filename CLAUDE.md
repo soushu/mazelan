@@ -49,6 +49,12 @@ feature/* を develop にマージする前に必ず以下を実行:
 GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
 全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
 
+## セキュリティ
+
+- APIキー、シークレット、パスワード、トークンなどの機密情報をチャット出力に表示しない
+- .env ファイルの中身を表示・出力しない
+- コマンド実行結果に機密情報が含まれる場合は、該当部分を伏せて報告する
+
 ## DEV バッジバージョン
 
 ステージング環境の DEV バッジにバージョン番号を表示する（`frontend/app/chat/page.tsx` 内）。
