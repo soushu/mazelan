@@ -60,11 +60,21 @@ export default function ContextModal({ open, onClose }: Props) {
   }
 
   async function handleToggle(id: string) {
+    // Optimistic update – no reload, no scroll reset
+    setGrouped((prev) => {
+      const next = { ...prev };
+      for (const cat of Object.keys(next)) {
+        next[cat] = next[cat].map((item) =>
+          item.id === id ? { ...item, is_active: !item.is_active } : item
+        );
+      }
+      return next;
+    });
     try {
       await toggleContext(id);
-      await loadContexts();
     } catch (err) {
       console.error(err);
+      await loadContexts(); // revert on error
     }
   }
 
