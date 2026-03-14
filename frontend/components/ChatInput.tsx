@@ -199,40 +199,57 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
             }}
           />
 
-          <textarea
-            ref={ref}
-            disabled={disabled}
-            onKeyDown={handleKeyDown}
-            onPaste={(e) => {
-              const files = e.clipboardData?.files;
-              if (files && files.length > 0) {
-                handleFiles(files);
-              }
-            }}
-            placeholder="Type a message..."
-            rows={2}
-            className="flex-1 bg-theme-input text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 rounded-xl resize-none outline-none focus:ring-1 focus:ring-border-secondary disabled:opacity-50 font-sans"
-          />
-
-          {/* Send button */}
-          <button
-            onClick={submit}
-            disabled={disabled}
-            className="p-2 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors flex-shrink-0 mb-1"
-            title="Send"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-          </button>
+          <div className="flex-1 relative">
+            <textarea
+              ref={ref}
+              disabled={disabled}
+              onKeyDown={handleKeyDown}
+              onPaste={(e) => {
+                const files = e.clipboardData?.files;
+                if (files && files.length > 0) {
+                  handleFiles(files);
+                }
+              }}
+              placeholder="Type a message..."
+              rows={2}
+              className="w-full bg-theme-input text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 pr-24 rounded-xl resize-none outline-none focus:ring-1 focus:ring-border-secondary disabled:opacity-50 font-sans"
+            />
+            {/* Thinking toggle + Send button — bottom-right inside textarea */}
+            <div className="absolute right-2 bottom-2 flex items-center gap-1">
+              {supportsThinking && (
+                <button
+                  onClick={() => setThinking(!thinking)}
+                  disabled={disabled}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                    thinking
+                      ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                      : "text-t-muted hover:text-t-secondary hover:bg-theme-hover"
+                  }`}
+                  title="思考モード"
+                >
+                  🧠
+                </button>
+              )}
+              <button
+                onClick={submit}
+                disabled={disabled}
+                className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
+                title="Send"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
         {dragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-xl pointer-events-none z-10">
             <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
           </div>
         )}
-        <div className="flex items-center justify-between mt-1 ml-11 gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="mt-1 ml-11">
+          <div className="flex items-center gap-2">
             {/* Model selector */}
             <select
               value={selectedModel}
@@ -264,49 +281,30 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
             >
               🔀 議論
             </button>
-
-            {/* Second model selector (debate mode) — placed right after toggle */}
-            {debateMode && (
-              <>
-                <span className="text-t-muted text-xs">vs</span>
-                <select
-                  value={secondModel}
-                  onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
-                  disabled={disabled}
-                  className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
-                >
-                  {MODEL_GROUPS.map((g) => (
-                    <optgroup key={g.provider} label={g.label}>
-                      {g.models.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </>
-            )}
-
-            {/* Thinking mode toggle */}
-            {supportsThinking && (
-              <button
-                onClick={() => setThinking(!thinking)}
-                disabled={disabled}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                  thinking
-                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/40"
-                    : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-                }`}
-                title="思考モード"
-              >
-                🧠 思考
-              </button>
-            )}
           </div>
-          <p className="text-xs text-t-faint text-right hidden md:block flex-shrink-0">
-            Cmd+Enter で送信 / 画像はドラッグ&ドロップ、ペースト、クリップで添付
-          </p>
+
+          {/* Second model (debate mode) — on a new line with "vs" prefix */}
+          {debateMode && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-t-muted text-xs">vs</span>
+              <select
+                value={secondModel}
+                onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
+                disabled={disabled}
+                className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+              >
+                {MODEL_GROUPS.map((g) => (
+                  <optgroup key={g.provider} label={g.label}>
+                    {g.models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
     </div>
