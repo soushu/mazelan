@@ -185,7 +185,7 @@ async def stream_debate(
             f"<!--STEP:model_b_critique-->\n{step_contents['model_b_critique']}\n"
             f"<!--STEP:final-->\n{step_contents['final']}"
         )
-        assistant_msg = Message(session_id=session_id, role="assistant", content=debate_content)
+        assistant_msg = Message(session_id=session_id, role="assistant", content=debate_content, model=f"debate:{model_a}:{model_b}")
         db.add(assistant_msg)
 
         chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()

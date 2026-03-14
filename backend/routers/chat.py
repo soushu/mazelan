@@ -87,7 +87,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             full_response += text
             yield text
 
-        assistant_msg = Message(session_id=session_id, role="assistant", content=full_response)
+        assistant_msg = Message(session_id=session_id, role="assistant", content=full_response, model=model)
         db.add(assistant_msg)
         # Update session's updated_at
         chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()

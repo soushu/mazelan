@@ -44,6 +44,7 @@ class Message(Base):
     role = Column(String, nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     images = Column(JSON, nullable=True)  # [{"media_type": "image/png", "data": "base64..."}]
+    model = Column(String(64), nullable=True)  # e.g. "claude-sonnet-4-6", "gpt-4o"
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     session = relationship("ChatSession", back_populates="messages")
