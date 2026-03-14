@@ -108,32 +108,38 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
             {/* Assistant bubble — debate or normal */}
             {pair.assistant && debateData && (
-              <div className="flex gap-3 justify-start group/msg">
-                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
-                  🔀
+              <div className="group/msg">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                    🔀
+                  </div>
+                  <span className="text-xs font-medium text-t-muted">議論モード</span>
                 </div>
-                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <DebateDisplay
                     modelA={debateData.modelA}
                     modelB={debateData.modelB}
                     steps={debateData.steps}
                   />
                 </div>
-                <div className="flex items-end pb-2">
+                <div className="flex justify-end mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
                   <MessageCopyButton text={debateData.steps.find(s => s.id === "final")?.content || pair.assistant.content} />
                 </div>
               </div>
             )}
 
             {pair.assistant && !debateData && (
-              <div className="flex gap-3 justify-start group/msg">
-                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
-                  C
+              <div className="group/msg">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                    C
+                  </div>
+                  <span className="text-xs font-medium text-t-muted">claudia</span>
                 </div>
-                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <MessageContent content={pair.assistant.content} />
                 </div>
-                <div className="flex items-end pb-2">
+                <div className="flex justify-end mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
                   <MessageCopyButton text={pair.assistant.content} />
                 </div>
               </div>
@@ -141,11 +147,14 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
             {/* Streaming response — debate mode */}
             {isStreaming && !pair.assistant && streamingDebate && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
-                  🔀
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                    🔀
+                  </div>
+                  <span className="text-xs font-medium text-t-muted">議論モード</span>
                 </div>
-                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <StreamingDebateView rawText={streamingText || ""} modelA={streamingDebate.modelA} modelB={streamingDebate.modelB} />
                 </div>
               </div>
@@ -153,11 +162,14 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
             {/* Streaming response — normal mode */}
             {isStreaming && !pair.assistant && !streamingDebate && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
-                  C
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 text-t-primary">
+                    C
+                  </div>
+                  <span className="text-xs font-medium text-t-muted">claudia</span>
                 </div>
-                <div className="min-w-0 flex-1 bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   {streamingText ? (
                     <MessageContent content={streamingText} />
                   ) : (
