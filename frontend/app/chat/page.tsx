@@ -268,6 +268,8 @@ export default function ChatPage() {
     setStreamingModel(model);
     setStreamingDebate(debateMode ? { modelA: model, modelB: secondModel!, currentStep: null, rawText: "" } : null);
 
+    let full = "";
+    try {
     let sessionId = activeId;
     if (!sessionId) {
       const session = await createSession(content.slice(0, 60) || "Image question");
@@ -286,9 +288,6 @@ export default function ChatPage() {
     ]);
     shouldScrollToQuestion.current = true;
     needsStreamingScroll.current = true;
-
-    let full = "";
-    try {
       if (debateMode && secondModel) {
         // ── Debate mode ──
         const providerA = getProviderForModel(model);
@@ -360,13 +359,17 @@ export default function ChatPage() {
         ]);
       }
     } catch (err) {
+      console.error("handleSubmit error:", err);
       if (err instanceof Error && err.message === "API_KEY_INVALID") {
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。", created_at: new Date().toISOString() },
         ]);
       } else {
-        throw err;
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "⚠️ メッセージの送信中にエラーが発生しました。もう一度お試しください。", created_at: new Date().toISOString() },
+        ]);
       }
     } finally {
       setStreaming(false);
@@ -423,7 +426,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v33.0
+          DEV v33.1
         </div>
       )}
 
