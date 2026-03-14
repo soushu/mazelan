@@ -48,7 +48,17 @@ export default function ChatPage() {
       return next;
     });
   }, []);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveIdRaw] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return localStorage.getItem("claudia_active_session") || null; } catch { return null; }
+  });
+  const setActiveId = useCallback((id: string | null) => {
+    setActiveIdRaw(id);
+    try {
+      if (id) localStorage.setItem("claudia_active_session", id);
+      else localStorage.removeItem("claudia_active_session");
+    } catch {}
+  }, []);
   const [messages, setMessages] = useState<Message[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
@@ -78,6 +88,27 @@ export default function ChatPage() {
       .then(setSessions)
       .catch(console.error)
       .finally(() => setLoadingSessions(false));
+
+    // Restore active session on reload
+    if (activeId) {
+      const cacheKey = `claudia_msgs_${activeId}`;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) setMessages(JSON.parse(cached));
+      } catch {}
+      setLoadingMessages(true);
+      getMessages(activeId)
+        .then((msgs) => {
+          setMessages(msgs);
+          shouldScrollToQuestion.current = true;
+          try {
+            const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+            localStorage.setItem(cacheKey, JSON.stringify(light));
+          } catch {}
+        })
+        .catch(console.error)
+        .finally(() => setLoadingMessages(false));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
@@ -164,6 +195,7 @@ export default function ChatPage() {
     try {
       const msgs = await getMessages(id);
       setMessages(msgs);
+      shouldScrollToQuestion.current = true;
       // Cache without image data to save localStorage space
       try {
         const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
@@ -379,7 +411,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v31.5
+          DEV v31.6
         </div>
       )}
 
