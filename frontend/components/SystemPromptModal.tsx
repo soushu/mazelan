@@ -83,7 +83,7 @@ export default function SystemPromptModal({ open, onClose, activeSessionId }: Pr
       >
         <h2 className="text-lg font-semibold text-t-primary mb-1">System Prompt</h2>
         <p className="text-xs text-t-tertiary mb-4">
-          AIの振る舞いをカスタマイズできます。グローバル設定は全会話に適用され、セッション設定はその会話のみに適用されます。
+          すべての会話に共通の指示をここに書いておくと、毎回同じことを伝える必要がなくなります。例えば「日本語で回答して」「簡潔に答えて」など。セッション設定はその会話だけに適用されます。
         </p>
 
         {/* Tabs */}
@@ -121,8 +121,8 @@ export default function SystemPromptModal({ open, onClose, activeSessionId }: Pr
               value={currentPrompt}
               onChange={(e) => setCurrentPrompt(e.target.value)}
               placeholder={tab === "global"
-                ? "例: あなたはフレンドリーなアシスタントです。日本語で回答してください。"
-                : "このセッション専用の指示（グローバル設定を上書きします）"
+                ? "例: 日本語で回答して / 簡潔に答えて / コードにはコメントをつけて"
+                : "この会話だけに適用する指示（グローバル設定より優先されます）"
               }
               rows={6}
               className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary resize-none"
