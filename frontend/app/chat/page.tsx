@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Sidebar from "@/components/Sidebar";
 import ChatInput from "@/components/ChatInput";
@@ -88,15 +88,15 @@ export default function ChatPage() {
   const shouldScrollToQuestion = useRef(false);
 
   // When user sends a message, scroll so the question appears at the top of the viewport
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (shouldScrollToQuestion.current && lastPairRef.current) {
       lastPairRef.current.scrollIntoView({ behavior: "instant", block: "start" });
       shouldScrollToQuestion.current = false;
     }
   });
 
-  // Dynamic spacer: shrinks as the last pair (question + response) grows
-  useEffect(() => {
+  // Dynamic spacer: use layoutEffect to set height before paint, avoiding flicker
+  useLayoutEffect(() => {
     if (!scrollContainerRef.current || !lastPairRef.current || !spacerRef.current) return;
     const viewportH = scrollContainerRef.current.clientHeight;
     const pairH = lastPairRef.current.clientHeight;
@@ -352,7 +352,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v30.4
+          DEV v30.5
         </div>
       )}
 
@@ -431,8 +431,8 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Dynamic spacer: shrinks as the response grows */}
-            <div ref={spacerRef} />
+            {/* Dynamic spacer: CSS provides initial height, JS shrinks it as response grows */}
+            <div ref={spacerRef} className="h-[70dvh]" />
           </div>
         </div>
 
