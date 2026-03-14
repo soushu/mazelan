@@ -421,6 +421,8 @@ export default function ChatPage() {
               </div>
             )}
 
+            {/* Spacer: ensures the last question can scroll to the top of the viewport */}
+            <div className="h-[70dvh]" />
           </div>
         </div>
 
