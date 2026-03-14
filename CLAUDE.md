@@ -53,4 +53,3 @@ GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
 
 ステージング環境の DEV バッジにバージョン番号を表示する（`frontend/app/chat/page.tsx` 内）。
 - develop にマージするたびにパッチ番号をインクリメントする（例: v30.4 → v30.5）
-- 現在のバージョン: **v32.7**
