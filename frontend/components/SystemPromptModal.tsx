@@ -83,7 +83,7 @@ export default function SystemPromptModal({ open, onClose, activeSessionId }: Pr
       >
         <h2 className="text-lg font-semibold text-t-primary mb-1">System Prompt</h2>
         <p className="text-xs text-t-tertiary mb-4">
-          すべての会話に共通の指示をここに書いておくと、毎回同じことを伝える必要がなくなります。例えば「日本語で回答して」「簡潔に答えて」など。セッション設定はその会話だけに適用されます。
+          すべての会話に共通の指示をここに書いておくと、毎回同じことを伝える必要がなくなります。複数の指示を登録したい場合は、改行や「・」で区切って自由に書けます。セッション設定はその会話だけに適用され、グローバルより優先されます。
         </p>
 
         {/* Tabs */}
@@ -121,8 +121,8 @@ export default function SystemPromptModal({ open, onClose, activeSessionId }: Pr
               value={currentPrompt}
               onChange={(e) => setCurrentPrompt(e.target.value)}
               placeholder={tab === "global"
-                ? "例: 日本語で回答して / 簡潔に答えて / コードにはコメントをつけて"
-                : "この会話だけに適用する指示（グローバル設定より優先されます）"
+                ? "例:\n・日本語で回答して\n・簡潔に答えて\n・コードにはコメントをつけて\n・敬語は不要"
+                : "この会話だけに適用する指示\n例:\n・この会話では英語で回答して\n・専門用語を避けて説明して"
               }
               rows={6}
               className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary resize-none"
