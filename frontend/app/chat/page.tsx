@@ -522,7 +522,7 @@ export default function ChatPage() {
                 <div className="w-7 h-7 rounded-full bg-theme-avatar flex items-center justify-center text-xs flex-shrink-0 mt-1 text-t-primary">
                   C
                 </div>
-                <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm">
+                <div className={`bg-theme-assistant-bubble text-t-secondary rounded-2xl rounded-bl-sm px-3 py-2.5 md:px-4 md:py-3 text-sm${streamingText ? "" : " w-fit"}`}>
                   {streamingText ? (
                     <span>{streamingText}</span>
                   ) : (
