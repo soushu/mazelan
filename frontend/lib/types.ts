@@ -11,7 +11,7 @@ export type ModelId =
   | "gemini-2.5-pro"
   | "gemini-3.1-flash-lite";
 
-export type ModelOption = { id: ModelId; label: string };
+export type ModelOption = { id: ModelId; label: string; supports_thinking?: boolean };
 
 export type ModelGroup = {
   provider: Provider;
@@ -24,9 +24,9 @@ export const MODEL_GROUPS: ModelGroup[] = [
     provider: "anthropic",
     label: "Anthropic",
     models: [
-      { id: "claude-sonnet-4-6", label: "Claude Sonnet" },
-      { id: "claude-opus-4-6", label: "Claude Opus" },
-      { id: "claude-haiku-4-5-20251001", label: "Claude Haiku" },
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", supports_thinking: true },
+      { id: "claude-opus-4-6", label: "Claude Opus 4.6", supports_thinking: true },
+      { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", supports_thinking: true },
     ],
   },
   {
@@ -42,8 +42,8 @@ export const MODEL_GROUPS: ModelGroup[] = [
     provider: "google",
     label: "Google",
     models: [
-      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", supports_thinking: true },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", supports_thinking: true },
       { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
     ],
   },

@@ -16,9 +16,9 @@ main(本番) → develop(統合) → feature/*(機能) の3層構成。
 
 ## デプロイ前チェック（厳守）
 
-develop に push する前に必ず以下を実行:
+feature/* を develop にマージする前に必ず以下を実行:
 1. TypeScript型チェック: `npx tsc --noEmit`
-2. ロジックのダブルチェック（全パターン確認）
+2. ロジックのダブルチェック（全変更ファイルを読み直し、全パターン確認）
 
 ## コーディングルール
 
@@ -47,4 +47,4 @@ develop に push する前に必ず以下を実行:
 | ステージング | develop | dev.claudia.soushu.biz | :8002 | :3002 | claudia_staging |
 
 GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
-使用済みポート: 8001 (zenn-content)
+全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`

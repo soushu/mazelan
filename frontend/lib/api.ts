@@ -50,10 +50,14 @@ export async function* streamChat(
   apiKey?: string | null,
   model?: ModelId,
   anthropicKey?: string | null,
+  thinking?: boolean,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
     body.model = model;
+  }
+  if (thinking) {
+    body.thinking = true;
   }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));
@@ -134,8 +138,12 @@ export async function* streamDebate(
   apiKeyB?: string | null,
   images?: ImageAttachment[],
   anthropicKey?: string | null,
+  thinking?: boolean,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content, model_a: modelA, model_b: modelB };
+  if (thinking) {
+    body.thinking = true;
+  }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));
   }

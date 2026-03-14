@@ -177,7 +177,7 @@ export default function ChatPage() {
     });
   }
 
-  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId) {
+  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
     setStreaming(true);
     setStreamingText("");
     setStreamingDebate(debateMode ? { modelA: model, modelB: secondModel!, currentStep: null, rawText: "" } : null);
@@ -234,7 +234,7 @@ export default function ChatPage() {
           return;
         }
 
-        for await (const chunk of streamDebate(sessionId, content, model, secondModel, apiKeyA, apiKeyB, images.length > 0 ? images : undefined, anthropicKey)) {
+        for await (const chunk of streamDebate(sessionId, content, model, secondModel, apiKeyA, apiKeyB, images.length > 0 ? images : undefined, anthropicKey, thinking)) {
           full += chunk;
           setStreamingText(full);
         }
@@ -262,7 +262,7 @@ export default function ChatPage() {
           setApiKeyModalOpen(true);
           return;
         }
-        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey)) {
+        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking)) {
           full += chunk;
           setStreamingText(full);
         }
