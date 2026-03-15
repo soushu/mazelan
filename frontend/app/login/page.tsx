@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -156,6 +157,12 @@ function LoginForm() {
         >
           {isSignUp ? "Sign in" : "Sign up"}
         </button>
+      </p>
+
+      <p className="text-center text-xs text-t-muted">
+        <Link href="/terms" className="hover:text-t-secondary transition-colors">利用規約</Link>
+        <span className="mx-2">·</span>
+        <Link href="/privacy" className="hover:text-t-secondary transition-colors">プライバシーポリシー</Link>
       </p>
     </div>
   );

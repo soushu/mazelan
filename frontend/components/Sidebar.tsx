@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 import type { Session } from "@/lib/types";
 import { hasAnyApiKey as checkAnyApiKey } from "@/lib/apiKeyStore";
 import { useTheme } from "@/lib/themeContext";
@@ -290,6 +291,10 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
             >
               Sign out
             </button>
+            <div className="flex gap-3 mt-2 px-3">
+              <Link href="/terms" className="text-xs text-t-muted hover:text-t-secondary transition-colors">利用規約</Link>
+              <Link href="/privacy" className="text-xs text-t-muted hover:text-t-secondary transition-colors">プライバシーポリシー</Link>
+            </div>
             </div>
           </div>
         )}
