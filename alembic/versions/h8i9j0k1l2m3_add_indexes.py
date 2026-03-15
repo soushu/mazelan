@@ -16,10 +16,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_index('ix_chat_sessions_user_id', 'chat_sessions', ['user_id'])
-    op.create_index('ix_messages_session_id', 'messages', ['session_id'])
-    op.create_index('ix_messages_created_at', 'messages', ['created_at'])
-    op.create_index('ix_contexts_user_id', 'contexts', ['user_id'])
+    op.execute('CREATE INDEX IF NOT EXISTS ix_chat_sessions_user_id ON chat_sessions (user_id)')
+    op.execute('CREATE INDEX IF NOT EXISTS ix_messages_session_id ON messages (session_id)')
+    op.execute('CREATE INDEX IF NOT EXISTS ix_messages_created_at ON messages (created_at)')
+    op.execute('CREATE INDEX IF NOT EXISTS ix_contexts_user_id ON contexts (user_id)')
 
 
 def downgrade() -> None:
