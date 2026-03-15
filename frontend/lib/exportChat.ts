@@ -110,7 +110,7 @@ export function exportAsText(title: string, messages: Message[]) {
 
   const content = header + "\n" + lines.join("\n") + footer;
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const filename = `claudia_${sanitizeFilename(title)}_${formatDate()}.txt`;
+  const filename = `mazelan_${sanitizeFilename(title)}_${formatDate()}.txt`;
   triggerDownload(blob, filename);
 }
 
@@ -216,6 +216,6 @@ export async function exportAsPdf(title: string, messages: Message[]) {
     if (totalCost > 0) writeText(`Total Cost: ${formatCost(totalCost)}`, 8);
   }
 
-  const filename = `claudia_${sanitizeFilename(title)}_${formatDate()}.pdf`;
+  const filename = `mazelan_${sanitizeFilename(title)}_${formatDate()}.pdf`;
   doc.save(filename);
 }

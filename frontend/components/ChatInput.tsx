@@ -18,24 +18,24 @@ function getSessionModel(sessionId: string | null): { model: ModelId; model2: Mo
   if (typeof window === "undefined") return { model: DEFAULT_MODEL, model2: DEFAULT_MODEL2 };
   if (sessionId) {
     try {
-      const data = JSON.parse(localStorage.getItem("claudia_session_models") || "{}");
+      const data = JSON.parse(localStorage.getItem("mazelan_session_models") || "{}");
       if (data[sessionId]) return { model: data[sessionId].model || DEFAULT_MODEL, model2: data[sessionId].model2 || DEFAULT_MODEL2 };
     } catch {}
   }
   return {
-    model: (localStorage.getItem("claudia_model") as ModelId) || DEFAULT_MODEL,
-    model2: (localStorage.getItem("claudia_model2") as ModelId) || DEFAULT_MODEL2,
+    model: (localStorage.getItem("mazelan_model") as ModelId) || DEFAULT_MODEL,
+    model2: (localStorage.getItem("mazelan_model2") as ModelId) || DEFAULT_MODEL2,
   };
 }
 
 function saveSessionModel(sessionId: string | null, model: ModelId, model2: ModelId) {
   try {
-    localStorage.setItem("claudia_model", model);
-    localStorage.setItem("claudia_model2", model2);
+    localStorage.setItem("mazelan_model", model);
+    localStorage.setItem("mazelan_model2", model2);
     if (sessionId) {
-      const data = JSON.parse(localStorage.getItem("claudia_session_models") || "{}");
+      const data = JSON.parse(localStorage.getItem("mazelan_session_models") || "{}");
       data[sessionId] = { model, model2 };
-      localStorage.setItem("claudia_session_models", JSON.stringify(data));
+      localStorage.setItem("mazelan_session_models", JSON.stringify(data));
     }
   } catch {}
 }

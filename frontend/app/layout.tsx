@@ -3,8 +3,11 @@ import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "claudia",
-  description: "Personal AI chat powered by Claude",
+  title: "Mazelan",
+  description: "AI-powered travel planning assistant",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export const viewport: Viewport = {

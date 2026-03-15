@@ -54,7 +54,7 @@ function LoginForm() {
   return (
     <div className="w-full max-w-sm space-y-6 px-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-t-primary">claudia</h1>
+        <h1 className="text-2xl font-bold text-t-primary">Mazelan</h1>
         <p className="mt-1 text-sm text-t-muted">
           {isSignUp ? "Create your account" : "Sign in to continue"}
         </p>

@@ -104,7 +104,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
       >
         {/* Header */}
         <div className="p-4 border-b border-border-primary flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-t-primary">claudia</h1>
+          <h1 className="text-lg font-semibold text-t-primary">Mazelan</h1>
           {/* Close button (mobile only) */}
           <button
             onClick={onClose}

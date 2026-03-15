@@ -22,7 +22,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-base font-semibold text-t-primary mb-2">1. サービスについて</h2>
             <p>
-              claudia（以下「本サービス」）は、個人が運営するAIチャットインターフェースです。
+              Mazelan（以下「本サービス」）は、個人が運営するAIチャットインターフェースです。
               本サービスは、ユーザーが自身で取得したAPIキーを使用して、複数のAIプロバイダー（Anthropic、OpenAI、Google）と対話するためのプラットフォームを提供します。
             </p>
             <p className="mt-2">

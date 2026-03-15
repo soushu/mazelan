@@ -17,7 +17,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 _is_prod = os.getenv("ENV", "development") == "production"
 app = FastAPI(
-    title="claudia",
+    title="mazelan",
     docs_url=None if _is_prod else "/docs",
     redoc_url=None if _is_prod else "/redoc",
     openapi_url=None if _is_prod else "/openapi.json",
