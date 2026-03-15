@@ -1,14 +1,17 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from backend.database import get_db
 from backend.dependencies import get_current_user_id
 from backend.models import Context
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/contexts", tags=["contexts"])
 
 
@@ -62,7 +65,9 @@ def list_contexts(
 
 
 @router.post("", response_model=ContextResponse, status_code=201)
+@limiter.limit("20/minute")
 def create_context(
+    request: Request,
     req: ContextCreate,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -88,7 +93,9 @@ def create_context(
 
 
 @router.patch("/{context_id}", response_model=ContextResponse)
+@limiter.limit("20/minute")
 def update_context(
+    request: Request,
     context_id: uuid.UUID,
     req: ContextUpdate,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
@@ -119,7 +126,9 @@ def update_context(
 
 
 @router.delete("/{context_id}", status_code=204)
+@limiter.limit("20/minute")
 def delete_context(
+    request: Request,
     context_id: uuid.UUID,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -134,7 +143,9 @@ def delete_context(
 
 
 @router.patch("/{context_id}/toggle", response_model=ContextResponse)
+@limiter.limit("20/minute")
 def toggle_context(
+    request: Request,
     context_id: uuid.UUID,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),

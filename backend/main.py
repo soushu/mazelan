@@ -15,7 +15,13 @@ load_dotenv()
 
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="claudia")
+_is_prod = os.getenv("ENV", "development") == "production"
+app = FastAPI(
+    title="claudia",
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

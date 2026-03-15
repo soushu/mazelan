@@ -1,13 +1,16 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from backend.database import get_db
 from backend.dependencies import get_current_user_id
 from backend.models import ChatSession, Message, User
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
@@ -22,7 +25,9 @@ class SessionResponse(BaseModel):
 
 
 @router.post("", response_model=SessionResponse)
+@limiter.limit("30/minute")
 def create_session(
+    request: Request,
     title: str,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -93,7 +98,9 @@ class SessionUpdateRequest(BaseModel):
 
 
 @router.put("/{session_id}", response_model=SessionResponse)
+@limiter.limit("30/minute")
 def update_session(
+    request: Request,
     session_id: uuid.UUID,
     req: SessionUpdateRequest,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
@@ -116,7 +123,9 @@ def update_session(
 
 
 @router.delete("/{session_id}", status_code=204)
+@limiter.limit("20/minute")
 def delete_session(
+    request: Request,
     session_id: uuid.UUID,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -131,7 +140,9 @@ def delete_session(
 
 
 @router.put("/{session_id}/star", response_model=SessionResponse)
+@limiter.limit("30/minute")
 def toggle_star(
+    request: Request,
     session_id: uuid.UUID,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -168,7 +179,9 @@ def get_user_system_prompt(
 
 
 @router.put("/user/system-prompt")
+@limiter.limit("10/minute")
 def update_user_system_prompt(
+    request: Request,
     req: SystemPromptRequest,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
@@ -196,7 +209,9 @@ def get_session_system_prompt(
 
 
 @router.put("/{session_id}/system-prompt")
+@limiter.limit("10/minute")
 def update_session_system_prompt(
+    request: Request,
     session_id: uuid.UUID,
     req: SystemPromptRequest,
     current_user_id: uuid.UUID = Depends(get_current_user_id),

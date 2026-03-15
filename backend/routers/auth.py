@@ -1,7 +1,7 @@
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session as DBSession
 from passlib.context import CryptContext
 
@@ -29,6 +29,13 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("パスワードは8文字以上で入力してください。")
+        return v
 
 
 class LoginRequest(BaseModel):

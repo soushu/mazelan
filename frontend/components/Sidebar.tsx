@@ -38,6 +38,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const menuRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; top: number; left: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const menuHeight = 228; // approximate menu height in px
 
   const openMenu = useCallback((sessionId: string, buttonEl: HTMLButtonElement) => {
@@ -387,7 +388,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
               e.stopPropagation();
               const id = menuOpenId;
               setMenuOpenId(null);
-              onDelete(id);
+              setDeleteConfirmId(id);
             }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -396,6 +397,34 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
             Delete
           </button>
         </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirmId && createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50" onClick={() => setDeleteConfirmId(null)}>
+          <div className="bg-theme-elevated rounded-lg shadow-lg border border-border-primary p-5 max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-t-primary mb-4">このセッションを削除しますか？この操作は取り消せません。</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-3 py-1.5 text-sm text-t-secondary hover:bg-theme-hover rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const id = deleteConfirmId;
+                  setDeleteConfirmId(null);
+                  onDelete(id);
+                }}
+                className="px-3 py-1.5 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {/* Session title tooltip — portal to body to escape overflow:hidden */}
