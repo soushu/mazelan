@@ -167,7 +167,6 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                       if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                         e.preventDefault();
                         const trimmed = editingTitle.trim();
-                        console.log("[DEBUG rename] Enter pressed, editingTitle:", JSON.stringify(editingTitle), "trimmed:", JSON.stringify(trimmed), "original:", JSON.stringify(s.title));
                         if (trimmed) onRename(s.id, trimmed);
                         setEditingId(null);
                       } else if (e.key === "Escape") {

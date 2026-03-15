@@ -223,15 +223,13 @@ export default function ChatPage() {
   }
 
   async function handleRename(id: string, newTitle: string) {
-    console.log("[DEBUG handleRename] id:", id, "newTitle:", JSON.stringify(newTitle));
     try {
       const updated = await updateSession(id, newTitle);
-      console.log("[DEBUG handleRename] response:", JSON.stringify(updated));
       setSessions((prev) =>
         prev.map((s) => (s.id === id ? { ...s, title: updated.title } : s))
       );
     } catch (err) {
-      console.error("[DEBUG handleRename] error:", err);
+      console.error(err);
     }
   }
 
