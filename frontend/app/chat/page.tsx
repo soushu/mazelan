@@ -233,6 +233,24 @@ export default function ChatPage() {
     }
   }
 
+  const handleExport = useCallback(async (sessionId: string, format: "text" | "pdf") => {
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    let msgs: Message[];
+    if (sessionId === activeId) {
+      msgs = messages;
+    } else {
+      msgs = await getMessages(sessionId);
+    }
+    if (msgs.length === 0) return;
+    const { exportAsText, exportAsPdf } = await import("@/lib/exportChat");
+    if (format === "text") {
+      exportAsText(session.title, msgs);
+    } else {
+      await exportAsPdf(session.title, msgs);
+    }
+  }, [sessions, activeId, messages]);
+
   async function handleToggleStar(id: string) {
     try {
       const updated = await toggleSessionStar(id);
@@ -424,6 +442,7 @@ export default function ChatPage() {
         onDelete={handleDelete}
         onRename={handleRename}
         onToggleStar={handleToggleStar}
+        onExport={handleExport}
         onNew={handleNew}
         userEmail={authSession?.user?.email}
         onOpenApiKeyModal={() => setApiKeyModalOpen(true)}
@@ -441,7 +460,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v34.6
+          DEV v34.7
         </div>
       )}
 

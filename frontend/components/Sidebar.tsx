@@ -19,13 +19,14 @@ type Props = {
   onOpenSystemPromptModal: () => void;
   onOpenContextModal: () => void;
   onToggleStar: (id: string) => void;
+  onExport: (id: string, format: "text" | "pdf") => void;
   apiKeyModalOpen: boolean;
   open: boolean;
   onClose: () => void;
   loading?: boolean;
 };
 
-export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, onToggleStar, apiKeyModalOpen, open, onClose, loading }: Props) {
+export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRename, onNew, userEmail, onOpenApiKeyModal, onOpenSystemPromptModal, onOpenContextModal, onToggleStar, onExport, apiKeyModalOpen, open, onClose, loading }: Props) {
   const [query, setQuery] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const { theme, toggleTheme, themeLabel } = useTheme();
@@ -36,7 +37,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const menuRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ text: string; top: number; left: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const menuHeight = 148; // approximate menu height in px
+  const menuHeight = 228; // approximate menu height in px
 
   const openMenu = useCallback((sessionId: string, buttonEl: HTMLButtonElement) => {
     if (menuOpenId === sessionId) {
@@ -345,6 +346,35 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
               </button>
             );
           })()}
+          <div className="border-t border-border-primary my-1" />
+          <button
+            className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              const id = menuOpenId;
+              setMenuOpenId(null);
+              if (id) onExport(id, "text");
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            Export Text
+          </button>
+          <button
+            className="w-full px-3 py-2 text-sm text-t-secondary hover:bg-theme-hover flex items-center gap-2 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              const id = menuOpenId;
+              setMenuOpenId(null);
+              if (id) onExport(id, "pdf");
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            Export PDF
+          </button>
           <div className="border-t border-border-primary my-1" />
           <button
             className="w-full px-3 py-2 text-sm text-danger hover:bg-theme-hover flex items-center gap-2 text-left"
