@@ -460,7 +460,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v35.3
+          DEV v35.4
         </div>
       )}
 
@@ -560,7 +560,11 @@ export default function ChatPage() {
                   {streamingText ? (
                     <>
                       <span>{streamingText}</span>
-                      <span className="inline-block w-2 h-4 ml-0.5 bg-t-muted/60 animate-pulse align-middle" />
+                      <span className="inline-flex gap-1 items-center mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
+                      </span>
                     </>
                   ) : (
                     <span className="inline-flex gap-1 items-center py-1">
