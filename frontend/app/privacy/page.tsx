@@ -1,15 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function PrivacyPage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-theme-base">
       <div className="max-w-2xl mx-auto px-4 py-12">
-        <Link
-          href="/login"
+        <button
+          onClick={() => router.back()}
           className="text-sm text-accent hover:text-accent-hover transition-colors"
         >
           &larr; Back
-        </Link>
+        </button>
 
         <h1 className="text-2xl font-bold text-t-primary mt-6 mb-2">プライバシーポリシー</h1>
         <p className="text-xs text-t-muted mb-8">最終更新日: 2026年3月15日</p>
