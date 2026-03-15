@@ -164,7 +164,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                     value={editingTitle}
                     onChange={(e) => setEditingTitle(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                         e.preventDefault();
                         const trimmed = editingTitle.trim();
                         if (trimmed) onRename(s.id, trimmed);
@@ -179,6 +179,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                       setEditingId(null);
                     }}
                     onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
                     autoFocus
                     className="flex-1 text-sm bg-theme-input text-t-primary px-1 py-0 rounded outline-none focus:ring-1 focus:ring-border-secondary min-w-0"
                   />
