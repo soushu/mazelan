@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
 import type { Session } from "@/lib/types";
 import { hasAnyApiKey as checkAnyApiKey } from "@/lib/apiKeyStore";
@@ -33,6 +34,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const menuRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<{ text: string; top: number; left: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const menuHeight = 148; // approximate menu height in px
 
@@ -184,9 +186,16 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                         <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
                       </svg>
                     )}
-                    <span className="flex-1 text-sm truncate">{s.title}</span>
-                    {/* Tooltip — rendered outside truncate to avoid overflow:hidden clipping */}
-                    <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 hidden group-hover:block max-w-[240px] whitespace-normal break-words rounded-lg bg-theme-surface border border-border-primary shadow-lg px-3 py-2 text-xs text-t-secondary">
+                    <span
+                      className="flex-1 text-sm truncate"
+                      onMouseEnter={(e) => {
+                        const el = e.currentTarget;
+                        if (el.scrollWidth <= el.clientWidth) return; // not truncated
+                        const rect = el.getBoundingClientRect();
+                        setTooltip({ text: s.title, top: rect.top + rect.height / 2, left: rect.right + 8 });
+                      }}
+                      onMouseLeave={() => setTooltip(null)}
+                    >
                       {s.title}
                     </span>
                     {/* Three-dot menu button */}
@@ -352,6 +361,17 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
             Delete
           </button>
         </div>
+      )}
+
+      {/* Session title tooltip — portal to body to escape overflow:hidden */}
+      {tooltip && createPortal(
+        <div
+          className="fixed z-[200] pointer-events-none max-w-[240px] whitespace-normal break-words rounded-lg bg-theme-surface border border-border-primary shadow-lg px-3 py-2 text-xs text-t-secondary"
+          style={{ top: tooltip.top, left: tooltip.left, transform: "translateY(-50%)" }}
+        >
+          {tooltip.text}
+        </div>,
+        document.body,
       )}
     </>
   );
