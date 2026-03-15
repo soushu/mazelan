@@ -37,7 +37,9 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/upsert-user")
+@limiter.limit("10/minute")
 def upsert_user(
+    request: Request,
     req: UpsertUserRequest,
     db: DBSession = Depends(get_db),
     x_internal_api_key: str = Header(alias="X-Internal-API-Key", default=""),
