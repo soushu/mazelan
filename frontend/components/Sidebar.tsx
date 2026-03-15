@@ -179,7 +179,8 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                       setEditingId(null);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    ref={(el) => { if (el) { el.focus(); el.select(); } }}
+                    onFocus={(e) => e.target.select()}
+                    autoFocus
                     className="flex-1 text-sm bg-theme-input text-t-primary px-1 py-0 rounded outline-none focus:ring-1 focus:ring-border-secondary min-w-0"
                   />
                 ) : (
