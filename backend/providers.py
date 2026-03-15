@@ -40,20 +40,29 @@ class ProviderError(Exception):
 
 # ── Model Registry ──────────────────────────────────────────
 
+# Prices: USD per 1M tokens (as of 2026-03)
 MODEL_REGISTRY: dict[str, dict] = {
     # Anthropic
-    "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet 4.6",  "supports_images": True,  "supports_web_search": True},
-    "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus 4.6",    "supports_images": True,  "supports_web_search": True},
-    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku 4.5",   "supports_images": True,  "supports_web_search": True},
+    "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet 4.6",  "supports_images": True,  "supports_web_search": True,  "input_price": 3.0,   "output_price": 15.0},
+    "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus 4.6",    "supports_images": True,  "supports_web_search": True,  "input_price": 15.0,  "output_price": 75.0},
+    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku 4.5",   "supports_images": True,  "supports_web_search": True,  "input_price": 0.80,  "output_price": 4.0},
     # OpenAI
-    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False},
-    "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": False},
-    "o3-mini":                    {"provider": "openai",    "label": "o3-mini",         "supports_images": False, "supports_web_search": False},
+    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False, "input_price": 2.50,  "output_price": 10.0},
+    "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
+    "o3-mini":                    {"provider": "openai",    "label": "o3-mini",         "supports_images": False, "supports_web_search": False, "input_price": 1.10,  "output_price": 4.40},
     # Google
-    "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": False},
-    "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": False},
-    "gemini-3.1-flash-lite":      {"provider": "google",    "label": "Gemini 3.1 Flash Lite", "supports_images": True, "supports_web_search": False},
+    "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
+    "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": False, "input_price": 1.25,  "output_price": 10.0},
+    "gemini-3.1-flash-lite":      {"provider": "google",    "label": "Gemini 3.1 Flash Lite", "supports_images": True, "supports_web_search": False, "input_price": 0.075, "output_price": 0.30},
 }
+
+
+def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Calculate cost in USD from token counts."""
+    info = MODEL_REGISTRY.get(model, {})
+    input_price = info.get("input_price", 0)
+    output_price = info.get("output_price", 0)
+    return (input_tokens * input_price + output_tokens * output_price) / 1_000_000
 
 ALLOWED_MODELS = set(MODEL_REGISTRY.keys())
 
@@ -95,6 +104,8 @@ async def stream_anthropic(
         async with client.messages.stream(**kwargs) as stream:
             async for text in stream.text_stream:
                 yield text
+            final = await stream.get_final_message()
+            yield {"input_tokens": final.usage.input_tokens, "output_tokens": final.usage.output_tokens}
     except AnthropicAuthError:
         raise ProviderAuthError("Anthropic API key is invalid")
     except AnthropicRateLimitError as e:
@@ -168,12 +179,18 @@ async def stream_openai(
             model=model,
             messages=oai_messages,
             stream=True,
+            stream_options={"include_usage": True},
             **{token_param: 4096},
         )
+        usage_data = None
         async for chunk in stream:
+            if chunk.usage:
+                usage_data = {"input_tokens": chunk.usage.prompt_tokens, "output_tokens": chunk.usage.completion_tokens}
             delta = chunk.choices[0].delta if chunk.choices else None
             if delta and delta.content:
                 yield delta.content
+        if usage_data:
+            yield usage_data
     except OpenAIAuthError:
         raise ProviderAuthError("OpenAI API key is invalid")
     except OpenAIRateLimitError as e:
@@ -246,9 +263,18 @@ async def stream_google(
             contents=gemini_contents,
             config=config,
         )
+        usage_data = None
         async for chunk in stream:
             if chunk.text:
                 yield chunk.text
+            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                um = chunk.usage_metadata
+                usage_data = {
+                    "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
+                    "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
+                }
+        if usage_data:
+            yield usage_data
     except Exception as e:
         err_str = str(e).lower()
         if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
@@ -269,8 +295,10 @@ async def stream_provider(
     api_key: str,
     system_prompt: str | None = None,
     thinking: bool = False,
-) -> AsyncGenerator[str, None]:
-    """Route to the correct provider's streaming function."""
+) -> AsyncGenerator[str | dict, None]:
+    """Route to the correct provider's streaming function.
+    Yields str chunks for content, and a final dict with usage info.
+    """
     provider = get_provider(model)
 
     if provider == "anthropic":
@@ -283,16 +311,16 @@ async def stream_provider(
         raise ProviderError(f"Unsupported provider: {provider}")
 
     try:
-        async for text in _timeout_generator(gen, STREAM_TIMEOUT_SECONDS):
-            yield text
+        async for chunk in _timeout_generator(gen, STREAM_TIMEOUT_SECONDS):
+            yield chunk
     except asyncio.TimeoutError:
         logger.warning("Stream timed out after %ds for model %s", STREAM_TIMEOUT_SECONDS, model)
         yield "\n\n⚠️ 応答がタイムアウトしました。もう一度お試しください。"
 
 
 async def _timeout_generator(
-    gen: AsyncGenerator[str, None], timeout: float
-) -> AsyncGenerator[str, None]:
+    gen: AsyncGenerator[str | dict, None], timeout: float
+) -> AsyncGenerator[str | dict, None]:
     """Wrap an async generator with a per-chunk timeout."""
     ait = gen.__aiter__()
     while True:

@@ -80,6 +80,9 @@ def get_messages(
             "created_at": m.created_at.isoformat(),
             **({"images": m.images} if m.images else {}),
             **({"model": m.model} if m.model else {}),
+            **({"input_tokens": m.input_tokens} if m.input_tokens is not None else {}),
+            **({"output_tokens": m.output_tokens} if m.output_tokens is not None else {}),
+            **({"cost": m.cost} if m.cost is not None else {}),
         }
         for m in messages
     ]

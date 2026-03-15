@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Boolean, Integer, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -46,6 +46,9 @@ class Message(Base):
     content = Column(Text, nullable=False)
     images = Column(JSON, nullable=True)  # [{"media_type": "image/png", "data": "base64..."}]
     model = Column(String(64), nullable=True)  # e.g. "claude-sonnet-4-6", "gpt-4o"
+    input_tokens = Column(Integer, nullable=True)
+    output_tokens = Column(Integer, nullable=True)
+    cost = Column(Float, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     session = relationship("ChatSession", back_populates="messages")

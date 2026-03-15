@@ -11,7 +11,7 @@ import ContextModal from "@/components/ContextModal";
 import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate } from "@/lib/api";
 import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
-import { getProviderForModel, parseDebateContent } from "@/lib/types";
+import { getProviderForModel, parseDebateContent, parseUsageMarker } from "@/lib/types";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
   const pairs: QAPair[] = [];
@@ -360,11 +360,17 @@ export default function ChatPage() {
         }
         for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking)) {
           full += chunk;
-          setStreamingText(full);
+          // Strip usage marker from display during streaming
+          const display = full.replace(/\n<!--USAGE:\{.*?\}-->$/, "");
+          setStreamingText(display);
         }
+        const { text: cleanText, usage } = parseUsageMarker(full);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: full, created_at: new Date().toISOString(), model },
+          {
+            role: "assistant", content: cleanText, created_at: new Date().toISOString(), model,
+            ...(usage ? { input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost: usage.cost } : {}),
+          },
         ]);
       }
     } catch (err) {
@@ -435,7 +441,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v34.0
+          DEV v34.1
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { parseDebateContent, getProviderFromModelId } from "@/lib/types";
 import MessageContent from "@/components/MessageContent";
 import DebateDisplay from "@/components/DebateDisplay";
 import ProviderIcon from "@/components/ProviderIcon";
+import TokenUsageTooltip from "@/components/TokenUsageTooltip";
 
 function MessageCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -165,7 +166,10 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                     steps={debateData.steps}
                   />
                 </div>
-                <div className="flex justify-end mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                <div className="flex justify-end mt-1 gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                  {pair.assistant.input_tokens != null && pair.assistant.cost != null && (
+                    <TokenUsageTooltip usage={{ input_tokens: pair.assistant.input_tokens, output_tokens: pair.assistant.output_tokens!, cost: pair.assistant.cost }} />
+                  )}
                   <MessageCopyButton text={debateData.steps.find(s => s.id === "final")?.content || pair.assistant.content} />
                 </div>
               </div>
@@ -181,7 +185,10 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                 <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <MessageContent content={pair.assistant.content} />
                 </div>
-                <div className="flex justify-end mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                <div className="flex justify-end mt-1 gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                  {pair.assistant.input_tokens != null && pair.assistant.cost != null && (
+                    <TokenUsageTooltip usage={{ input_tokens: pair.assistant.input_tokens, output_tokens: pair.assistant.output_tokens!, cost: pair.assistant.cost }} />
+                  )}
                   <MessageCopyButton text={pair.assistant.content} />
                 </div>
               </div>

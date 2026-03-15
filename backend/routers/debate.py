@@ -21,6 +21,7 @@ from backend.context_extractor import extract_contexts
 from backend.providers import (
     ALLOWED_MODELS,
     MODEL_REGISTRY,
+    calculate_cost,
     get_provider,
     stream_provider,
     ProviderAuthError,
@@ -126,20 +127,34 @@ async def stream_debate(
         model_a_label = MODEL_REGISTRY.get(model_a, {}).get("label", model_a)
         model_b_label = MODEL_REGISTRY.get(model_b, {}).get("label", model_b)
 
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_cost = 0.0
+
+        async def _stream_step(mdl, msgs, key):
+            nonlocal total_input_tokens, total_output_tokens, total_cost
+            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking):
+                if isinstance(chunk, dict):
+                    total_input_tokens += chunk.get("input_tokens", 0)
+                    total_output_tokens += chunk.get("output_tokens", 0)
+                    total_cost += calculate_cost(mdl, chunk.get("input_tokens", 0), chunk.get("output_tokens", 0))
+                else:
+                    yield chunk
+
         # ── Step 1: Model A answers ──
         yield f"\n[STEP:model_a_answer]\n"
         step_text = ""
-        async for text in stream_provider(model_a, messages, api_key_a, system_prompt, thinking=thinking):
-            step_text += text
-            yield text
+        async for t in _stream_step(model_a, messages, api_key_a):
+            step_text += t
+            yield t
         step_contents["model_a_answer"] = step_text
 
         # ── Step 2: Model B answers ──
         yield f"\n[STEP:model_b_answer]\n"
         step_text = ""
-        async for text in stream_provider(model_b, messages, api_key_b, system_prompt, thinking=thinking):
-            step_text += text
-            yield text
+        async for t in _stream_step(model_b, messages, api_key_b):
+            step_text += t
+            yield t
         step_contents["model_b_answer"] = step_text
 
         # ── Step 3: Model A critiques Model B ──
@@ -149,9 +164,9 @@ async def stream_debate(
             {"role": "user", "content": _critique_prompt(model_b_label, step_contents["model_b_answer"])},
         ]
         step_text = ""
-        async for text in stream_provider(model_a, critique_msg_a, api_key_a, system_prompt, thinking=thinking):
-            step_text += text
-            yield text
+        async for t in _stream_step(model_a, critique_msg_a, api_key_a):
+            step_text += t
+            yield t
         step_contents["model_a_critique"] = step_text
 
         # ── Step 4: Model B critiques Model A ──
@@ -161,9 +176,9 @@ async def stream_debate(
             {"role": "user", "content": _critique_prompt(model_a_label, step_contents["model_a_answer"])},
         ]
         step_text = ""
-        async for text in stream_provider(model_b, critique_msg_b, api_key_b, system_prompt, thinking=thinking):
-            step_text += text
-            yield text
+        async for t in _stream_step(model_b, critique_msg_b, api_key_b):
+            step_text += t
+            yield t
         step_contents["model_b_critique"] = step_text
 
         # ── Step 5: Model A synthesizes final answer ──
@@ -177,9 +192,9 @@ async def stream_debate(
             )},
         ]
         step_text = ""
-        async for text in stream_provider(model_a, final_msg, api_key_a, system_prompt, thinking=thinking):
-            step_text += text
-            yield text
+        async for t in _stream_step(model_a, final_msg, api_key_a):
+            step_text += t
+            yield t
         step_contents["final"] = step_text
 
         # ── Save to DB ──
@@ -191,13 +206,25 @@ async def stream_debate(
             f"<!--STEP:model_b_critique-->\n{step_contents['model_b_critique']}\n"
             f"<!--STEP:final-->\n{step_contents['final']}"
         )
-        assistant_msg = Message(session_id=session_id, role="assistant", content=debate_content, model=f"debate:{model_a}:{model_b}")
+        assistant_msg = Message(
+            session_id=session_id, role="assistant", content=debate_content,
+            model=f"debate:{model_a}:{model_b}",
+            input_tokens=total_input_tokens if total_input_tokens else None,
+            output_tokens=total_output_tokens if total_output_tokens else None,
+            cost=total_cost if total_cost else None,
+        )
         db.add(assistant_msg)
 
         chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
         if chat_session:
             chat_session.updated_at = datetime.now(timezone.utc)
         db.commit()
+
+        # Yield usage metadata marker
+        if total_input_tokens:
+            import json
+            meta = {"input_tokens": total_input_tokens, "output_tokens": total_output_tokens, "cost": round(total_cost, 6)}
+            yield f"\n<!--USAGE:{json.dumps(meta)}-->"
 
         # Context extraction (fire-and-forget)
         extraction_key = anthropic_key or (api_key_a if get_provider(model_a) == "anthropic" else None)

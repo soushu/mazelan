@@ -78,7 +78,33 @@ export type Message = {
   created_at: string;
   images?: ImageAttachment[];
   model?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cost?: number;
 };
+
+export type UsageInfo = {
+  input_tokens: number;
+  output_tokens: number;
+  cost: number;
+};
+
+/** Parse and strip <!--USAGE:{...}--> marker from streamed content */
+export function parseUsageMarker(content: string): { text: string; usage: UsageInfo | null } {
+  const match = content.match(/\n<!--USAGE:(\{.*?\})-->$/);
+  if (!match) return { text: content, usage: null };
+  try {
+    const usage = JSON.parse(match[1]) as UsageInfo;
+    return { text: content.slice(0, match.index!), usage };
+  } catch {
+    return { text: content, usage: null };
+  }
+}
+
+export function formatCost(cost: number): string {
+  if (cost < 0.01) return `$${cost.toFixed(4)}`;
+  return `$${cost.toFixed(2)}`;
+}
 
 /** Get provider from a model ID stored in the message (handles debate format too) */
 export function getProviderFromModelId(modelId: string | undefined): Provider | null {
