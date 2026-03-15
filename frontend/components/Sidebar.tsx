@@ -193,6 +193,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
                     <span
                       className="flex-1 text-sm truncate"
                       onMouseEnter={(e) => {
+                        if (window.matchMedia("(pointer: coarse)").matches) return;
                         const el = e.currentTarget;
                         if (el.scrollWidth <= el.clientWidth) return; // not truncated
                         const rect = el.getBoundingClientRect();

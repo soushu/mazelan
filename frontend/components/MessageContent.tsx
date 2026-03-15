@@ -96,7 +96,7 @@ export default function MessageContent({ content }: { content: string }) {
         },
       }}
     >
-      {content}
+      {content.replace(/<\/?cite[^>]*>/g, "")}
     </ReactMarkdown>
   );
 }
