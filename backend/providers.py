@@ -5,12 +5,15 @@ Supports Anthropic (Claude), OpenAI (GPT), and Google (Gemini).
 
 import asyncio
 import base64
+import json
 import logging
 import os
 import threading
 from typing import AsyncGenerator
 
 from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError, BadRequestError as AnthropicBadRequestError, RateLimitError as AnthropicRateLimitError
+
+from backend.amazon_search import AMAZON_SEARCH_TOOL, search_amazon, is_available as amazon_available
 from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
@@ -111,6 +114,17 @@ def get_provider(model_id: str) -> str:
 
 # ── Anthropic (Claude) ──────────────────────────────────────
 
+async def _execute_tool(name: str, input_data: dict) -> str:
+    """Execute a tool call and return the result as a string."""
+    if name == "amazon_product_search":
+        results = await search_amazon(
+            query=input_data.get("query", ""),
+            max_results=input_data.get("max_results", 3),
+        )
+        return json.dumps(results, ensure_ascii=False)
+    return json.dumps({"error": f"Unknown tool: {name}"})
+
+
 async def stream_anthropic(
     model: str,
     messages: list[dict],
@@ -122,24 +136,57 @@ async def stream_anthropic(
     kwargs: dict = dict(
         model=model,
         max_tokens=4096,
-        messages=messages,
+        messages=list(messages),  # copy to avoid mutating caller's list
     )
     # Extended thinking
     if thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
         kwargs["max_tokens"] = 16000
-    # Web search tool (Claude only)
+    # Tools: web search (Claude built-in) + Amazon product search (custom)
+    tools: list[dict] = []
     if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
-        kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+        tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
+    if amazon_available():
+        tools.append(AMAZON_SEARCH_TOOL)
+    if tools:
+        kwargs["tools"] = tools
     if system_prompt:
         kwargs["system"] = system_prompt
 
+    total_input_tokens = 0
+    total_output_tokens = 0
+    max_tool_rounds = 3  # Prevent infinite tool loops
+
     try:
-        async with client.messages.stream(**kwargs) as stream:
-            async for text in stream.text_stream:
-                yield text
-            final = await stream.get_final_message()
-            yield {"input_tokens": final.usage.input_tokens, "output_tokens": final.usage.output_tokens}
+        for _round in range(max_tool_rounds + 1):
+            async with client.messages.stream(**kwargs) as stream:
+                async for text in stream.text_stream:
+                    yield text
+                final = await stream.get_final_message()
+
+            total_input_tokens += final.usage.input_tokens
+            total_output_tokens += final.usage.output_tokens
+
+            # Check if the model wants to use a custom tool
+            tool_use_blocks = [b for b in final.content if b.type == "tool_use" and b.name != "web_search"]
+            if final.stop_reason != "tool_use" or not tool_use_blocks:
+                break  # No more tool calls, done
+
+            # Execute tool calls and build tool_result messages
+            assistant_content = [{"type": b.type, **({"id": b.id, "name": b.name, "input": b.input} if b.type == "tool_use" else {"text": b.text})} for b in final.content if b.type in ("text", "tool_use")]
+            kwargs["messages"].append({"role": "assistant", "content": assistant_content})
+
+            tool_results = []
+            for block in tool_use_blocks:
+                result = await _execute_tool(block.name, block.input)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result,
+                })
+            kwargs["messages"].append({"role": "user", "content": tool_results})
+
+        yield {"input_tokens": total_input_tokens, "output_tokens": total_output_tokens}
     except AnthropicAuthError:
         raise ProviderAuthError("Anthropic API key is invalid")
     except AnthropicRateLimitError as e:
