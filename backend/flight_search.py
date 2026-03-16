@@ -1,4 +1,4 @@
-"""Flight search via SerpAPI (Google Flights) and Duffel API."""
+"""Flight search via SerpAPI (Google Flights) and Travelpayouts (Aviasales)."""
 
 import asyncio
 import logging
@@ -9,14 +9,14 @@ import httpx
 logger = logging.getLogger(__name__)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
-DUFFEL_API_KEY = os.environ.get("DUFFEL_API_KEY", "")
+TRAVELPAYOUTS_TOKEN = os.environ.get("TRAVELPAYOUTS_TOKEN", "")
 SERPAPI_BASE = "https://serpapi.com/search.json"
-DUFFEL_BASE = "https://api.duffel.com/air/offer_requests"
+TRAVELPAYOUTS_BASE = "https://api.travelpayouts.com"
 
 
 def is_available() -> bool:
     """Check if at least one flight search provider is configured."""
-    return bool(SERPAPI_KEY) or bool(DUFFEL_API_KEY)
+    return bool(SERPAPI_KEY) or bool(TRAVELPAYOUTS_TOKEN)
 
 
 # ── Tool definition for LLM function calling ──
@@ -26,7 +26,7 @@ FLIGHT_SEARCH_TOOL = {
     "description": (
         "Search for flights between two cities/airports. "
         "Returns flight options with prices, airlines, duration, and booking links. "
-        "Searches Google Flights and Duffel (300+ airlines including LCCs) for comprehensive results. "
+        "Searches Google Flights and Travelpayouts/Aviasales (728+ airlines including LCCs) for comprehensive results. "
         "Use this when the user asks about flights, airfares, or travel between cities."
     ),
     "input_schema": {
@@ -131,120 +131,69 @@ async def _search_google_flights(
         return []
 
 
-# ── Duffel API ──
+# ── Travelpayouts / Aviasales API ──
 
-def _parse_duration(iso_duration: str) -> int | None:
-    """Parse ISO 8601 duration like 'PT2H26M' to minutes."""
-    if not iso_duration or not iso_duration.startswith("PT"):
-        return None
-    try:
-        rest = iso_duration[2:]
-        hours = 0
-        minutes = 0
-        if "H" in rest:
-            h_part, rest = rest.split("H")
-            hours = int(h_part)
-        if "M" in rest:
-            m_part = rest.replace("M", "")
-            minutes = int(m_part)
-        return hours * 60 + minutes
-    except (ValueError, IndexError):
-        return None
-
-
-async def _search_duffel(
+async def _search_travelpayouts(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
 ) -> list[dict]:
-    """Search Duffel API for flights (300+ airlines including LCCs)."""
-    if not DUFFEL_API_KEY:
+    """Search Travelpayouts cheapest tickets API (cached data, 728+ airlines including LCCs)."""
+    if not TRAVELPAYOUTS_TOKEN:
         return []
 
-    slices = [{"origin": origin.upper(), "destination": destination.upper(), "departure_date": departure_date}]
+    # Use the cheapest tickets endpoint (fast, cached)
+    params: dict = {
+        "origin": origin.upper(),
+        "destination": destination.upper(),
+        "depart_date": departure_date,
+        "currency": "JPY",
+        "token": TRAVELPAYOUTS_TOKEN,
+    }
     if return_date:
-        slices.append({"origin": destination.upper(), "destination": origin.upper(), "departure_date": return_date})
-
-    passengers = [{"type": "adult"} for _ in range(adults)]
-
-    body = {
-        "data": {
-            "slices": slices,
-            "passengers": passengers,
-            "cabin_class": "economy",
-        }
-    }
-
-    headers = {
-        "Authorization": f"Bearer {DUFFEL_API_KEY}",
-        "Duffel-Version": "v2",
-        "Content-Type": "application/json",
-    }
+        params["return_date"] = return_date
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                DUFFEL_BASE,
-                json=body,
-                headers=headers,
-                params={"return_offers": "true", "supplier_timeout": "20000"},
-            )
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{TRAVELPAYOUTS_BASE}/v1/prices/cheap", params=params)
             resp.raise_for_status()
             data = resp.json()
 
-        offers = data.get("data", {}).get("offers", [])
-        # Sort by price and take top results
-        offers.sort(key=lambda o: float(o.get("total_amount", "999999")))
-        offers = offers[:max_results]
+        if not data.get("success"):
+            return []
 
         flights = []
-        for offer in offers:
-            owner = offer.get("owner", {})
-            slices_data = offer.get("slices", [])
-            if not slices_data:
-                continue
+        dest_data = data.get("data", {}).get(destination.upper(), {})
 
-            # Use outbound slice for display
-            outbound = slices_data[0]
-            segments = outbound.get("segments", [])
-            if not segments:
-                continue
+        for key, ticket in dest_data.items():
+            if len(flights) >= max_results:
+                break
 
-            first_seg = segments[0]
-            last_seg = segments[-1]
-            stops = len(segments) - 1
-
-            # Collect all airlines
-            airlines = list({
-                seg.get("operating_carrier", {}).get("name", "")
-                or seg.get("marketing_carrier", {}).get("name", "")
-                for seg in segments
-            })
-
-            # Calculate total duration
-            total_duration = sum(_parse_duration(seg.get("duration", "")) or 0 for seg in segments)
+            # Build Aviasales deep link
+            dep_date_compact = departure_date.replace("-", "")
+            link_params = f"{origin.upper()}{dep_date_compact}{destination.upper()}"
+            if return_date:
+                ret_date_compact = return_date.replace("-", "")
+                link_params += ret_date_compact
+            booking_link = f"https://www.aviasales.com/search/{link_params}1"
 
             flight_info = {
-                "source": "Duffel",
-                "airline": ", ".join([a for a in airlines if a]),
-                "departure": first_seg.get("departing_at", ""),
-                "arrival": last_seg.get("arriving_at", ""),
-                "departure_airport": first_seg.get("origin", {}).get("iata_code", ""),
-                "arrival_airport": last_seg.get("destination", {}).get("iata_code", ""),
-                "duration_min": total_duration if total_duration else None,
-                "stops": stops,
-                "price": round(float(offer.get("total_amount", 0))),
-                "currency": offer.get("total_currency", "JPY"),
-                "offer_id": offer.get("id", ""),
+                "source": "Aviasales",
+                "airline_code": ticket.get("airline", ""),
+                "departure_date": ticket.get("departure_at", departure_date),
+                "return_date": ticket.get("return_at", ""),
+                "stops": ticket.get("number_of_changes", 0),
+                "price": ticket.get("price"),
+                "currency": "JPY",
+                "booking_link": booking_link,
+                "flight_number": ticket.get("flight_number"),
+                "expires_at": ticket.get("expires_at", ""),
             }
-            flights.append({k: v for k, v in flight_info.items() if v is not None})
+            flights.append({k: v for k, v in flight_info.items() if v and v != ""})
 
         return flights
 
-    except httpx.HTTPStatusError as e:
-        logger.error("Duffel API error %s: %s", e.response.status_code, e.response.text[:200])
-        return []
     except Exception as e:
-        logger.error("Duffel search error: %s", e)
+        logger.error("Travelpayouts search error: %s", e)
         return []
 
 
@@ -254,15 +203,15 @@ async def search_flights(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
 ) -> list[dict]:
-    """Search Google Flights and Duffel, merge and sort by price."""
+    """Search Google Flights and Travelpayouts, merge and sort by price."""
     tasks = []
     if SERPAPI_KEY:
         tasks.append(_search_google_flights(origin, destination, departure_date, return_date, adults, max_results))
-    if DUFFEL_API_KEY:
-        tasks.append(_search_duffel(origin, destination, departure_date, return_date, adults, max_results))
+    if TRAVELPAYOUTS_TOKEN:
+        tasks.append(_search_travelpayouts(origin, destination, departure_date, return_date, adults, max_results))
 
     if not tasks:
-        return [{"error": "No flight search API configured (SERPAPI_KEY or DUFFEL_API_KEY)"}]
+        return [{"error": "No flight search API configured (SERPAPI_KEY or TRAVELPAYOUTS_TOKEN)"}]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 

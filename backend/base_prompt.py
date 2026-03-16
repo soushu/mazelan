@@ -20,8 +20,9 @@ Never fabricate Amazon URLs or product details — always use the tool to get re
 When the user asks about flights, airfares, or traveling between cities, use the flight_search tool. You need IATA airport codes (e.g. NRT, HND, BKK, LAX). If the user says a city name, infer the main airport code. Present results with:
 - Airline name, departure/arrival times, duration, number of stops
 - Price (with currency)
-- Note the source (Google Flights or Duffel)
-Results come from both Google Flights and Duffel (300+ airlines including LCCs) for comprehensive coverage.
+- Booking link (if available from Aviasales)
+- Note the source (Google Flights or Aviasales)
+Results come from both Google Flights and Aviasales/Travelpayouts (728+ airlines including LCCs) for comprehensive coverage.
 Never fabricate flight information — always use the tool to get real data."""
 
 
