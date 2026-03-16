@@ -22,7 +22,10 @@ sudo systemctl stop claudia-frontend
 
 # Frontend: install dependencies + build
 cd frontend
-npm ci --prefer-offline || npm install
+if ! npm ci --prefer-offline 2>/dev/null; then
+  echo "npm ci failed, falling back to npm install..."
+  npm install
+fi
 NODE_OPTIONS="--max_old_space_size=384" npm run build
 cd ..
 
