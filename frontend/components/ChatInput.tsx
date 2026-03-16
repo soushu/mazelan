@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo, KeyboardEvent, DragEvent } from "react";
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
+import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 
 type Props = {
   onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
@@ -11,7 +12,7 @@ type Props = {
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-const DEFAULT_MODEL: ModelId = "claude-sonnet-4-6";
+const DEFAULT_MODEL: ModelId = "gemini-3.1-flash-lite";
 const DEFAULT_MODEL2: ModelId = "gpt-4o";
 
 function getSessionModel(sessionId: string | null): { model: ModelId; model2: ModelId } {
@@ -50,6 +51,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
+  const hasGoogleKey = !!getApiKeyForProvider("google");
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef<HTMLDivElement>(null);
   const dragCounter = useRef(0);
@@ -305,7 +307,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.label}
+                    {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " Free x1" : m.id === "gemini-2.5-flash" ? " Free x2" : m.id === "gemini-2.5-pro" ? " Free x10" : "")}
                   </option>
                 ))}
               </optgroup>
@@ -338,7 +340,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.label}
+                        {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " Free x1" : m.id === "gemini-2.5-flash" ? " Free x2" : m.id === "gemini-2.5-pro" ? " Free x10" : "")}
                       </option>
                     ))}
                   </optgroup>

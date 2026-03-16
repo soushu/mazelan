@@ -23,6 +23,7 @@ from backend.providers import (
     ALLOWED_MODELS,
     get_provider,
     stream_provider,
+    gemini_free_pool,
     ProviderAuthError,
     ProviderRateLimitError,
     ProviderSpendLimitError,
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     content: str
     images: list[ImageAttachment] = []
-    model: str = "claude-sonnet-4-6"
+    model: str = "gemini-3.1-flash-lite"
     thinking: bool = False
 
     @field_validator("images")
@@ -46,7 +47,7 @@ class ChatRequest(BaseModel):
         return validate_image_count(v)
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "claude-sonnet-4-6", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-3.1-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -90,7 +91,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             return
 
         usage_info = None
-        async for chunk in stream_provider(model, messages, api_key, system_prompt, thinking=thinking):
+        async for chunk in stream_provider(model, messages, api_key, system_prompt, thinking=thinking, google_fallback=google_fallback):
             if isinstance(chunk, dict):
                 usage_info = chunk
             else:
@@ -165,6 +166,7 @@ async def chat(
     db: Session = Depends(get_db),
     x_api_key: str | None = Header(None),
     x_anthropic_key: str | None = Header(None),
+    x_google_fallback_key: str | None = Header(None),
 ):
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -172,10 +174,17 @@ async def chat(
     if session.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    if not x_api_key:
-        raise HTTPException(status_code=400, detail="APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。")
+    model = req.model if req.model in ALLOWED_MODELS else "gemini-3.1-flash-lite"
 
-    model = req.model if req.model in ALLOWED_MODELS else "claude-sonnet-4-6"
+    # For Google models, allow access without user API key if free pool is available
+    if not x_api_key:
+        if get_provider(model) == "google" and gemini_free_pool.available:
+            pass  # Will use free pool keys
+        else:
+            raise HTTPException(status_code=400, detail="APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。")
+
+    # For Google models, attach fallback key for auto-switching on quota errors
+    google_fallback = x_google_fallback_key if get_provider(model) == "google" else None
 
     # Resolve system prompt: session-specific > user global > none
     user_prompt = session.system_prompt
@@ -199,6 +208,6 @@ async def chat(
     system_prompt = build_system_prompt(user_prompt, context_block)
 
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking, google_fallback=google_fallback),
         media_type="text/plain",
     )

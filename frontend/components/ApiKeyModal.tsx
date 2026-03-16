@@ -97,6 +97,13 @@ export default function ApiKeyModal({ open, onClose }: Props) {
           ))}
         </div>
 
+        {/* Google free tier note */}
+        {activeTab === "google" && (
+          <p className="text-xs text-t-muted mb-3">
+            Googleモデルは APIキーなしでも利用できます（Free表記）。x2, x10 は無料枠の消費倍率です。自分のキーを設定すると、より高い上限で使えます。
+          </p>
+        )}
+
         {/* Key input */}
         <div className="relative">
           <input

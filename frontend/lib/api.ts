@@ -60,6 +60,7 @@ export async function* streamChat(
   model?: ModelId,
   anthropicKey?: string | null,
   thinking?: boolean,
+  googleFallbackKey?: string | null,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
@@ -77,6 +78,9 @@ export async function* streamChat(
   }
   if (anthropicKey) {
     headers["X-Anthropic-Key"] = anthropicKey;
+  }
+  if (googleFallbackKey) {
+    headers["X-Google-Fallback-Key"] = googleFallbackKey;
   }
   const res = await fetch(`${BACKEND}/chat/${sessionId}`, {
     method: "POST",
@@ -148,6 +152,7 @@ export async function* streamDebate(
   images?: ImageAttachment[],
   anthropicKey?: string | null,
   thinking?: boolean,
+  googleFallbackKey?: string | null,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content, model_a: modelA, model_b: modelB };
   if (thinking) {
@@ -160,6 +165,7 @@ export async function* streamDebate(
   if (apiKeyA) headers["X-API-Key-A"] = apiKeyA;
   if (apiKeyB) headers["X-API-Key-B"] = apiKeyB;
   if (anthropicKey) headers["X-Anthropic-Key"] = anthropicKey;
+  if (googleFallbackKey) headers["X-Google-Fallback-Key"] = googleFallbackKey;
 
   const res = await fetch(`${BACKEND}/debate/${sessionId}`, {
     method: "POST",

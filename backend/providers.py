@@ -6,6 +6,8 @@ Supports Anthropic (Claude), OpenAI (GPT), and Google (Gemini).
 import asyncio
 import base64
 import logging
+import os
+import threading
 from typing import AsyncGenerator
 
 from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError, BadRequestError as AnthropicBadRequestError, RateLimitError as AnthropicRateLimitError
@@ -14,6 +16,38 @@ from google import genai
 from google.genai import types as genai_types
 
 logger = logging.getLogger(__name__)
+
+
+# ── Gemini Free Key Pool ───────────────────────────────────
+
+class GeminiFreeKeyPool:
+    """Round-robin pool of free-tier Gemini API keys."""
+
+    def __init__(self):
+        keys_str = os.environ.get("GEMINI_FREE_KEYS", "")
+        self._keys = [k.strip() for k in keys_str.split(",") if k.strip()]
+        self._index = 0
+        self._lock = threading.Lock()
+        if self._keys:
+            logger.info("Gemini free key pool initialized with %d keys", len(self._keys))
+
+    @property
+    def available(self) -> bool:
+        return len(self._keys) > 0
+
+    def get_next(self) -> str | None:
+        if not self._keys:
+            return None
+        with self._lock:
+            key = self._keys[self._index % len(self._keys)]
+            self._index += 1
+            return key
+
+    def get_all(self) -> list[str]:
+        return list(self._keys)
+
+
+gemini_free_pool = GeminiFreeKeyPool()
 
 
 # ── Exceptions ──────────────────────────────────────────────
@@ -238,15 +272,65 @@ def _convert_messages_for_gemini(
     return gemini_history
 
 
+def _is_gemini_exhausted_error(err_str: str) -> bool:
+    """Check if error indicates quota/spending cap exhaustion (not transient rate limit)."""
+    return "spending cap" in err_str or "billing" in err_str or ("quota" in err_str and "rate" not in err_str)
+
+
+def _is_gemini_rate_limit(err_str: str) -> bool:
+    """Check if error is a transient rate limit (retryable)."""
+    return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str
+
+
+async def _stream_google_with_key(
+    model: str, gemini_contents: list, config: genai_types.GenerateContentConfig, api_key: str,
+) -> AsyncGenerator[str | dict, None]:
+    """Attempt streaming with a single key, with exponential backoff for transient 429s."""
+    client = genai.Client(api_key=api_key)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            stream = await client.aio.models.generate_content_stream(
+                model=model, contents=gemini_contents, config=config,
+            )
+            usage_data = None
+            async for chunk in stream:
+                if chunk.text:
+                    yield chunk.text
+                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                    um = chunk.usage_metadata
+                    usage_data = {
+                        "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
+                        "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
+                    }
+            if usage_data:
+                yield usage_data
+            return
+        except Exception as e:
+            err_str = str(e).lower()
+            logger.warning("Gemini error (attempt %d/%d, model=%s): %s", attempt + 1, max_retries, model, e)
+            if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
+                raise ProviderAuthError("Google API key is invalid")
+            if _is_gemini_exhausted_error(err_str):
+                raise ProviderSpendLimitError(str(e))
+            if _is_gemini_rate_limit(err_str) and attempt < max_retries - 1:
+                wait = 2 ** attempt
+                logger.warning("Gemini 429, retry %d/%d after %ds", attempt + 1, max_retries, wait)
+                await asyncio.sleep(wait)
+                continue
+            if _is_gemini_rate_limit(err_str):
+                raise ProviderRateLimitError(str(e))
+            raise ProviderError(f"Gemini error: {e}")
+
+
 async def stream_google(
     model: str,
     messages: list[dict],
-    api_key: str,
+    api_key: str | None,
     system_prompt: str | None = None,
     thinking: bool = False,
+    fallback_key: str | None = None,
 ) -> AsyncGenerator[str, None]:
-    client = genai.Client(api_key=api_key)
-
     gemini_contents = _convert_messages_for_gemini(messages)
     if not gemini_contents:
         return
@@ -257,31 +341,42 @@ async def stream_google(
     if system_prompt:
         config.system_instruction = system_prompt
 
-    try:
-        stream = await client.aio.models.generate_content_stream(
-            model=model,
-            contents=gemini_contents,
-            config=config,
-        )
-        usage_data = None
-        async for chunk in stream:
-            if chunk.text:
-                yield chunk.text
-            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                um = chunk.usage_metadata
-                usage_data = {
-                    "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
-                    "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
-                }
-        if usage_data:
-            yield usage_data
-    except Exception as e:
-        err_str = str(e).lower()
-        if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
-            raise ProviderAuthError("Google API key is invalid")
-        if "rate limit" in err_str or "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
-            raise ProviderRateLimitError(str(e))
-        raise ProviderError(f"Gemini error: {e}")
+    # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
+    keys_to_try: list[tuple[str, str]] = []  # (key, label)
+    if api_key:
+        keys_to_try.append((api_key, "user"))
+    if not api_key and gemini_free_pool.available:
+        # No user key: use free pool keys
+        for i, k in enumerate(gemini_free_pool.get_all()):
+            keys_to_try.append((k, f"free-pool-{i+1}"))
+    if fallback_key:
+        keys_to_try.append((fallback_key, "paid-fallback"))
+
+    if not keys_to_try:
+        raise ProviderError("Google APIキーが設定されていません。")
+
+    last_error = None
+    for key, label in keys_to_try:
+        try:
+            logger.info("Gemini: trying key [%s] for model %s", label, model)
+            async for chunk in _stream_google_with_key(model, gemini_contents, config, key):
+                yield chunk
+            return  # Success
+        except (ProviderSpendLimitError, ProviderRateLimitError) as e:
+            logger.warning("Gemini key [%s] exhausted: %s", label, e)
+            last_error = e
+            continue  # Try next key
+        except ProviderAuthError:
+            logger.warning("Gemini key [%s] auth error, skipping", label)
+            last_error = ProviderAuthError("Google API key is invalid")
+            continue
+
+    # All keys exhausted
+    if isinstance(last_error, ProviderSpendLimitError):
+        raise ProviderSpendLimitError("すべてのGoogle APIキーの利用上限に達しました。しばらく待ってから再度お試しください。")
+    if isinstance(last_error, ProviderRateLimitError):
+        raise ProviderRateLimitError("すべてのGoogle APIキーがレート制限に達しました。しばらく待ってから再度お試しください。")
+    raise last_error or ProviderError("Google APIエラー")
 
 
 # ── Dispatch ────────────────────────────────────────────────
@@ -295,9 +390,11 @@ async def stream_provider(
     api_key: str,
     system_prompt: str | None = None,
     thinking: bool = False,
+    google_fallback: str | None = None,
 ) -> AsyncGenerator[str | dict, None]:
     """Route to the correct provider's streaming function.
     Yields str chunks for content, and a final dict with usage info.
+    For Google models, falls back to google_fallback key on quota/spending errors.
     """
     provider = get_provider(model)
 
@@ -306,7 +403,7 @@ async def stream_provider(
     elif provider == "openai":
         gen = stream_openai(model, messages, api_key, system_prompt)
     elif provider == "google":
-        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking)
+        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback)
     else:
         raise ProviderError(f"Unsupported provider: {provider}")
 
