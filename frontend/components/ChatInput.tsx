@@ -28,6 +28,7 @@ type Props = {
   onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
   disabled: boolean;
   sessionId: string | null;
+  onOpenApiKeyModal?: () => void;
 };
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -61,7 +62,7 @@ function saveSessionModel(sessionId: string | null, model: ModelId, model2: Mode
   } catch {}
 }
 
-export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
+export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyModal }: Props) {
   const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -73,6 +74,13 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
   const hasGoogleKey = !!getApiKeyForProvider("google");
+
+  function isModelLocked(modelId: string, provider: string): boolean {
+    if (provider === "anthropic" && !getApiKeyForProvider("anthropic")) return true;
+    if (provider === "openai" && !getApiKeyForProvider("openai")) return true;
+    if (!hasGoogleKey && modelId === "gemini-2.5-pro") return true;
+    return false;
+  }
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const modeMenuRef = useRef<HTMLDivElement>(null);
   const dragCounter = useRef(0);
@@ -320,19 +328,25 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
         <div className="flex items-center gap-2 mt-1.5 ml-1 flex-wrap">
           <select
             value={selectedModel}
-            onChange={(e) => { const v = e.target.value as ModelId; setSelectedModel(v); saveSessionModel(sessionId, v, secondModel); }}
+            onChange={(e) => {
+              const v = e.target.value as ModelId;
+              const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
+              if (group && isModelLocked(v, group.provider)) {
+                onOpenApiKeyModal?.();
+                e.target.value = selectedModel; // revert
+                return;
+              }
+              setSelectedModel(v);
+              saveSessionModel(sessionId, v, secondModel);
+            }}
             disabled={disabled}
             className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
           >
             {MODEL_GROUPS.map((g) => (
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
-                  <option key={m.id} value={m.id} disabled={
-                    (g.provider === "anthropic" && !getApiKeyForProvider("anthropic")) ||
-                    (g.provider === "openai" && !getApiKeyForProvider("openai")) ||
-                    (!hasGoogleKey && m.id === "gemini-2.5-pro")
-                  }>
-                    {m.label}{getCostLabel(m.id, !hasGoogleKey)}
+                  <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
+                    {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
                   </option>
                 ))}
               </optgroup>
@@ -357,15 +371,25 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <span className="text-t-muted text-xs select-none">{t("input.vs")}</span>
               <select
                 value={secondModel}
-                onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}
+                onChange={(e) => {
+                  const v = e.target.value as ModelId;
+                  const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
+                  if (group && isModelLocked(v, group.provider)) {
+                    onOpenApiKeyModal?.();
+                    e.target.value = secondModel;
+                    return;
+                  }
+                  setSecondModel(v);
+                  saveSessionModel(sessionId, selectedModel, v);
+                }}
                 disabled={disabled}
                 className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
               >
                 {MODEL_GROUPS.map((g) => (
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}{getCostLabel(m.id, !hasGoogleKey)}
+                      <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
+                        {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
                       </option>
                     ))}
                   </optgroup>
