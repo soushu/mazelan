@@ -4,6 +4,25 @@ import { useRef, useEffect, useState, useCallback, useMemo, KeyboardEvent, DragE
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
 import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 
+const COST_LABELS: Record<string, string> = {
+  "gemini-3.1-flash-lite": "x1",
+  "gemini-2.5-flash": "x2",
+  "gemini-2.5-pro": "x30",
+  "gpt-4o-mini": "x1",
+  "o3-mini": "x7",
+  "gpt-4o": "x17",
+  "claude-haiku-4-5-20251001": "x1",
+  "claude-sonnet-4-6": "x4",
+  "claude-opus-4-6": "x19",
+};
+
+function getCostLabel(modelId: string, isGoogleFree: boolean): string {
+  const cost = COST_LABELS[modelId] || "";
+  if (!cost) return "";
+  const isFree = isGoogleFree && modelId.startsWith("gemini-");
+  return isFree ? ` (Free) ${cost}` : ` ${cost}`;
+}
+
 type Props = {
   onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
   disabled: boolean;
@@ -307,7 +326,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " (Free x1)" : m.id === "gemini-2.5-flash" ? " (Free x2)" : m.id === "gemini-2.5-pro" ? " (Free x10)" : "")}
+                    {m.label}{getCostLabel(m.id, !hasGoogleKey)}
                   </option>
                 ))}
               </optgroup>
@@ -340,7 +359,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " (Free x1)" : m.id === "gemini-2.5-flash" ? " (Free x2)" : m.id === "gemini-2.5-pro" ? " (Free x10)" : "")}
+                        {m.label}{getCostLabel(m.id, !hasGoogleKey)}
                       </option>
                     ))}
                   </optgroup>
