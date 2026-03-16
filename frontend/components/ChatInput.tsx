@@ -327,7 +327,11 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
             {MODEL_GROUPS.map((g) => (
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
-                  <option key={m.id} value={m.id}>
+                  <option key={m.id} value={m.id} disabled={
+                    (g.provider === "anthropic" && !getApiKeyForProvider("anthropic")) ||
+                    (g.provider === "openai" && !getApiKeyForProvider("openai")) ||
+                    (!hasGoogleKey && m.id === "gemini-2.5-pro")
+                  }>
                     {m.label}{getCostLabel(m.id, !hasGoogleKey)}
                   </option>
                 ))}
