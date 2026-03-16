@@ -280,9 +280,11 @@ async def stream_google(
             return  # Success, exit retry loop
         except Exception as e:
             err_str = str(e).lower()
+            logger.warning("Gemini error (attempt %d/%d, model=%s): %s", attempt + 1, max_retries, model, e)
             if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
                 raise ProviderAuthError("Google API key is invalid")
-            is_rate_limit = "rate limit" in err_str or "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str
+            is_rate_limit = "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str
+            is_quota = "quota" in err_str and "rate" not in err_str
             if is_rate_limit and attempt < max_retries - 1:
                 wait = 2 ** attempt  # 1s, 2s, 4s
                 logger.warning("Gemini 429 rate limit, retry %d/%d after %ds", attempt + 1, max_retries, wait)
@@ -290,6 +292,8 @@ async def stream_google(
                 continue
             if is_rate_limit:
                 raise ProviderRateLimitError(str(e))
+            if is_quota:
+                raise ProviderRateLimitError(f"日次クオータ超過: {e}")
             raise ProviderError(f"Gemini error: {e}")
 
 
