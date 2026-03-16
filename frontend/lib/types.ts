@@ -9,7 +9,7 @@ export type ModelId =
   | "o3-mini"
   | "gemini-2.5-flash"
   | "gemini-2.5-pro"
-  | "gemini-3.1-flash-lite";
+  | "gemini-2.5-flash-lite";
 
 export type ModelOption = { id: ModelId; label: string; supports_thinking?: boolean };
 
@@ -44,7 +44,7 @@ export const MODEL_GROUPS: ModelGroup[] = [
     models: [
       { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", supports_thinking: true },
       { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", supports_thinking: true },
-      { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
+      { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
     ],
   },
 ];

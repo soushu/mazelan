@@ -6,7 +6,7 @@ import { getApiKeyForProvider } from "@/lib/apiKeyStore";
 import { useTranslations } from "next-intl";
 
 const COST_LABELS: Record<string, string> = {
-  "gemini-3.1-flash-lite": "x1",
+  "gemini-2.5-flash-lite": "x1",
   "gemini-2.5-flash": "x2",
   "gemini-2.5-pro": "x30",
   "gpt-4o-mini": "x1",
@@ -32,7 +32,7 @@ type Props = {
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-const DEFAULT_MODEL: ModelId = "gemini-3.1-flash-lite";
+const DEFAULT_MODEL: ModelId = "gemini-2.5-flash-lite";
 const DEFAULT_MODEL2: ModelId = "gpt-4o";
 
 function getSessionModel(sessionId: string | null): { model: ModelId; model2: ModelId } {
