@@ -22,7 +22,7 @@ sudo systemctl stop claudia-staging-frontend || true
 
 # Frontend: install dependencies + build
 cd frontend
-npm ci --prefer-offline
+npm ci --prefer-offline || npm install
 NODE_OPTIONS="--max_old_space_size=384" npm run build
 cd ..
 
