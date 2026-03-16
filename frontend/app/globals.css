@@ -90,8 +90,8 @@
   --color-bg-hover: #cffafe;       /* cyan-100 */
   --color-bg-active: #a5f3fc;      /* cyan-200 */
   --color-bg-input: #ffffff;
-  --color-bg-user-bubble: #0891b2; /* cyan-600 */
-  --color-text-user-bubble: #ffffff;
+  --color-bg-user-bubble: #99f6e4; /* teal-200 soft */
+  --color-text-user-bubble: #134e4a;
   --color-bg-assistant-bubble: #edfeff;
   --color-bg-avatar: #0e7490;      /* cyan-700 */
   --color-bg-overlay: rgba(0,0,0,0.3);
