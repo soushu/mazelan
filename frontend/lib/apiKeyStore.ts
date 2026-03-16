@@ -64,6 +64,23 @@ export function validateApiKey(provider: Provider, key: string): string | null {
   return null;
 }
 
+// ── Google fallback (paid) key ───────────────────────
+
+const GOOGLE_FALLBACK_KEY = "mazelan_google_api_key_paid";
+
+export function getGoogleFallbackKey(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(GOOGLE_FALLBACK_KEY);
+}
+
+export function setGoogleFallbackKey(key: string): void {
+  localStorage.setItem(GOOGLE_FALLBACK_KEY, key);
+}
+
+export function clearGoogleFallbackKey(): void {
+  localStorage.removeItem(GOOGLE_FALLBACK_KEY);
+}
+
 // ── Backward-compatible (Anthropic only) ───────────
 
 export function getApiKey(): string | null {

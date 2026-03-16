@@ -87,6 +87,7 @@ async def stream_debate(
     user_id: uuid.UUID | None = None,
     anthropic_key: str | None = None,
     thinking: bool = False,
+    google_fallback: str | None = None,
 ):
     db = SessionLocal()
     step_contents: dict[str, str] = {}
@@ -139,7 +140,8 @@ async def stream_debate(
 
         async def _stream_step(mdl, msgs, key):
             nonlocal total_input_tokens, total_output_tokens, total_cost
-            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking):
+            fb = google_fallback if get_provider(mdl) == "google" else None
+            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking, google_fallback=fb):
                 if isinstance(chunk, dict):
                     total_input_tokens += chunk.get("input_tokens", 0)
                     total_output_tokens += chunk.get("output_tokens", 0)
@@ -288,6 +290,7 @@ async def debate(
     x_api_key_a: str | None = Header(None),
     x_api_key_b: str | None = Header(None),
     x_anthropic_key: str | None = Header(None),
+    x_google_fallback_key: str | None = Header(None),
 ):
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -334,6 +337,7 @@ async def debate(
             user_id=current_user_id,
             anthropic_key=x_anthropic_key,
             thinking=req.thinking,
+            google_fallback=x_google_fallback_key,
         ),
         media_type="text/plain",
     )

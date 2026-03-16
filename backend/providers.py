@@ -244,6 +244,7 @@ async def stream_google(
     api_key: str,
     system_prompt: str | None = None,
     thinking: bool = False,
+    fallback_key: str | None = None,
 ) -> AsyncGenerator[str, None]:
     client = genai.Client(api_key=api_key)
 
@@ -283,8 +284,14 @@ async def stream_google(
             logger.warning("Gemini error (attempt %d/%d, model=%s): %s", attempt + 1, max_retries, model, e)
             if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
                 raise ProviderAuthError("Google API key is invalid")
-            # Spending cap exceeded - don't retry, it won't resolve
+            # Spending cap / billing exceeded - try fallback key if available
             if "spending cap" in err_str or "billing" in err_str:
+                if fallback_key and api_key != fallback_key:
+                    logger.info("Gemini spending cap hit, switching to fallback (paid) key")
+                    client = genai.Client(api_key=fallback_key)
+                    api_key = fallback_key  # prevent re-fallback loops
+                    fallback_key = None
+                    continue
                 raise ProviderSpendLimitError("GCPプロジェクトの支出上限に達しています。Google Cloud Consoleで上限を引き上げてください。")
             is_rate_limit = "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str
             is_quota = "quota" in err_str and "rate" not in err_str
@@ -296,6 +303,12 @@ async def stream_google(
             if is_rate_limit:
                 raise ProviderRateLimitError(str(e))
             if is_quota:
+                if fallback_key and api_key != fallback_key:
+                    logger.info("Gemini quota exceeded, switching to fallback (paid) key")
+                    client = genai.Client(api_key=fallback_key)
+                    api_key = fallback_key
+                    fallback_key = None
+                    continue
                 raise ProviderRateLimitError(f"日次クオータ超過: {e}")
             raise ProviderError(f"Gemini error: {e}")
 
@@ -311,9 +324,11 @@ async def stream_provider(
     api_key: str,
     system_prompt: str | None = None,
     thinking: bool = False,
+    google_fallback: str | None = None,
 ) -> AsyncGenerator[str | dict, None]:
     """Route to the correct provider's streaming function.
     Yields str chunks for content, and a final dict with usage info.
+    For Google models, falls back to google_fallback key on quota/spending errors.
     """
     provider = get_provider(model)
 
@@ -322,7 +337,7 @@ async def stream_provider(
     elif provider == "openai":
         gen = stream_openai(model, messages, api_key, system_prompt)
     elif provider == "google":
-        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking)
+        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback)
     else:
         raise ProviderError(f"Unsupported provider: {provider}")
 

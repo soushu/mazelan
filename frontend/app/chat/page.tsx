@@ -9,7 +9,7 @@ import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
 import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate } from "@/lib/api";
-import { getApiKeyForProvider } from "@/lib/apiKeyStore";
+import { getApiKeyForProvider, getGoogleFallbackKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
 import { getProviderForModel, parseDebateContent, parseUsageMarker } from "@/lib/types";
 
@@ -348,7 +348,7 @@ export default function ChatPage() {
           return;
         }
 
-        for await (const chunk of streamDebate(sessionId, content, model, secondModel, apiKeyA, apiKeyB, images.length > 0 ? images : undefined, anthropicKey, thinking)) {
+        for await (const chunk of streamDebate(sessionId, content, model, secondModel, apiKeyA, apiKeyB, images.length > 0 ? images : undefined, anthropicKey, thinking, getGoogleFallbackKey())) {
           full += chunk;
           setStreamingText(full);
         }
@@ -387,7 +387,7 @@ export default function ChatPage() {
           setApiKeyModalOpen(true);
           return;
         }
-        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking)) {
+        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey())) {
           full += chunk;
           // Strip usage marker from display during streaming
           const display = full.replace(/\n<!--USAGE:\{.*?\}-->$/, "");

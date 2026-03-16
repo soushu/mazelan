@@ -7,6 +7,9 @@ import {
   setApiKeyForProvider,
   clearApiKeyForProvider,
   validateApiKey,
+  getGoogleFallbackKey,
+  setGoogleFallbackKey,
+  clearGoogleFallbackKey,
 } from "@/lib/apiKeyStore";
 
 type Props = {
@@ -24,6 +27,8 @@ export default function ApiKeyModal({ open, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<Provider>("anthropic");
   const [keys, setKeys] = useState<Record<Provider, string>>({ anthropic: "", openai: "", google: "" });
   const [saved, setSaved] = useState<Record<Provider, boolean>>({ anthropic: false, openai: false, google: false });
+  const [googleFallback, setGoogleFallback] = useState("");
+  const [googleFallbackSaved, setGoogleFallbackSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,6 +43,9 @@ export default function ApiKeyModal({ open, onClose }: Props) {
       }
       setKeys(newKeys);
       setSaved(newSaved);
+      const fb = getGoogleFallbackKey();
+      setGoogleFallback(fb ?? "");
+      setGoogleFallbackSaved(!!fb);
       setShowKey(false);
       setError("");
     }
@@ -116,6 +124,48 @@ export default function ApiKeyModal({ open, onClose }: Props) {
         </div>
 
         {error && <p className="text-danger text-xs mt-2">{error}</p>}
+
+        {/* Google fallback (paid) key */}
+        {activeTab === "google" && (
+          <div className="mt-3">
+            <p className="text-xs text-t-muted mb-1.5">有料キー（無料枠超過時に自動切替）</p>
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                value={googleFallback}
+                onChange={(e) => setGoogleFallback(e.target.value)}
+                placeholder="AIza...（有料プランのキー）"
+                className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2.5 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary"
+              />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  const trimmed = googleFallback.trim();
+                  if (trimmed.length < 10) { setError("有料キーが短すぎます"); return; }
+                  setGoogleFallbackKey(trimmed);
+                  setGoogleFallbackSaved(true);
+                  setError("");
+                }}
+                disabled={!googleFallback.trim()}
+                className="py-1.5 px-3 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs transition-colors"
+              >
+                保存
+              </button>
+              {googleFallbackSaved && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-success self-center" />
+                  <button
+                    onClick={() => { clearGoogleFallbackKey(); setGoogleFallback(""); setGoogleFallbackSaved(false); }}
+                    className="py-1.5 px-3 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-xs transition-colors"
+                  >
+                    削除
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-2 mt-4">
           <button
