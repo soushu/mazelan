@@ -353,13 +353,22 @@ export default function ChatPage() {
           setStreamingText(full);
         }
 
-        // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
-        const msgs = await getMessages(sessionId);
-        setMessages(msgs);
-        try {
-          const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
-          localStorage.setItem(`mazelan_msgs_${sessionId}`, JSON.stringify(light));
-        } catch {}
+        // If the stream ended with an error marker, keep it as-is instead of reloading from DB
+        // (errors cause db.rollback() so the message won't be in DB)
+        if (full.includes("⚠️")) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: full, created_at: new Date().toISOString(), model },
+          ]);
+        } else {
+          // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
+          const msgs = await getMessages(sessionId);
+          setMessages(msgs);
+          try {
+            const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+            localStorage.setItem(`mazelan_msgs_${sessionId}`, JSON.stringify(light));
+          } catch {}
+        }
       } else {
         // ── Normal mode ──
         const provider = getProviderForModel(model);
