@@ -1,22 +1,22 @@
-"""Flight search via SerpAPI (Google Flights) and Kiwi.com Tequila API."""
+"""Flight search via SerpAPI (Google Flights) and Duffel API."""
 
+import asyncio
 import logging
 import os
-from datetime import datetime
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
-KIWI_API_KEY = os.environ.get("KIWI_API_KEY", "")
+DUFFEL_API_KEY = os.environ.get("DUFFEL_API_KEY", "")
 SERPAPI_BASE = "https://serpapi.com/search.json"
-KIWI_BASE = "https://api.tequila.kiwi.com/v2/search"
+DUFFEL_BASE = "https://api.duffel.com/air/offer_requests"
 
 
 def is_available() -> bool:
     """Check if at least one flight search provider is configured."""
-    return bool(SERPAPI_KEY) or bool(KIWI_API_KEY)
+    return bool(SERPAPI_KEY) or bool(DUFFEL_API_KEY)
 
 
 # ── Tool definition for LLM function calling ──
@@ -26,7 +26,7 @@ FLIGHT_SEARCH_TOOL = {
     "description": (
         "Search for flights between two cities/airports. "
         "Returns flight options with prices, airlines, duration, and booking links. "
-        "Searches both Google Flights and Kiwi.com for comprehensive results including LCCs. "
+        "Searches Google Flights and Duffel (300+ airlines including LCCs) for comprehensive results. "
         "Use this when the user asks about flights, airfares, or travel between cities."
     ),
     "input_schema": {
@@ -117,11 +117,10 @@ async def _search_google_flights(
                     "arrival": last_leg.get("arrival_airport", {}).get("time", ""),
                     "departure_airport": first_leg.get("departure_airport", {}).get("id", ""),
                     "arrival_airport": last_leg.get("arrival_airport", {}).get("id", ""),
-                    "duration": f.get("total_duration", 0),
+                    "duration_min": f.get("total_duration", 0),
                     "stops": stops,
                     "price": f.get("price"),
                     "currency": "JPY",
-                    "booking_token": f.get("booking_token", ""),
                 }
                 flights.append({k: v for k, v in flight_info.items() if v is not None})
 
@@ -132,79 +131,120 @@ async def _search_google_flights(
         return []
 
 
-# ── Kiwi.com Tequila API ──
+# ── Duffel API ──
 
-async def _search_kiwi(
+def _parse_duration(iso_duration: str) -> int | None:
+    """Parse ISO 8601 duration like 'PT2H26M' to minutes."""
+    if not iso_duration or not iso_duration.startswith("PT"):
+        return None
+    try:
+        rest = iso_duration[2:]
+        hours = 0
+        minutes = 0
+        if "H" in rest:
+            h_part, rest = rest.split("H")
+            hours = int(h_part)
+        if "M" in rest:
+            m_part = rest.replace("M", "")
+            minutes = int(m_part)
+        return hours * 60 + minutes
+    except (ValueError, IndexError):
+        return None
+
+
+async def _search_duffel(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
 ) -> list[dict]:
-    """Search Kiwi.com Tequila API for flights (including LCCs)."""
-    if not KIWI_API_KEY:
+    """Search Duffel API for flights (300+ airlines including LCCs)."""
+    if not DUFFEL_API_KEY:
         return []
 
-    # Convert YYYY-MM-DD to DD/MM/YYYY for Kiwi
-    try:
-        dt = datetime.strptime(departure_date, "%Y-%m-%d")
-        date_from = dt.strftime("%d/%m/%Y")
-    except ValueError:
-        return []
+    slices = [{"origin": origin.upper(), "destination": destination.upper(), "departure_date": departure_date}]
+    if return_date:
+        slices.append({"origin": destination.upper(), "destination": origin.upper(), "departure_date": return_date})
 
-    params: dict = {
-        "fly_from": origin.upper(),
-        "fly_to": destination.upper(),
-        "date_from": date_from,
-        "date_to": date_from,  # exact date
-        "adults": adults,
-        "curr": "JPY",
-        "locale": "ja",
-        "limit": max_results,
-        "sort": "price",
+    passengers = [{"type": "adult"} for _ in range(adults)]
+
+    body = {
+        "data": {
+            "slices": slices,
+            "passengers": passengers,
+            "cabin_class": "economy",
+        }
     }
 
-    if return_date:
-        try:
-            rt = datetime.strptime(return_date, "%Y-%m-%d")
-            params["return_from"] = rt.strftime("%d/%m/%Y")
-            params["return_to"] = rt.strftime("%d/%m/%Y")
-            params["flight_type"] = "round"
-        except ValueError:
-            pass
-    else:
-        params["flight_type"] = "oneway"
-
-    headers = {"apikey": KIWI_API_KEY}
+    headers = {
+        "Authorization": f"Bearer {DUFFEL_API_KEY}",
+        "Duffel-Version": "v2",
+        "Content-Type": "application/json",
+    }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(KIWI_BASE, params=params, headers=headers)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                DUFFEL_BASE,
+                json=body,
+                headers=headers,
+                params={"return_offers": "true", "supplier_timeout": "20000"},
+            )
             resp.raise_for_status()
             data = resp.json()
 
+        offers = data.get("data", {}).get("offers", [])
+        # Sort by price and take top results
+        offers.sort(key=lambda o: float(o.get("total_amount", "999999")))
+        offers = offers[:max_results]
+
         flights = []
-        for item in data.get("data", [])[:max_results]:
-            route = item.get("route", [])
-            airlines = list({leg.get("airline", "") for leg in route})
-            stops = max(0, len([r for r in route if r.get("return") == 0]) - 1)
+        for offer in offers:
+            owner = offer.get("owner", {})
+            slices_data = offer.get("slices", [])
+            if not slices_data:
+                continue
+
+            # Use outbound slice for display
+            outbound = slices_data[0]
+            segments = outbound.get("segments", [])
+            if not segments:
+                continue
+
+            first_seg = segments[0]
+            last_seg = segments[-1]
+            stops = len(segments) - 1
+
+            # Collect all airlines
+            airlines = list({
+                seg.get("operating_carrier", {}).get("name", "")
+                or seg.get("marketing_carrier", {}).get("name", "")
+                for seg in segments
+            })
+
+            # Calculate total duration
+            total_duration = sum(_parse_duration(seg.get("duration", "")) or 0 for seg in segments)
 
             flight_info = {
-                "source": "Kiwi.com",
-                "airline": ", ".join(airlines),
-                "departure": item.get("local_departure", ""),
-                "arrival": item.get("local_arrival", ""),
-                "departure_airport": item.get("flyFrom", ""),
-                "arrival_airport": item.get("flyTo", ""),
-                "duration": round(item.get("duration", {}).get("departure", 0) / 3600, 1) if isinstance(item.get("duration"), dict) else None,
+                "source": "Duffel",
+                "airline": ", ".join([a for a in airlines if a]),
+                "departure": first_seg.get("departing_at", ""),
+                "arrival": last_seg.get("arriving_at", ""),
+                "departure_airport": first_seg.get("origin", {}).get("iata_code", ""),
+                "arrival_airport": last_seg.get("destination", {}).get("iata_code", ""),
+                "duration_min": total_duration if total_duration else None,
                 "stops": stops,
-                "price": item.get("price"),
-                "currency": "JPY",
-                "booking_link": item.get("deep_link", ""),
+                "price": round(float(offer.get("total_amount", 0))),
+                "currency": offer.get("total_currency", "JPY"),
+                "offer_id": offer.get("id", ""),
             }
             flights.append({k: v for k, v in flight_info.items() if v is not None})
 
         return flights
 
+    except httpx.HTTPStatusError as e:
+        logger.error("Duffel API error %s: %s", e.response.status_code, e.response.text[:200])
+        return []
     except Exception as e:
-        logger.error("Kiwi.com search error: %s", e)
+        logger.error("Duffel search error: %s", e)
         return []
 
 
@@ -214,17 +254,15 @@ async def search_flights(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
 ) -> list[dict]:
-    """Search both Google Flights and Kiwi.com, merge and deduplicate results."""
-    import asyncio
-
+    """Search Google Flights and Duffel, merge and sort by price."""
     tasks = []
     if SERPAPI_KEY:
         tasks.append(_search_google_flights(origin, destination, departure_date, return_date, adults, max_results))
-    if KIWI_API_KEY:
-        tasks.append(_search_kiwi(origin, destination, departure_date, return_date, adults, max_results))
+    if DUFFEL_API_KEY:
+        tasks.append(_search_duffel(origin, destination, departure_date, return_date, adults, max_results))
 
     if not tasks:
-        return [{"error": "No flight search API configured (SERPAPI_KEY or KIWI_API_KEY)"}]
+        return [{"error": "No flight search API configured (SERPAPI_KEY or DUFFEL_API_KEY)"}]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
