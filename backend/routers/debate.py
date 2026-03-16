@@ -132,6 +132,11 @@ async def stream_debate(
         total_output_tokens = 0
         total_cost = 0.0
 
+        # Track provider to add delay between same-provider requests (avoid burst 429s)
+        provider_a = get_provider(model_a)
+        provider_b = get_provider(model_b)
+        last_provider_used = None
+
         async def _stream_step(mdl, msgs, key):
             nonlocal total_input_tokens, total_output_tokens, total_cost
             async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking):
@@ -142,8 +147,16 @@ async def stream_debate(
                 else:
                     yield chunk
 
+        async def _pace(provider: str):
+            """Add delay between consecutive requests to the same provider to avoid burst rate limits."""
+            nonlocal last_provider_used
+            if last_provider_used == provider:
+                await asyncio.sleep(1)
+            last_provider_used = provider
+
         # ── Step 1: Model A answers ──
         yield f"\n[STEP:model_a_answer]\n"
+        await _pace(provider_a)
         step_text = ""
         async for t in _stream_step(model_a, messages, api_key_a):
             step_text += t
@@ -152,6 +165,7 @@ async def stream_debate(
 
         # ── Step 2: Model B answers ──
         yield f"\n[STEP:model_b_answer]\n"
+        await _pace(provider_b)
         step_text = ""
         async for t in _stream_step(model_b, messages, api_key_b):
             step_text += t
@@ -160,6 +174,7 @@ async def stream_debate(
 
         # ── Step 3: Model A critiques Model B ──
         yield f"\n[STEP:model_a_critique]\n"
+        await _pace(provider_a)
         critique_msg_a = messages + [
             {"role": "assistant", "content": step_contents["model_a_answer"]},
             {"role": "user", "content": _critique_prompt(model_b_label, step_contents["model_b_answer"])},
@@ -172,6 +187,7 @@ async def stream_debate(
 
         # ── Step 4: Model B critiques Model A ──
         yield f"\n[STEP:model_b_critique]\n"
+        await _pace(provider_b)
         critique_msg_b = messages + [
             {"role": "assistant", "content": step_contents["model_b_answer"]},
             {"role": "user", "content": _critique_prompt(model_a_label, step_contents["model_a_answer"])},
@@ -184,6 +200,7 @@ async def stream_debate(
 
         # ── Step 5: Model A synthesizes final answer ──
         yield f"\n[STEP:final]\n"
+        await _pace(provider_a)
         final_msg = messages + [
             {"role": "assistant", "content": "議論を開始します。"},
             {"role": "user", "content": _final_prompt(
