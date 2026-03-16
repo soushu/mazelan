@@ -86,7 +86,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
                 {"type": "text", "text": content},
             ]
 
-        if not api_key:
+        if not api_key and not (get_provider(model) == "google" and gemini_free_pool.available):
             yield "\n\n⚠️ APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
             return
 
