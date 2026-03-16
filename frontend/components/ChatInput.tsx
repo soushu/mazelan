@@ -305,7 +305,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.label}{g.provider === "google" ? " (無料・上限あり)" : ""}
+                    {m.label}{m.id === "gemini-2.5-pro" ? " (無料・上限少)" : m.id === "gemini-2.5-flash" ? " (無料・上限中)" : m.id === "gemini-3.1-flash-lite" ? " (無料・上限多)" : ""}
                   </option>
                 ))}
               </optgroup>
@@ -338,7 +338,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.label}{g.provider === "google" ? " (無料・上限あり)" : ""}
+                        {m.label}{m.id === "gemini-2.5-pro" ? " (無料・上限少)" : m.id === "gemini-2.5-flash" ? " (無料・上限中)" : m.id === "gemini-3.1-flash-lite" ? " (無料・上限多)" : ""}
                       </option>
                     ))}
                   </optgroup>
