@@ -51,8 +51,8 @@
   --color-bg-hover: #dce6f0;
   --color-bg-active: #c7d6e5;
   --color-bg-input: #ffffff;
-  --color-bg-user-bubble: #2563eb; /* blue-600 */
-  --color-text-user-bubble: #ffffff;
+  --color-bg-user-bubble: #bfdbfe; /* blue-200 pastel */
+  --color-text-user-bubble: #1e3a5f;
   --color-bg-assistant-bubble: #f5f8fc;
   --color-bg-avatar: #1d4ed8;     /* blue-700 */
   --color-bg-overlay: rgba(0,0,0,0.3);
@@ -90,8 +90,8 @@
   --color-bg-hover: #cffafe;       /* cyan-100 */
   --color-bg-active: #a5f3fc;      /* cyan-200 */
   --color-bg-input: #ffffff;
-  --color-bg-user-bubble: #0891b2; /* cyan-600 */
-  --color-text-user-bubble: #ffffff;
+  --color-bg-user-bubble: #99f6e4; /* teal-200 soft */
+  --color-text-user-bubble: #134e4a;
   --color-bg-assistant-bubble: #edfeff;
   --color-bg-avatar: #0e7490;      /* cyan-700 */
   --color-bg-overlay: rgba(0,0,0,0.3);
