@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import Providers from "./providers";
@@ -30,7 +29,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
-        <Script src="https://emrld.ltd/NTA4NTAz.js?t=508503" strategy="afterInteractive" />
+        <script data-noptimize="1" data-cfasync="false" data-wpfc-render="false" dangerouslySetInnerHTML={{ __html: `(function(){var s=document.createElement("script");s.async=1;s.src="https://emrld.ltd/NTA4NTAz.js?t=508503";document.head.appendChild(s);})();` }} />
       </head>
       <body>
         <NextIntlClientProvider messages={messages}>
