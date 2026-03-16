@@ -14,6 +14,7 @@ from typing import AsyncGenerator
 from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError, BadRequestError as AnthropicBadRequestError, RateLimitError as AnthropicRateLimitError
 
 from backend.amazon_search import AMAZON_SEARCH_TOOL, search_amazon, is_available as amazon_available
+from backend.flight_search import FLIGHT_SEARCH_TOOL, search_flights, is_available as flights_available
 from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
@@ -122,6 +123,16 @@ async def _execute_tool(name: str, input_data: dict) -> str:
             max_results=input_data.get("max_results", 3),
         )
         return json.dumps(results, ensure_ascii=False)
+    if name == "flight_search":
+        results = await search_flights(
+            origin=input_data.get("origin", ""),
+            destination=input_data.get("destination", ""),
+            departure_date=input_data.get("departure_date", ""),
+            return_date=input_data.get("return_date"),
+            adults=input_data.get("adults", 1),
+            max_results=input_data.get("max_results", 3),
+        )
+        return json.dumps(results, ensure_ascii=False)
     return json.dumps({"error": f"Unknown tool: {name}"})
 
 
@@ -142,12 +153,14 @@ async def stream_anthropic(
     if thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
         kwargs["max_tokens"] = 16000
-    # Tools: web search (Claude built-in) + Amazon product search (custom)
+    # Tools: web search (Claude built-in) + custom tools
     tools: list[dict] = []
     if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
         tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
     if amazon_available():
         tools.append(AMAZON_SEARCH_TOOL)
+    if flights_available():
+        tools.append(FLIGHT_SEARCH_TOOL)
     if tools:
         kwargs["tools"] = tools
     if system_prompt:
@@ -245,17 +258,13 @@ def _convert_messages_for_openai(
 
 
 def _openai_tools() -> list[dict] | None:
-    """Return OpenAI-format tool definitions if Amazon search is available."""
-    if not amazon_available():
-        return None
-    return [{
-        "type": "function",
-        "function": {
-            "name": AMAZON_SEARCH_TOOL["name"],
-            "description": AMAZON_SEARCH_TOOL["description"],
-            "parameters": AMAZON_SEARCH_TOOL["input_schema"],
-        },
-    }]
+    """Return OpenAI-format tool definitions for available tools."""
+    tools = []
+    if amazon_available():
+        tools.append({"type": "function", "function": {"name": AMAZON_SEARCH_TOOL["name"], "description": AMAZON_SEARCH_TOOL["description"], "parameters": AMAZON_SEARCH_TOOL["input_schema"]}})
+    if flights_available():
+        tools.append({"type": "function", "function": {"name": FLIGHT_SEARCH_TOOL["name"], "description": FLIGHT_SEARCH_TOOL["description"], "parameters": FLIGHT_SEARCH_TOOL["input_schema"]}})
+    return tools or None
 
 
 async def stream_openai(
@@ -406,16 +415,13 @@ def _is_gemini_rate_limit(err_str: str) -> bool:
 
 
 def _gemini_tools() -> list[genai_types.Tool] | None:
-    """Return Gemini-format tool definitions if Amazon search is available."""
-    if not amazon_available():
-        return None
-    return [genai_types.Tool(function_declarations=[
-        genai_types.FunctionDeclaration(
-            name=AMAZON_SEARCH_TOOL["name"],
-            description=AMAZON_SEARCH_TOOL["description"],
-            parameters=AMAZON_SEARCH_TOOL["input_schema"],
-        ),
-    ])]
+    """Return Gemini-format tool definitions for available tools."""
+    declarations = []
+    if amazon_available():
+        declarations.append(genai_types.FunctionDeclaration(name=AMAZON_SEARCH_TOOL["name"], description=AMAZON_SEARCH_TOOL["description"], parameters=AMAZON_SEARCH_TOOL["input_schema"]))
+    if flights_available():
+        declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
+    return [genai_types.Tool(function_declarations=declarations)] if declarations else None
 
 
 async def _stream_google_with_key(

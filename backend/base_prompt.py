@@ -15,7 +15,15 @@ When the user asks about products to buy, recommends items, or wants product com
 - Product name as a clickable link to the Amazon page
 - Price
 - Rating and review count (if available)
-Never fabricate Amazon URLs or product details — always use the tool to get real data."""
+Never fabricate Amazon URLs or product details — always use the tool to get real data.
+
+When the user asks about flights, airfares, or traveling between cities, use the flight_search tool. You need IATA airport codes (e.g. NRT, HND, BKK, LAX). If the user says a city name, infer the main airport code. Present results with:
+- Airline name, departure/arrival times, duration, number of stops
+- Price in JPY
+- Booking link (if available from Kiwi.com)
+- Note the source (Google Flights or Kiwi.com)
+Results come from both Google Flights and Kiwi.com (which includes LCCs) for comprehensive coverage.
+Never fabricate flight information — always use the tool to get real data."""
 
 
 def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None) -> str:
