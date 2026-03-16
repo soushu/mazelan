@@ -293,6 +293,28 @@ export default function ChatPage() {
   }
 
   async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
+    // Pre-flight: check if API key is needed
+    const provider = getProviderForModel(model);
+    const needsKey = (provider === "anthropic" && !getApiKeyForProvider("anthropic"))
+      || (provider === "openai" && !getApiKeyForProvider("openai"))
+      || (provider === "google" && model === "gemini-2.5-pro" && !getApiKeyForProvider("google"));
+    const secondProvider = secondModel ? getProviderForModel(secondModel) : null;
+    const secondNeedsKey = debateMode && secondProvider && (
+      (secondProvider === "anthropic" && !getApiKeyForProvider("anthropic"))
+      || (secondProvider === "openai" && !getApiKeyForProvider("openai"))
+      || (secondProvider === "google" && secondModel === "gemini-2.5-pro" && !getApiKeyForProvider("google"))
+    );
+    if (needsKey) {
+      setApiKeyModalTab(provider);
+      setApiKeyModalOpen(true);
+      return;
+    }
+    if (secondNeedsKey && secondProvider) {
+      setApiKeyModalTab(secondProvider);
+      setApiKeyModalOpen(true);
+      return;
+    }
+
     setStreaming(true);
     setStreamingText("");
     setStreamingModel(model);
@@ -472,7 +494,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v37.0
+          DEV v37.1
         </div>
       )}
 
