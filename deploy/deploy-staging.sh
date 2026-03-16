@@ -22,8 +22,12 @@ sudo systemctl stop claudia-staging-frontend || true
 
 # Frontend: install dependencies + build
 cd frontend
-if ! npm ci --prefer-offline 2>/dev/null; then
-  echo "npm ci failed, falling back to npm install..."
+set +e
+npm ci 2>&1
+NPM_CI_EXIT=$?
+set -e
+if [ $NPM_CI_EXIT -ne 0 ]; then
+  echo "npm ci failed (exit $NPM_CI_EXIT), falling back to npm install..."
   npm install
 fi
 NODE_OPTIONS="--max_old_space_size=384" npm run build
