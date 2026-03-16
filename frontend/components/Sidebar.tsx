@@ -41,6 +41,11 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
   const [tooltip, setTooltip] = useState<{ text: string; top: number; left: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Close settings accordion when sidebar closes on mobile
+  useEffect(() => {
+    if (!open) setSettingsOpen(false);
+  }, [open]);
   const menuHeight = 228; // approximate menu height in px
 
   const openMenu = useCallback((sessionId: string, buttonEl: HTMLButtonElement) => {
