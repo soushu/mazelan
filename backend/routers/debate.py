@@ -154,7 +154,7 @@ async def stream_debate(
             """Add delay between consecutive requests to the same provider to avoid burst rate limits."""
             nonlocal last_provider_used
             if last_provider_used == provider:
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
             last_provider_used = provider
 
         # ── Step 1: Model A answers ──

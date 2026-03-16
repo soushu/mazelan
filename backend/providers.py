@@ -413,8 +413,8 @@ def _is_gemini_exhausted_error(err_str: str) -> bool:
 
 
 def _is_gemini_rate_limit(err_str: str) -> bool:
-    """Check if error is a transient rate limit (retryable)."""
-    return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str
+    """Check if error is a transient rate limit or temporary unavailability (retryable)."""
+    return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str or "503" in err_str or "unavailable" in err_str
 
 
 def _gemini_tools() -> list[genai_types.Tool] | None:
