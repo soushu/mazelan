@@ -142,7 +142,7 @@ async def stream_debate(
         async def _stream_step(mdl, msgs, key):
             nonlocal total_input_tokens, total_output_tokens, total_cost
             fb = google_fallback if get_provider(mdl) == "google" else None
-            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking, google_fallback=fb):
+            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking, google_fallback=fb, disable_tools=True):
                 if isinstance(chunk, dict):
                     total_input_tokens += chunk.get("input_tokens", 0)
                     total_output_tokens += chunk.get("output_tokens", 0)
@@ -154,7 +154,7 @@ async def stream_debate(
             """Add delay between consecutive requests to the same provider to avoid burst rate limits."""
             nonlocal last_provider_used
             if last_provider_used == provider:
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
             last_provider_used = provider
 
         # ── Step 1: Model A answers ──

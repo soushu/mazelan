@@ -142,6 +142,7 @@ async def stream_anthropic(
     api_key: str,
     system_prompt: str | None = None,
     thinking: bool = False,
+    disable_tools: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = AsyncAnthropic(api_key=api_key)
     kwargs: dict = dict(
@@ -153,16 +154,17 @@ async def stream_anthropic(
     if thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
         kwargs["max_tokens"] = 16000
-    # Tools: web search (Claude built-in) + custom tools
-    tools: list[dict] = []
-    if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
-        tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
-    if amazon_available():
-        tools.append(AMAZON_SEARCH_TOOL)
-    if flights_available():
-        tools.append(FLIGHT_SEARCH_TOOL)
-    if tools:
-        kwargs["tools"] = tools
+    # Tools: web search (Claude built-in) + custom tools (disabled in debate mode)
+    if not disable_tools:
+        tools: list[dict] = []
+        if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
+            tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
+        if amazon_available():
+            tools.append(AMAZON_SEARCH_TOOL)
+        if flights_available():
+            tools.append(FLIGHT_SEARCH_TOOL)
+        if tools:
+            kwargs["tools"] = tools
     if system_prompt:
         kwargs["system"] = system_prompt
 
@@ -272,13 +274,14 @@ async def stream_openai(
     messages: list[dict],
     api_key: str,
     system_prompt: str | None = None,
+    disable_tools: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = AsyncOpenAI(api_key=api_key)
     oai_messages = _convert_messages_for_openai(messages, model, system_prompt)
 
     # o-series models (o1, o3, etc.) require max_completion_tokens instead of max_tokens
     token_param = "max_completion_tokens" if model.startswith("o") else "max_tokens"
-    tools = _openai_tools()
+    tools = None if disable_tools else _openai_tools()
     max_tool_rounds = 3
     total_input = 0
     total_output = 0
@@ -514,6 +517,7 @@ async def stream_google(
     system_prompt: str | None = None,
     thinking: bool = False,
     fallback_key: str | None = None,
+    disable_tools: bool = False,
 ) -> AsyncGenerator[str, None]:
     gemini_contents = _convert_messages_for_gemini(messages)
     if not gemini_contents:
@@ -524,9 +528,10 @@ async def stream_google(
         config.thinking_config = genai_types.ThinkingConfig(thinking_budget=10000)
     if system_prompt:
         config.system_instruction = system_prompt
-    gemini_tool_defs = _gemini_tools()
-    if gemini_tool_defs:
-        config.tools = gemini_tool_defs
+    if not disable_tools:
+        gemini_tool_defs = _gemini_tools()
+        if gemini_tool_defs:
+            config.tools = gemini_tool_defs
 
     # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
     keys_to_try: list[tuple[str, str]] = []  # (key, label)
@@ -578,6 +583,7 @@ async def stream_provider(
     system_prompt: str | None = None,
     thinking: bool = False,
     google_fallback: str | None = None,
+    disable_tools: bool = False,
 ) -> AsyncGenerator[str | dict, None]:
     """Route to the correct provider's streaming function.
     Yields str chunks for content, and a final dict with usage info.
@@ -586,11 +592,11 @@ async def stream_provider(
     provider = get_provider(model)
 
     if provider == "anthropic":
-        gen = stream_anthropic(model, messages, api_key, system_prompt, thinking=thinking)
+        gen = stream_anthropic(model, messages, api_key, system_prompt, thinking=thinking, disable_tools=disable_tools)
     elif provider == "openai":
-        gen = stream_openai(model, messages, api_key, system_prompt)
+        gen = stream_openai(model, messages, api_key, system_prompt, disable_tools=disable_tools)
     elif provider == "google":
-        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback)
+        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback, disable_tools=disable_tools)
     else:
         raise ProviderError(f"Unsupported provider: {provider}")
 
