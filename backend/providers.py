@@ -257,31 +257,40 @@ async def stream_google(
     if system_prompt:
         config.system_instruction = system_prompt
 
-    try:
-        stream = await client.aio.models.generate_content_stream(
-            model=model,
-            contents=gemini_contents,
-            config=config,
-        )
-        usage_data = None
-        async for chunk in stream:
-            if chunk.text:
-                yield chunk.text
-            if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                um = chunk.usage_metadata
-                usage_data = {
-                    "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
-                    "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
-                }
-        if usage_data:
-            yield usage_data
-    except Exception as e:
-        err_str = str(e).lower()
-        if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
-            raise ProviderAuthError("Google API key is invalid")
-        if "rate limit" in err_str or "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str:
-            raise ProviderRateLimitError(str(e))
-        raise ProviderError(f"Gemini error: {e}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            stream = await client.aio.models.generate_content_stream(
+                model=model,
+                contents=gemini_contents,
+                config=config,
+            )
+            usage_data = None
+            async for chunk in stream:
+                if chunk.text:
+                    yield chunk.text
+                if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                    um = chunk.usage_metadata
+                    usage_data = {
+                        "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
+                        "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
+                    }
+            if usage_data:
+                yield usage_data
+            return  # Success, exit retry loop
+        except Exception as e:
+            err_str = str(e).lower()
+            if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
+                raise ProviderAuthError("Google API key is invalid")
+            is_rate_limit = "rate limit" in err_str or "quota" in err_str or "429" in err_str or "resource_exhausted" in err_str
+            if is_rate_limit and attempt < max_retries - 1:
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                logger.warning("Gemini 429 rate limit, retry %d/%d after %ds", attempt + 1, max_retries, wait)
+                await asyncio.sleep(wait)
+                continue
+            if is_rate_limit:
+                raise ProviderRateLimitError(str(e))
+            raise ProviderError(f"Gemini error: {e}")
 
 
 # ── Dispatch ────────────────────────────────────────────────
