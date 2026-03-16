@@ -49,8 +49,8 @@ feature/* を develop にマージする前に必ず以下を実行:
 
 | 環境 | ブランチ | ドメイン | Backend | Frontend | DB |
 |------|----------|----------|---------|----------|-----|
-| 本番 | main | claudia.soushu.biz | :8000 | :3000 | claudia |
-| ステージング | develop | dev.claudia.soushu.biz | :8002 | :3002 | claudia_staging |
+| 本番 | main | mazelan.ai | :8000 | :3000 | claudia |
+| ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging |
 
 GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
 全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
