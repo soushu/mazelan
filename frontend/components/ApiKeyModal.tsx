@@ -8,6 +8,7 @@ import {
   clearApiKeyForProvider,
   validateApiKey,
 } from "@/lib/apiKeyStore";
+import { useTranslations } from "next-intl";
 
 type Props = {
   open: boolean;
@@ -21,6 +22,7 @@ const TABS: { provider: Provider; label: string; placeholder: string }[] = [
 ];
 
 export default function ApiKeyModal({ open, onClose }: Props) {
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Provider>("anthropic");
   const [keys, setKeys] = useState<Record<Provider, string>>({ anthropic: "", openai: "", google: "" });
   const [saved, setSaved] = useState<Record<Provider, boolean>>({ anthropic: false, openai: false, google: false });
@@ -72,9 +74,9 @@ export default function ApiKeyModal({ open, onClose }: Props) {
         className="bg-theme-elevated rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-t-primary mb-1">API Key 設定</h2>
+        <h2 className="text-lg font-semibold text-t-primary mb-1">{t("apiKey.title")}</h2>
         <p className="text-xs text-t-tertiary mb-4">
-          各プロバイダーのAPIキーを設定してください。キーはブラウザのlocalStorageにのみ保存されます。
+          {t("apiKey.description")}
         </p>
 
         {/* Tabs */}
@@ -100,7 +102,7 @@ export default function ApiKeyModal({ open, onClose }: Props) {
         {/* Google free tier note */}
         {activeTab === "google" && (
           <p className="text-xs text-t-muted mb-3">
-            Googleモデルは APIキーなしでも利用できます（Free表記）。x2, x10 は無料枠の消費倍率です。自分のキーを設定すると、より高い上限で使えます。
+            {t("apiKey.googleFreeNote")}
           </p>
         )}
 
@@ -118,7 +120,7 @@ export default function ApiKeyModal({ open, onClose }: Props) {
             onClick={() => setShowKey(!showKey)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-t-muted hover:text-t-secondary px-2 py-1"
           >
-            {showKey ? "隠す" : "表示"}
+            {showKey ? t("apiKey.hide") : t("apiKey.show")}
           </button>
         </div>
 
@@ -130,21 +132,21 @@ export default function ApiKeyModal({ open, onClose }: Props) {
             disabled={!keys[activeTab].trim()}
             className="flex-1 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm transition-colors"
           >
-            保存
+            {t("apiKey.save")}
           </button>
           {saved[activeTab] && (
             <button
               onClick={handleClear}
               className="py-2 px-4 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-sm transition-colors"
             >
-              削除
+              {t("apiKey.clear")}
             </button>
           )}
           <button
             onClick={onClose}
             className="py-2 px-4 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-sm transition-colors"
           >
-            閉じる
+            {t("apiKey.close")}
           </button>
         </div>
       </div>
