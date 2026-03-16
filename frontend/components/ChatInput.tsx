@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback, useMemo, KeyboardEvent, DragEvent } from "react";
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
 import { getApiKeyForProvider } from "@/lib/apiKeyStore";
+import { useTranslations } from "next-intl";
 
 const COST_LABELS: Record<string, string> = {
   "gemini-3.1-flash-lite": "x1",
@@ -61,6 +62,7 @@ function saveSessionModel(sessionId: string | null, model: ModelId, model2: Mode
 }
 
 export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
+  const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
@@ -164,7 +166,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
     handleFiles(e.dataTransfer?.files || null);
   }, []);
 
-  const modeLabel = thinking && supportsThinking ? "思考モード" : "高速モード";
+  const modeLabel = thinking && supportsThinking ? t("input.thinkingMode") : t("input.fastMode");
 
   return (
     <div
@@ -208,7 +210,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               const files = e.clipboardData?.files;
               if (files && files.length > 0) handleFiles(files);
             }}
-            placeholder="Type a message..."
+            placeholder={t("chat.typeMessage")}
             rows={2}
             className="w-full bg-transparent text-t-secondary placeholder-t-placeholder text-sm px-4 py-3 resize-none outline-none disabled:opacity-50 font-sans"
           />
@@ -219,7 +221,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               onClick={() => fileRef.current?.click()}
               disabled={disabled}
               className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
-              title="Attach image"
+              title={t("chat.attachImage")}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
@@ -266,28 +268,28 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                       className={`w-full text-left px-4 py-3 transition-colors ${!thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-t-secondary">高速モード</span>
+                        <span className="text-sm font-medium text-t-secondary">{t("input.fastMode")}</span>
                         {!thinking && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">素早く回答</p>
+                      <p className="text-xs text-t-muted mt-0.5">{t("input.fastDescription")}</p>
                     </button>
                     <button
                       onClick={() => { setThinking(true); setModeMenuOpen(false); }}
                       className={`w-full text-left px-4 py-3 transition-colors ${thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-t-secondary">思考モード</span>
+                        <span className="text-sm font-medium text-t-secondary">{t("input.thinkingMode")}</span>
                         {thinking && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">複雑な問題を解決</p>
+                      <p className="text-xs text-t-muted mt-0.5">{t("input.thinkingDescription")}</p>
                     </button>
                   </div>
                 )}
@@ -299,7 +301,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               onClick={submit}
               disabled={disabled}
               className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
-              title="Send"
+              title={t("chat.send")}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -310,7 +312,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
 
         {dragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-xl pointer-events-none z-10">
-            <p className="text-blue-400 text-sm font-medium">Drop images to attach</p>
+            <p className="text-blue-400 text-sm font-medium">{t("chat.dropImages")}</p>
           </div>
         )}
 
@@ -341,14 +343,14 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                 ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
                 : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
             }`}
-            title="議論モード"
+            title={t("input.debateMode")}
           >
-            🔀 議論
+            🔀 {t("input.debate")}
           </button>
 
           {debateMode && (
             <>
-              <span className="text-t-muted text-xs select-none">vs</span>
+              <span className="text-t-muted text-xs select-none">{t("input.vs")}</span>
               <select
                 value={secondModel}
                 onChange={(e) => { const v = e.target.value as ModelId; setSecondModel(v); saveSessionModel(sessionId, selectedModel, v); }}

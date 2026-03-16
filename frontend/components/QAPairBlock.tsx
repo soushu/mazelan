@@ -7,8 +7,10 @@ import MessageContent from "@/components/MessageContent";
 import DebateDisplay from "@/components/DebateDisplay";
 import ProviderIcon from "@/components/ProviderIcon";
 import TokenUsageTooltip from "@/components/TokenUsageTooltip";
+import { useTranslations } from "next-intl";
 
 function MessageCopyButton({ text }: { text: string }) {
+  const t = useTranslations();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -20,7 +22,7 @@ function MessageCopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      title="Copy message"
+      title={t("copy.copy")}
       className="opacity-0 group-hover/msg:opacity-100 p-1 rounded text-t-muted hover:text-t-secondary hover:bg-theme-hover transition-all text-xs"
     >
       {copied ? (
@@ -37,6 +39,7 @@ function MessageCopyButton({ text }: { text: string }) {
 }
 
 function UserBubble({ user }: { user: QAPair["user"] }) {
+  const t = useTranslations();
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
@@ -76,7 +79,7 @@ function UserBubble({ user }: { user: QAPair["user"] }) {
                 onClick={() => setExpanded(true)}
                 className="absolute bottom-0 right-0 pl-8 bg-gradient-to-l from-[var(--color-bg-user-bubble)] from-60% text-t-user-bubble/70 hover:text-t-user-bubble text-xs"
               >
-                ...more
+                {t("debate.more")}
               </button>
             )}
             {expanded && clamped && (
@@ -84,7 +87,7 @@ function UserBubble({ user }: { user: QAPair["user"] }) {
                 onClick={() => setExpanded(false)}
                 className="text-t-user-bubble/70 hover:text-t-user-bubble text-xs mt-1"
               >
-                show less
+                {t("debate.showLess")}
               </button>
             )}
           </div>
@@ -111,6 +114,7 @@ type Props = {
 };
 
 export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate, streamingModel }: Props) {
+  const t = useTranslations();
   const isStreaming = streamingText !== undefined;
 
   // Check if assistant content is a debate
@@ -157,7 +161,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                   <div className="w-6 h-6 flex items-center justify-center text-xs flex-shrink-0 text-t-secondary">
                     🔀
                   </div>
-                  <span className="text-xs font-medium text-t-muted">議論モード</span>
+                  <span className="text-xs font-medium text-t-muted">{t("debate.debateMode")}</span>
                 </div>
                 <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <DebateDisplay
@@ -201,7 +205,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                   <div className="w-6 h-6 flex items-center justify-center text-xs flex-shrink-0 text-t-secondary">
                     🔀
                   </div>
-                  <span className="text-xs font-medium text-t-muted">議論モード</span>
+                  <span className="text-xs font-medium text-t-muted">{t("debate.debateMode")}</span>
                 </div>
                 <div className="bg-theme-assistant-bubble text-t-secondary rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm">
                   <StreamingDebateView rawText={streamingText || ""} modelA={streamingDebate.modelA} modelB={streamingDebate.modelB} />
@@ -246,6 +250,7 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
 
 /** Parse streaming debate text into steps for real-time display */
 function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; modelA: string; modelB: string }) {
+  const t = useTranslations();
   const completedSteps: { id: DebateStepId; content: string }[] = [];
   let currentStepId: DebateStepId | null = null;
   let currentContent = "";
@@ -267,7 +272,7 @@ function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; mod
   }
 
   if (!currentStepId && completedSteps.length === 0) {
-    return <span className="animate-pulse text-t-muted">議論を開始中...</span>;
+    return <span className="animate-pulse text-t-muted">{t("debate.starting")}</span>;
   }
 
   return (
