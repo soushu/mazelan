@@ -11,6 +11,7 @@
     "jspdf": "^4.2.0",
     "next": "14.2.29",
     "next-auth": "^4.24.11",
+    "next-intl": "^4.8.3",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^9",

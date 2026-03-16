@@ -1,0 +1,91 @@
+{
+  "app": {
+    "name": "Mazelan"
+  },
+  "auth": {
+    "signInTitle": "Sign in to continue",
+    "signUpTitle": "Create your account",
+    "signInWithGoogle": "Sign in with Google",
+    "or": "or",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name (optional)",
+    "signIn": "Sign in with Email",
+    "signUp": "Sign up",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signInLink": "Sign in",
+    "signUpLink": "Sign up",
+    "signOut": "Sign out",
+    "errorAccessDenied": "Access denied. Your account is not authorized.",
+    "errorSignInFailed": "Sign in failed. Please try again.",
+    "errorEmailExists": "This email is already registered.",
+    "errorRegistrationFailed": "Registration failed.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  },
+  "chat": {
+    "welcome": "What can I help you with?",
+    "suggestion1": "Help me plan a trip",
+    "suggestion2": "Recommend tourist spots",
+    "suggestion3": "Give me some ideas",
+    "suggestion4": "Proofread my text",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "attachImage": "Attach image",
+    "dropImages": "Drop images to attach",
+    "imageQuestion": "Image question",
+    "errorGeneric": "An error occurred.",
+    "errorSending": "An error occurred while sending the message. Please try again.",
+    "errorApiKeyInvalid": "API key is invalid. Please set the correct key in \"API Key\" settings in the sidebar.",
+    "errorApiKeyMissing": "{provider} API key is not configured. Please set the key in \"API Key\" settings in the sidebar."
+  },
+  "sidebar": {
+    "newChat": "+ New",
+    "search": "Search...",
+    "noHistory": "No history",
+    "apiKey": "API Key",
+    "systemPrompt": "System Prompt",
+    "contextMemory": "Context Memory",
+    "theme": "Theme: {theme}",
+    "rename": "Rename",
+    "star": "Star",
+    "unstar": "Unstar",
+    "exportText": "Export Text",
+    "exportPdf": "Export PDF",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this session? This action cannot be undone.",
+    "cancel": "Cancel"
+  },
+  "input": {
+    "fastMode": "Fast mode",
+    "thinkingMode": "Thinking mode",
+    "fastDescription": "Quick response",
+    "thinkingDescription": "Solve complex problems",
+    "debateMode": "Debate mode",
+    "debate": "Debate",
+    "vs": "vs"
+  },
+  "apiKey": {
+    "title": "API Key Settings",
+    "description": "Set API keys for each provider. Keys are stored only in your browser's localStorage.",
+    "googleFreeNote": "Google models can be used without an API key (Free). x2, x10 indicate free tier usage multiplier. Set your own key for higher limits.",
+    "show": "Show",
+    "hide": "Hide",
+    "save": "Save",
+    "clear": "Clear",
+    "close": "Close"
+  },
+  "debate": {
+    "debateMode": "Debate mode",
+    "starting": "Starting debate...",
+    "more": "...more",
+    "showLess": "show less"
+  },
+  "copy": {
+    "copied": "Copied!",
+    "copy": "Copy"
+  }
+}
