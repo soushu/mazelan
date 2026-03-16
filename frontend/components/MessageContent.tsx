@@ -6,8 +6,10 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, coldarkCold } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useTheme } from "@/lib/themeContext";
+import { useTranslations } from "next-intl";
 
 function CopyButton({ text }: { text: string }) {
+  const t = useTranslations();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -21,7 +23,7 @@ function CopyButton({ text }: { text: string }) {
       onClick={handleCopy}
       className="absolute top-2 right-2 px-2 py-1 rounded text-xs bg-theme-hover/80 hover:bg-theme-active text-t-tertiary hover:text-t-secondary transition-colors opacity-0 group-hover:opacity-100"
     >
-      {copied ? "Copied!" : "Copy"}
+      {copied ? t("copy.copied") : t("copy.copy")}
     </button>
   );
 }

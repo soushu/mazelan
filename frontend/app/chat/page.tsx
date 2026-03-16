@@ -12,6 +12,7 @@ import { createSession, listSessions, getMessages, deleteSession, updateSession,
 import { getApiKeyForProvider, getGoogleFallbackKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
 import { getProviderForModel, parseDebateContent, parseUsageMarker } from "@/lib/types";
+import { useTranslations } from "next-intl";
 
 function groupIntoPairs(messages: Message[]): QAPair[] {
   const pairs: QAPair[] = [];
@@ -32,6 +33,7 @@ function groupIntoPairs(messages: Message[]): QAPair[] {
 }
 
 export default function ChatPage() {
+  const t = useTranslations();
   const { data: authSession, status } = useSession();
 
   const [sessions, setSessionsRaw] = useState<Session[]>(() => {
@@ -65,6 +67,7 @@ export default function ChatPage() {
   const [streamingModel, setStreamingModel] = useState<string | undefined>(undefined);
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [apiKeyModalTab, setApiKeyModalTab] = useState<string | undefined>(undefined);
   const [systemPromptModalOpen, setSystemPromptModalOpen] = useState(false);
   const [contextModalOpen, setContextModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -290,6 +293,28 @@ export default function ChatPage() {
   }
 
   async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
+    // Pre-flight: check if API key is needed
+    const provider = getProviderForModel(model);
+    const needsKey = (provider === "anthropic" && !getApiKeyForProvider("anthropic"))
+      || (provider === "openai" && !getApiKeyForProvider("openai"))
+      || (provider === "google" && model === "gemini-2.5-pro" && !getApiKeyForProvider("google"));
+    const secondProvider = secondModel ? getProviderForModel(secondModel) : null;
+    const secondNeedsKey = debateMode && secondProvider && (
+      (secondProvider === "anthropic" && !getApiKeyForProvider("anthropic"))
+      || (secondProvider === "openai" && !getApiKeyForProvider("openai"))
+      || (secondProvider === "google" && secondModel === "gemini-2.5-pro" && !getApiKeyForProvider("google"))
+    );
+    if (needsKey) {
+      setApiKeyModalTab(provider);
+      setApiKeyModalOpen(true);
+      return;
+    }
+    if (secondNeedsKey && secondProvider) {
+      setApiKeyModalTab(secondProvider);
+      setApiKeyModalOpen(true);
+      return;
+    }
+
     setStreaming(true);
     setStreamingText("");
     setStreamingModel(model);
@@ -299,7 +324,7 @@ export default function ChatPage() {
     try {
     let sessionId = activeId;
     if (!sessionId) {
-      const session = await createSession(content.slice(0, 60) || "Image question");
+      const session = await createSession(content.slice(0, 60) || t("chat.imageQuestion"));
       setSessions((prev) => [session, ...prev]);
       setActiveId(session.id);
       sessionId = session.id;
@@ -324,11 +349,10 @@ export default function ChatPage() {
         const anthropicKey = providerA !== "anthropic" && providerB !== "anthropic"
           ? getApiKeyForProvider("anthropic") : null;
 
-        const providerNames: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
         if (!apiKeyA && providerA !== "google") {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: `${providerNames[providerA]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+            { role: "assistant", content: t("chat.errorApiKeyMissing", { provider: providerA.charAt(0).toUpperCase() + providerA.slice(1) }), created_at: new Date().toISOString() },
           ]);
           setStreaming(false);
           setStreamingText("");
@@ -339,7 +363,7 @@ export default function ChatPage() {
         if (!apiKeyB && providerB !== "google") {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: `${providerNames[providerB]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+            { role: "assistant", content: t("chat.errorApiKeyMissing", { provider: providerB.charAt(0).toUpperCase() + providerB.slice(1) }), created_at: new Date().toISOString() },
           ]);
           setStreaming(false);
           setStreamingText("");
@@ -357,7 +381,7 @@ export default function ChatPage() {
         // (errors cause db.rollback() so the message won't be in DB)
         if (full.includes("⚠️")) {
           const errorMatch = full.match(/⚠️[^\n]*/);
-          const errorMsg = errorMatch ? errorMatch[0] : "⚠️ エラーが発生しました。";
+          const errorMsg = errorMatch ? errorMatch[0] : `⚠️ ${t("chat.errorGeneric")}`;
           setMessages((prev) => [
             ...prev,
             { role: "assistant", content: errorMsg, created_at: new Date().toISOString(), model },
@@ -377,10 +401,9 @@ export default function ChatPage() {
         const apiKey = getApiKeyForProvider(provider);
         const anthropicKey = provider !== "anthropic" ? getApiKeyForProvider("anthropic") : null;
         if (!apiKey && provider !== "google") {
-          const providerNames: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: `${providerNames[provider]} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。`, created_at: new Date().toISOString() },
+            { role: "assistant", content: t("chat.errorApiKeyMissing", { provider: provider.charAt(0).toUpperCase() + provider.slice(1) }), created_at: new Date().toISOString() },
           ]);
           setStreaming(false);
           setStreamingText("");
@@ -407,12 +430,12 @@ export default function ChatPage() {
       if (err instanceof Error && err.message === "API_KEY_INVALID") {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。", created_at: new Date().toISOString() },
+          { role: "assistant", content: t("chat.errorApiKeyInvalid"), created_at: new Date().toISOString() },
         ]);
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "⚠️ メッセージの送信中にエラーが発生しました。もう一度お試しください。", created_at: new Date().toISOString() },
+          { role: "assistant", content: `⚠️ ${t("chat.errorSending")}`, created_at: new Date().toISOString() },
         ]);
       }
     } finally {
@@ -464,14 +487,14 @@ export default function ChatPage() {
         onClose={() => setSidebarOpen(false)}
         loading={loadingSessions}
       />
-      <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
+      <ApiKeyModal open={apiKeyModalOpen} onClose={() => { setApiKeyModalOpen(false); setApiKeyModalTab(undefined); }} initialTab={apiKeyModalTab} />
       <SystemPromptModal open={systemPromptModalOpen} onClose={() => setSystemPromptModalOpen(false)} activeSessionId={activeId} />
       <ContextModal open={contextModalOpen} onClose={() => setContextModalOpen(false)} />
 
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v36.6
+          DEV v37.2
         </div>
       )}
 
@@ -487,7 +510,7 @@ export default function ChatPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <h1 className="text-base font-semibold text-t-primary">Mazelan</h1>
+          <h1 className="text-base font-semibold text-t-primary">{t("app.name")}</h1>
         </div>
 
         {/* Message list */}
@@ -527,14 +550,14 @@ export default function ChatPage() {
                     </g>
                   </svg>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-semibold text-t-primary mb-1">Mazelan</h2>
-                <p className="text-t-tertiary text-sm mb-8">何でも聞いてください</p>
+                <h2 className="text-2xl md:text-3xl font-semibold text-t-primary mb-1">{t("app.name")}</h2>
+                <p className="text-t-tertiary text-sm mb-8">{t("chat.welcome")}</p>
                 <div className="grid grid-cols-2 gap-2 md:gap-3 w-full max-w-md">
                   {[
-                    { icon: "✈️", text: "旅行プランを考えて" },
-                    { icon: "🗺️", text: "おすすめの観光地は？" },
-                    { icon: "💡", text: "アイデアを出して" },
-                    { icon: "📝", text: "文章を添削して" },
+                    { icon: "✈️", text: t("chat.suggestion1") },
+                    { icon: "🗺️", text: t("chat.suggestion2") },
+                    { icon: "💡", text: t("chat.suggestion3") },
+                    { icon: "📝", text: t("chat.suggestion4") },
                   ].map((s) => (
                     <button
                       key={s.text}
@@ -615,7 +638,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <ChatInput onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} />
+        <ChatInput onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} onOpenApiKeyModal={(provider) => { setApiKeyModalTab(provider); setApiKeyModalOpen(true); }} />
       </div>
     </div>
   );

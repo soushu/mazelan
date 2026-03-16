@@ -3,11 +3,13 @@
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 function LoginForm() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const [email, setEmail] = useState("");
@@ -33,16 +35,15 @@ function LoginForm() {
           const data = await res.json().catch(() => null);
           setFormError(
             res.status === 409
-              ? "このメールアドレスは既に登録されています。"
-              : data?.detail || "登録に失敗しました。"
+              ? t("auth.errorEmailExists")
+              : data?.detail || t("auth.errorRegistrationFailed")
           );
           setLoading(false);
           return;
         }
-        // Registration successful, auto sign in
         await signIn("credentials", { email, password, callbackUrl: "/chat" });
       } catch {
-        setFormError("登録に失敗しました。");
+        setFormError(t("auth.errorRegistrationFailed"));
       }
       setLoading(false);
     } else {
@@ -54,9 +55,9 @@ function LoginForm() {
   return (
     <div className="w-full max-w-sm space-y-6 px-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-t-primary">Mazelan</h1>
+        <h1 className="text-2xl font-bold text-t-primary">{t("app.name")}</h1>
         <p className="mt-1 text-sm text-t-muted">
-          {isSignUp ? "Create your account" : "Sign in to continue"}
+          {isSignUp ? t("auth.signUpTitle") : t("auth.signInTitle")}
         </p>
       </div>
 
@@ -64,8 +65,8 @@ function LoginForm() {
         <div className="rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {formError ||
             (error === "AccessDenied"
-              ? "Access denied. Your account is not authorized."
-              : "Sign in failed. Please try again.")}
+              ? t("auth.errorAccessDenied")
+              : t("auth.errorSignInFailed"))}
         </div>
       )}
 
@@ -93,12 +94,12 @@ function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            Sign in with Google
+            {t("auth.signInWithGoogle")}
           </button>
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-divider" />
-            <span className="text-xs text-t-muted">or</span>
+            <span className="text-xs text-t-muted">{t("auth.or")}</span>
             <div className="h-px flex-1 bg-divider" />
           </div>
         </>
@@ -108,7 +109,7 @@ function LoginForm() {
         {isSignUp && (
           <input
             type="text"
-            placeholder="Name (optional)"
+            placeholder={t("auth.name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-lg border border-border-input bg-theme-input px-4 py-3 text-sm text-t-primary placeholder-t-placeholder focus:border-border-secondary focus:outline-none"
@@ -116,7 +117,7 @@ function LoginForm() {
         )}
         <input
           type="email"
-          placeholder="Email"
+          placeholder={t("auth.email")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -124,7 +125,7 @@ function LoginForm() {
         />
         <input
           type="password"
-          placeholder="Password"
+          placeholder={t("auth.password")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -138,16 +139,16 @@ function LoginForm() {
         >
           {loading
             ? isSignUp
-              ? "Creating account..."
-              : "Signing in..."
+              ? t("auth.creatingAccount")
+              : t("auth.signingIn")
             : isSignUp
-              ? "Sign up"
-              : "Sign in with Email"}
+              ? t("auth.signUp")
+              : t("auth.signIn")}
         </button>
       </form>
 
       <p className="text-center text-sm text-t-muted">
-        {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+        {isSignUp ? t("auth.hasAccount") : t("auth.noAccount")}{" "}
         <button
           onClick={() => {
             setIsSignUp(!isSignUp);
@@ -155,14 +156,14 @@ function LoginForm() {
           }}
           className="text-accent hover:text-accent-hover transition-colors"
         >
-          {isSignUp ? "Sign in" : "Sign up"}
+          {isSignUp ? t("auth.signInLink") : t("auth.signUpLink")}
         </button>
       </p>
 
       <p className="text-center text-xs text-t-muted">
-        <Link href="/terms" className="hover:text-t-secondary transition-colors">利用規約</Link>
+        <Link href="/terms" className="hover:text-t-secondary transition-colors">{t("auth.terms")}</Link>
         <span className="mx-2">·</span>
-        <Link href="/privacy" className="hover:text-t-secondary transition-colors">プライバシーポリシー</Link>
+        <Link href="/privacy" className="hover:text-t-secondary transition-colors">{t("auth.privacy")}</Link>
       </p>
     </div>
   );

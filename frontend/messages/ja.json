@@ -1,0 +1,140 @@
+{
+  "app": {
+    "name": "Mazelan"
+  },
+  "auth": {
+    "signInTitle": "ログインしてください",
+    "signUpTitle": "アカウントを作成",
+    "signInWithGoogle": "Googleでログイン",
+    "or": "または",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "name": "名前（任意）",
+    "signIn": "メールでログイン",
+    "signUp": "アカウント作成",
+    "signingIn": "ログイン中...",
+    "creatingAccount": "アカウント作成中...",
+    "noAccount": "アカウントをお持ちでない方",
+    "hasAccount": "すでにアカウントをお持ちの方",
+    "signInLink": "ログイン",
+    "signUpLink": "新規登録",
+    "signOut": "ログアウト",
+    "errorAccessDenied": "アクセスが拒否されました。このアカウントは認証されていません。",
+    "errorSignInFailed": "ログインに失敗しました。もう一度お試しください。",
+    "errorEmailExists": "このメールアドレスは既に登録されています。",
+    "errorRegistrationFailed": "登録に失敗しました。",
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー"
+  },
+  "chat": {
+    "welcome": "何でも聞いてください",
+    "suggestion1": "旅行プランを考えて",
+    "suggestion2": "おすすめの観光地は？",
+    "suggestion3": "アイデアを出して",
+    "suggestion4": "文章を添削して",
+    "typeMessage": "メッセージを入力...",
+    "send": "送信",
+    "attachImage": "画像を添付",
+    "dropImages": "画像をドロップして添付",
+    "imageQuestion": "画像の質問",
+    "errorGeneric": "エラーが発生しました。",
+    "errorSending": "メッセージの送信中にエラーが発生しました。もう一度お試しください。",
+    "errorApiKeyInvalid": "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。",
+    "errorApiKeyMissing": "{provider} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
+  },
+  "sidebar": {
+    "newChat": "+ New",
+    "search": "検索...",
+    "noHistory": "履歴がありません",
+    "apiKey": "API Key",
+    "systemPrompt": "システムプロンプト",
+    "contextMemory": "コンテキストメモリ",
+    "theme": "テーマ: {theme}",
+    "rename": "名前変更",
+    "star": "お気に入り",
+    "unstar": "お気に入り解除",
+    "exportText": "テキスト出力",
+    "exportPdf": "PDF出力",
+    "delete": "削除",
+    "deleteConfirm": "このセッションを削除しますか？この操作は取り消せません。",
+    "cancel": "キャンセル"
+  },
+  "input": {
+    "fastMode": "高速モード",
+    "thinkingMode": "思考モード",
+    "fastDescription": "素早く回答",
+    "thinkingDescription": "複雑な問題を解決",
+    "debateMode": "議論モード",
+    "debate": "議論",
+    "vs": "vs"
+  },
+  "apiKey": {
+    "title": "API Key 設定",
+    "description": "各プロバイダーのAPIキーを設定してください。キーはブラウザのlocalStorageにのみ保存されます。",
+    "googleFreeNote": "Googleモデルは APIキーなしでも利用できます（Free表記）。x2, x10 は無料枠の消費倍率です。自分のキーを設定すると、より高い上限で使えます。",
+    "show": "表示",
+    "hide": "隠す",
+    "save": "保存",
+    "clear": "削除",
+    "close": "閉じる"
+  },
+  "debate": {
+    "debateMode": "議論モード",
+    "starting": "議論を開始中...",
+    "more": "...もっと見る",
+    "showLess": "閉じる",
+    "answer": "の回答",
+    "critique": "の批評",
+    "finalAnswer": "統合回答",
+    "thinking": "考え中...",
+    "generating": "（生成中）",
+    "completedSteps": "完了したステップ（{count}件）",
+    "viewProcess": "議論の過程を見る（{count}件）",
+    "step": "ステップ {current}/{total}: {label}"
+  },
+  "systemPrompt": {
+    "title": "システムプロンプト",
+    "description": "AIが従う指示を設定します。すべての応答のトーンや振る舞いに影響します。",
+    "global": "グローバル",
+    "session": "セッション",
+    "globalPlaceholder": "例: 必ず敬語で回答してください...",
+    "sessionPlaceholder": "例: あなたは旅行プランニングの専門家です...",
+    "selectSession": "会話を選択してください。",
+    "chars": "文字",
+    "saved": "保存しました！",
+    "save": "保存",
+    "clear": "クリア",
+    "close": "閉じる"
+  },
+  "context": {
+    "title": "コンテキストメモリ",
+    "items": "件",
+    "description": "AIがあなたについて記憶している情報です。会話から自動的に抽出されますが、手動で追加・編集もできます。",
+    "searchPlaceholder": "新しいコンテキストを追加...",
+    "add": "追加",
+    "emptyMessage": "まだ何も登録されていません。上のフォームから追加するか、会話を続けるとAIが自動的に学習します。",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "edit": "編集",
+    "delete": "削除",
+    "close": "閉じる",
+    "categories": {
+      "preferences": "好み・設定",
+      "skills": "スキル・専門",
+      "projects": "プロジェクト",
+      "personal": "個人情報",
+      "general": "その他"
+    }
+  },
+  "usage": {
+    "title": "トークン使用量",
+    "input": "入力",
+    "output": "出力",
+    "total": "合計",
+    "cost": "コスト"
+  },
+  "copy": {
+    "copied": "コピーしました！",
+    "copy": "コピー"
+  }
+}

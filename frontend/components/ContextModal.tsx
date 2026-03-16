@@ -3,14 +3,9 @@
 import { useState, useEffect } from "react";
 import { listContexts, createContext, updateContext, deleteContext, toggleContext } from "@/lib/api";
 import type { ContextItem } from "@/lib/types";
+import { useTranslations } from "next-intl";
 
-const CATEGORIES = [
-  { value: "preferences", label: "好み・設定" },
-  { value: "skills", label: "スキル・専門" },
-  { value: "projects", label: "プロジェクト" },
-  { value: "personal", label: "個人情報" },
-  { value: "general", label: "その他" },
-];
+const CATEGORY_KEYS = ["preferences", "skills", "projects", "personal", "general"] as const;
 
 type Props = {
   open: boolean;
@@ -18,6 +13,7 @@ type Props = {
 };
 
 export default function ContextModal({ open, onClose }: Props) {
+  const t = useTranslations();
   const [grouped, setGrouped] = useState<Record<string, ContextItem[]>>({});
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -60,7 +56,6 @@ export default function ContextModal({ open, onClose }: Props) {
   }
 
   async function handleToggle(id: string) {
-    // Optimistic update – no reload, no scroll reset
     setGrouped((prev) => {
       const next = { ...prev };
       for (const cat of Object.keys(next)) {
@@ -74,7 +69,7 @@ export default function ContextModal({ open, onClose }: Props) {
       await toggleContext(id);
     } catch (err) {
       console.error(err);
-      await loadContexts(); // revert on error
+      await loadContexts();
     }
   }
 
@@ -100,9 +95,8 @@ export default function ContextModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const categoryOrder = CATEGORIES.map((c) => c.value);
   const sortedCategories = Object.keys(grouped).sort(
-    (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
+    (a, b) => CATEGORY_KEYS.indexOf(a as typeof CATEGORY_KEYS[number]) - CATEGORY_KEYS.indexOf(b as typeof CATEGORY_KEYS[number])
   );
 
   return (
@@ -112,11 +106,11 @@ export default function ContextModal({ open, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-semibold text-t-primary">Context Memory</h2>
-          <span className="text-xs text-t-muted">{total} items</span>
+          <h2 className="text-lg font-semibold text-t-primary">{t("context.title")}</h2>
+          <span className="text-xs text-t-muted">{total} {t("context.items")}</span>
         </div>
         <p className="text-xs text-t-tertiary mb-4">
-          AIがあなたのことを覚えておくためのメモです。例えば「プログラマー」「日本語で回答希望」などを登録しておくと、毎回伝えなくてもAIがそれを踏まえて回答します。会話中にAIが自動で学習することもあります。不要な項目はOFFにできます。
+          {t("context.description")}
         </p>
 
         {/* Add form */}
@@ -125,9 +119,8 @@ export default function ContextModal({ open, onClose }: Props) {
             type="text"
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
-            placeholder="例: Webエンジニア / 東京在住 / 敬語不要"
+            placeholder={t("context.searchPlaceholder")}
             className="w-full bg-theme-surface text-t-secondary placeholder-t-placeholder text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-border-secondary"
-
           />
           <div className="flex gap-2">
             <select
@@ -135,8 +128,8 @@ export default function ContextModal({ open, onClose }: Props) {
               onChange={(e) => setNewCategory(e.target.value)}
               className="flex-1 bg-theme-surface text-t-secondary text-sm px-2 py-2 rounded-lg outline-none"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+              {CATEGORY_KEYS.map((key) => (
+                <option key={key} value={key}>{t(`context.categories.${key}`)}</option>
               ))}
             </select>
             <button
@@ -144,7 +137,7 @@ export default function ContextModal({ open, onClose }: Props) {
               disabled={adding || !newContent.trim()}
               className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm transition-colors whitespace-nowrap"
             >
-              追加
+              {t("context.add")}
             </button>
           </div>
         </div>
@@ -157,13 +150,13 @@ export default function ContextModal({ open, onClose }: Props) {
             </div>
           ) : sortedCategories.length === 0 ? (
             <p className="text-t-muted text-sm text-center py-8">
-              まだ何も登録されていません。上のフォームから追加するか、会話を続けるとAIが自動的に学習します。
+              {t("context.emptyMessage")}
             </p>
           ) : (
             sortedCategories.map((cat) => (
               <div key={cat}>
                 <h3 className="text-xs font-medium text-t-tertiary uppercase tracking-wider mb-2">
-                  {CATEGORIES.find((c) => c.value === cat)?.label ?? cat}
+                  {t(`context.categories.${cat}`)}
                 </h3>
                 <div className="space-y-1.5">
                   {grouped[cat].map((item) => (
@@ -173,7 +166,6 @@ export default function ContextModal({ open, onClose }: Props) {
                         item.is_active ? "bg-theme-surface" : "bg-theme-surface opacity-50"
                       }`}
                     >
-                      {/* Toggle */}
                       <button
                         onClick={() => handleToggle(item.id)}
                         className={`mt-0.5 w-8 h-4 rounded-full flex-shrink-0 transition-colors relative ${
@@ -187,7 +179,6 @@ export default function ContextModal({ open, onClose }: Props) {
                         />
                       </button>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         {editingId === item.id ? (
                           <div className="flex gap-1">
@@ -203,13 +194,13 @@ export default function ContextModal({ open, onClose }: Props) {
                               onClick={() => handleEditSave(item.id)}
                               className="text-xs text-accent hover:text-accent-hover px-1"
                             >
-                              Save
+                              {t("context.save")}
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
                               className="text-xs text-t-muted hover:text-t-secondary px-1"
                             >
-                              Cancel
+                              {t("context.cancel")}
                             </button>
                           </div>
                         ) : (
@@ -224,13 +215,12 @@ export default function ContextModal({ open, onClose }: Props) {
                         </span>
                       </div>
 
-                      {/* Actions */}
                       {editingId !== item.id && (
                         <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => { setEditingId(item.id); setEditContent(item.content); }}
                             className="text-t-muted hover:text-t-secondary text-xs p-1"
-                            title="Edit"
+                            title={t("context.edit")}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
                               <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.22 10.306a1 1 0 0 0-.258.438l-.89 3.117a.5.5 0 0 0 .617.617l3.116-.89a1 1 0 0 0 .438-.257L14 5.488a1.75 1.75 0 0 0 0-2.475l-.512-.5Z" />
@@ -239,7 +229,7 @@ export default function ContextModal({ open, onClose }: Props) {
                           <button
                             onClick={() => handleDelete(item.id)}
                             className="text-t-muted hover:text-danger text-xs p-1"
-                            title="Delete"
+                            title={t("context.delete")}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
                               <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.286a1.5 1.5 0 0 0 1.492-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5A.75.75 0 0 1 9.95 6Z" clipRule="evenodd" />
@@ -255,13 +245,12 @@ export default function ContextModal({ open, onClose }: Props) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="mt-4 pt-3 border-t border-border-primary">
           <button
             onClick={onClose}
             className="w-full py-2 rounded-lg bg-theme-hover hover:bg-theme-active text-t-secondary text-sm transition-colors"
           >
-            閉じる
+            {t("context.close")}
           </button>
         </div>
       </div>
