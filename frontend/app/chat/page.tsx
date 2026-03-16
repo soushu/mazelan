@@ -494,7 +494,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v37.2
+          DEV v37.3
         </div>
       )}
 
@@ -510,7 +510,9 @@ export default function ChatPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <h1 className="text-base font-semibold text-t-primary">{t("app.name")}</h1>
+          <h1 className="text-base font-semibold text-t-primary truncate">
+            {activeId ? (sessions.find(s => s.id === activeId)?.title ?? t("app.name")) : t("app.name")}
+          </h1>
         </div>
 
         {/* Message list */}
