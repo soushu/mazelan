@@ -353,12 +353,14 @@ export default function ChatPage() {
           setStreamingText(full);
         }
 
-        // If the stream ended with an error marker, keep it as-is instead of reloading from DB
+        // If the stream ended with an error marker, extract just the error message
         // (errors cause db.rollback() so the message won't be in DB)
         if (full.includes("⚠️")) {
+          const errorMatch = full.match(/⚠️[^\n]*/);
+          const errorMsg = errorMatch ? errorMatch[0] : "⚠️ エラーが発生しました。";
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: full, created_at: new Date().toISOString(), model },
+            { role: "assistant", content: errorMsg, created_at: new Date().toISOString(), model },
           ]);
         } else {
           // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
