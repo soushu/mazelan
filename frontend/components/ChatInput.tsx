@@ -11,7 +11,7 @@ type Props = {
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-const DEFAULT_MODEL: ModelId = "gemini-2.5-flash";
+const DEFAULT_MODEL: ModelId = "gemini-3.1-flash-lite";
 const DEFAULT_MODEL2: ModelId = "gpt-4o";
 
 function getSessionModel(sessionId: string | null): { model: ModelId; model2: ModelId } {
@@ -305,7 +305,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.label}{m.id === "gemini-2.5-pro" ? " (無料・上限少)" : m.id === "gemini-2.5-flash" ? " (無料・上限中)" : m.id === "gemini-3.1-flash-lite" ? " (無料・上限多)" : ""}
+                    {m.label}{m.id === "gemini-2.5-pro" ? " Free ⚠" : m.id === "gemini-2.5-flash" ? " Free" : m.id === "gemini-3.1-flash-lite" ? " Free" : ""}
                   </option>
                 ))}
               </optgroup>
@@ -338,7 +338,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.label}{m.id === "gemini-2.5-pro" ? " (無料・上限少)" : m.id === "gemini-2.5-flash" ? " (無料・上限中)" : m.id === "gemini-3.1-flash-lite" ? " (無料・上限多)" : ""}
+                        {m.label}{m.id === "gemini-2.5-pro" ? " Free ⚠" : m.id === "gemini-2.5-flash" ? " Free" : m.id === "gemini-3.1-flash-lite" ? " Free" : ""}
                       </option>
                     ))}
                   </optgroup>

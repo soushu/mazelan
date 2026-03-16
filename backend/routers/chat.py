@@ -38,7 +38,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     content: str
     images: list[ImageAttachment] = []
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3.1-flash-lite"
     thinking: bool = False
 
     @field_validator("images")
@@ -47,7 +47,7 @@ class ChatRequest(BaseModel):
         return validate_image_count(v)
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-2.5-flash", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-3.1-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -174,7 +174,7 @@ async def chat(
     if session.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    model = req.model if req.model in ALLOWED_MODELS else "gemini-2.5-flash"
+    model = req.model if req.model in ALLOWED_MODELS else "gemini-3.1-flash-lite"
 
     # For Google models, allow access without user API key if free pool is available
     if not x_api_key:
