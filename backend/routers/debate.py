@@ -18,6 +18,7 @@ from backend.database import get_db, SessionLocal
 from backend.dependencies import get_current_user_id
 from backend.models import ChatSession, Context, Message, User
 from backend.context_extractor import extract_contexts
+from backend.base_prompt import build_system_prompt
 from backend.providers import (
     ALLOWED_MODELS,
     MODEL_REGISTRY,
@@ -287,11 +288,11 @@ async def debate(
     model_b = req.model_b if req.model_b in ALLOWED_MODELS else "gpt-4o"
 
     # Resolve system prompt
-    system_prompt = session.system_prompt
-    if not system_prompt:
+    user_prompt = session.system_prompt
+    if not user_prompt:
         user = db.query(User).filter(User.id == current_user_id).first()
         if user:
-            system_prompt = user.system_prompt
+            user_prompt = user.system_prompt
 
     # Inject context memory
     active_contexts = (
@@ -300,13 +301,12 @@ async def debate(
         .order_by(Context.category)
         .all()
     )
+    context_block = None
     if active_contexts:
         context_lines = [f"- {c.content}" for c in active_contexts]
         context_block = "<context_memory>\nHere are things you know about the user:\n" + "\n".join(context_lines) + "\n</context_memory>"
-        if system_prompt:
-            system_prompt = system_prompt + "\n\n" + context_block
-        else:
-            system_prompt = context_block
+
+    system_prompt = build_system_prompt(user_prompt, context_block)
 
     return StreamingResponse(
         stream_debate(
