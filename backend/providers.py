@@ -283,6 +283,9 @@ async def stream_google(
             logger.warning("Gemini error (attempt %d/%d, model=%s): %s", attempt + 1, max_retries, model, e)
             if "api key" in err_str or "permission" in err_str or "401" in err_str or "403" in err_str:
                 raise ProviderAuthError("Google API key is invalid")
+            # Spending cap exceeded - don't retry, it won't resolve
+            if "spending cap" in err_str or "billing" in err_str:
+                raise ProviderSpendLimitError("GCPプロジェクトの支出上限に達しています。Google Cloud Consoleで上限を引き上げてください。")
             is_rate_limit = "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str
             is_quota = "quota" in err_str and "rate" not in err_str
             if is_rate_limit and attempt < max_retries - 1:
