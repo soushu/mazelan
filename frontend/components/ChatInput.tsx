@@ -208,83 +208,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           </div>
         )}
 
-        {/* Model selector + debate — above the input box */}
-        <div className="flex items-center gap-2 mb-1.5 ml-1 flex-wrap">
-          <select
-            value={selectedModel}
-            onChange={(e) => {
-              const v = e.target.value as ModelId;
-              const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
-              if (group && isModelLocked(v, group.provider)) {
-                onOpenApiKeyModal?.(group.provider);
-                setSelectedModel(v);
-                saveSessionModel(sessionId, v, secondModel);
-                return;
-              }
-              setSelectedModel(v);
-              saveSessionModel(sessionId, v, secondModel);
-            }}
-            disabled={disabled}
-            className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
-          >
-            {MODEL_GROUPS.map((g) => (
-              <optgroup key={g.provider} label={g.label}>
-                {g.models.map((m) => (
-                  <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
-                    {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-
-          <button
-            onClick={() => setDebateMode(!debateMode)}
-            disabled={disabled}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-              debateMode
-                ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
-                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-            }`}
-            title={t("input.debateMode")}
-          >
-            🔀 {t("input.debate")}
-          </button>
-
-          {debateMode && (
-            <>
-              <span className="text-t-muted text-xs select-none">{t("input.vs")}</span>
-              <select
-                value={secondModel}
-                onChange={(e) => {
-                  const v = e.target.value as ModelId;
-                  const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
-                  if (group && isModelLocked(v, group.provider)) {
-                    onOpenApiKeyModal?.(group.provider);
-                    setSecondModel(v);
-                    saveSessionModel(sessionId, selectedModel, v);
-                    return;
-                  }
-                  setSecondModel(v);
-                  saveSessionModel(sessionId, selectedModel, v);
-                }}
-                disabled={disabled}
-                className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
-              >
-                {MODEL_GROUPS.map((g) => (
-                  <optgroup key={g.provider} label={g.label}>
-                    {g.models.map((m) => (
-                      <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
-                        {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </>
-          )}
-        </div>
-
         {/* Input box — textarea + toolbar inside one rounded container */}
         <div className="bg-theme-input rounded-xl focus-within:ring-1 focus-within:ring-border-secondary">
           <textarea
@@ -401,6 +324,82 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           </div>
         )}
 
+        {/* Model selector + debate — below the input box */}
+        <div className="flex items-center gap-2 mt-1.5 ml-1 flex-wrap">
+          <select
+            value={selectedModel}
+            onChange={(e) => {
+              const v = e.target.value as ModelId;
+              const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
+              if (group && isModelLocked(v, group.provider)) {
+                onOpenApiKeyModal?.(group.provider);
+                setSelectedModel(v);
+                saveSessionModel(sessionId, v, secondModel);
+                return;
+              }
+              setSelectedModel(v);
+              saveSessionModel(sessionId, v, secondModel);
+            }}
+            disabled={disabled}
+            className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+          >
+            {MODEL_GROUPS.map((g) => (
+              <optgroup key={g.provider} label={g.label}>
+                {g.models.map((m) => (
+                  <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
+                    {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setDebateMode(!debateMode)}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+              debateMode
+                ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/40"
+                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+            }`}
+            title={t("input.debateMode")}
+          >
+            🔀 {t("input.debate")}
+          </button>
+
+          {debateMode && (
+            <>
+              <span className="text-t-muted text-xs select-none">{t("input.vs")}</span>
+              <select
+                value={secondModel}
+                onChange={(e) => {
+                  const v = e.target.value as ModelId;
+                  const group = MODEL_GROUPS.find((g) => g.models.some((m) => m.id === v));
+                  if (group && isModelLocked(v, group.provider)) {
+                    onOpenApiKeyModal?.(group.provider);
+                    setSecondModel(v);
+                    saveSessionModel(sessionId, selectedModel, v);
+                    return;
+                  }
+                  setSecondModel(v);
+                  saveSessionModel(sessionId, selectedModel, v);
+                }}
+                disabled={disabled}
+                className="bg-transparent text-t-muted text-xs outline-none disabled:opacity-50 cursor-pointer"
+              >
+                {MODEL_GROUPS.map((g) => (
+                  <optgroup key={g.provider} label={g.label}>
+                    {g.models.map((m) => (
+                      <option key={m.id} value={m.id} className={isModelLocked(m.id, g.provider) ? "opacity-50" : ""}>
+                        {m.label}{getCostLabel(m.id, !hasGoogleKey)}{isModelLocked(m.id, g.provider) ? " 🔒" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
