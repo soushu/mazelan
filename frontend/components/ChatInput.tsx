@@ -307,7 +307,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
               <optgroup key={g.provider} label={g.label}>
                 {g.models.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " Free x1" : m.id === "gemini-2.5-flash" ? " Free x2" : m.id === "gemini-2.5-pro" ? " Free x10" : "")}
+                    {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " (Free x1)" : m.id === "gemini-2.5-flash" ? " (Free x2)" : m.id === "gemini-2.5-pro" ? " (Free x10)" : "")}
                   </option>
                 ))}
               </optgroup>
@@ -340,7 +340,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId }: Props) {
                   <optgroup key={g.provider} label={g.label}>
                     {g.models.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " Free x1" : m.id === "gemini-2.5-flash" ? " Free x2" : m.id === "gemini-2.5-pro" ? " Free x10" : "")}
+                        {m.label}{!hasGoogleKey && (m.id === "gemini-3.1-flash-lite" ? " (Free x1)" : m.id === "gemini-2.5-flash" ? " (Free x2)" : m.id === "gemini-2.5-pro" ? " (Free x10)" : "")}
                       </option>
                     ))}
                   </optgroup>
