@@ -61,7 +61,7 @@ function LoginForm() {
       </div>
 
       {(error || formError) && (
-        <div className="rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {formError ||
             (error === "AccessDenied"
               ? "Access denied. Your account is not authorized."
