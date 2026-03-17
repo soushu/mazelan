@@ -125,14 +125,22 @@ async def _search_google_flights(
                 price = f.get("price")
                 duration = f.get("total_duration", 0)
 
-                # Build Google Flights search link (via Google Search flights widget)
                 dep_airport = first_leg.get("departure_airport", {}).get("id", origin.upper())
                 arr_airport = last_leg.get("arrival_airport", {}).get("id", destination.upper())
-                dep_date_fmt = departure_date  # YYYY-MM-DD
-                if return_date:
-                    gf_link = f"https://www.google.com/search?q={dep_airport}+to+{arr_airport}+flights+{dep_date_fmt}+to+{return_date}"
-                else:
-                    gf_link = f"https://www.google.com/search?q={dep_airport}+to+{arr_airport}+flights+{dep_date_fmt}"
+
+                # Build Aviasales search link (reliable, always works)
+                # Format: HIJ0104SGN22041 (origin+DDMM+dest+DDMM+passengers)
+                try:
+                    dep_dt = datetime.strptime(departure_date, "%Y-%m-%d")
+                    dep_ddmm = dep_dt.strftime("%d%m")
+                    if return_date:
+                        ret_dt = datetime.strptime(return_date, "%Y-%m-%d")
+                        ret_ddmm = ret_dt.strftime("%d%m")
+                        search_link = f"https://www.aviasales.com/search/{dep_airport}{dep_ddmm}{arr_airport}{ret_ddmm}1"
+                    else:
+                        search_link = f"https://www.aviasales.com/search/{dep_airport}{dep_ddmm}{arr_airport}1"
+                except ValueError:
+                    search_link = f"https://www.aviasales.com/search/{dep_airport}{arr_airport}1"
 
                 flight_info = {
                     "source": "Google Flights",
@@ -146,7 +154,7 @@ async def _search_google_flights(
                     "price": price,
                     "currency": "JPY",
                     "return_date": return_date or "",
-                    "google_flights_link": gf_link,
+                    "search_link": search_link,
                     "_score": _flight_score(price, duration, stops),
                 }
                 flights.append({k: v for k, v in flight_info.items() if v is not None})
