@@ -56,8 +56,8 @@ FLIGHT_SEARCH_TOOL = {
             },
             "max_results": {
                 "type": "integer",
-                "description": "Maximum results per source (default: 3)",
-                "default": 3,
+                "description": "Maximum results per source (default: 5)",
+                "default": 5,
             },
         },
         "required": ["origin", "destination", "departure_date"],
@@ -69,7 +69,8 @@ FLIGHT_SEARCH_TOOL = {
 
 async def _search_google_flights(
     origin: str, destination: str, departure_date: str,
-    return_date: str | None = None, adults: int = 1, max_results: int = 3,
+    return_date: str | None = None, adults: int = 1, max_results: int = 5,
+    max_stops: int = 1,
 ) -> list[dict]:
     """Search Google Flights via SerpAPI."""
     if not SERPAPI_KEY:
@@ -84,6 +85,7 @@ async def _search_google_flights(
         "currency": "JPY",
         "hl": "ja",
         "api_key": SERPAPI_KEY,
+        "stops": max_stops + 1,  # SerpAPI: 1=nonstop, 2=max 1 stop, 3=max 2 stops
     }
     if return_date:
         params["return_date"] = return_date
@@ -98,6 +100,7 @@ async def _search_google_flights(
             data = resp.json()
 
         flights = []
+        # Collect from best_flights first (Google's recommended), then other_flights (sorted by price)
         for flight_list in [data.get("best_flights", []), data.get("other_flights", [])]:
             for f in flight_list:
                 if len(flights) >= max_results:
@@ -109,6 +112,11 @@ async def _search_google_flights(
                 first_leg = legs[0]
                 last_leg = legs[-1]
                 stops = len(legs) - 1
+
+                # Filter: skip flights with too many stops
+                if stops > max_stops:
+                    continue
+
                 airlines = list({leg.get("airline", "") for leg in legs})
 
                 flight_info = {
@@ -136,7 +144,7 @@ async def _search_google_flights(
 
 async def _search_travelpayouts(
     origin: str, destination: str, departure_date: str,
-    return_date: str | None = None, adults: int = 1, max_results: int = 3,
+    return_date: str | None = None, adults: int = 1, max_results: int = 5,
 ) -> list[dict]:
     """Search Travelpayouts cheapest tickets API (cached data, 728+ airlines including LCCs)."""
     if not TRAVELPAYOUTS_TOKEN:
@@ -205,7 +213,7 @@ HUB_AIRPORTS = ["ICN", "TPE", "HKG", "PVG", "HAN", "BKK", "SIN", "KUL"]
 
 async def _search_direct(
     origin: str, destination: str, departure_date: str,
-    return_date: str | None = None, adults: int = 1, max_results: int = 3,
+    return_date: str | None = None, adults: int = 1, max_results: int = 5,
 ) -> list[dict]:
     """Search both providers for a single origin-destination pair."""
     tasks = []
@@ -248,7 +256,7 @@ def _fix_date(date_str: str) -> str:
 
 async def search_flights(
     origin: str, destination: str, departure_date: str,
-    return_date: str | None = None, adults: int = 1, max_results: int = 3,
+    return_date: str | None = None, adults: int = 1, max_results: int = 5,
 ) -> list[dict]:
     """Search Google Flights and Travelpayouts, merge and sort by price.
     If no results found, suggest hub connections as alternatives.
