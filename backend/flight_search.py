@@ -100,7 +100,7 @@ async def _search_google_flights(
         params["type"] = "2"  # one way
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(SERPAPI_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
@@ -153,8 +153,14 @@ async def _search_google_flights(
         flights.sort(key=lambda f: f.get("_score", 999999))
         return flights[:max_results]
 
+    except httpx.TimeoutException:
+        logger.warning("Google Flights search timeout for %s→%s on %s", origin, destination, departure_date)
+        return []
+    except httpx.HTTPStatusError as e:
+        logger.error("Google Flights search HTTP %s for %s→%s: %s", e.response.status_code, origin, destination, e.response.text[:200])
+        return []
     except Exception as e:
-        logger.error("Google Flights search error: %s", e)
+        logger.error("Google Flights search error for %s→%s: %s", origin, destination, repr(e))
         return []
 
 
@@ -384,16 +390,14 @@ async def search_flights(
             best_return_dates = return_candidates[3:4] + return_candidates[6:7] + return_candidates[10:11]
             best_return_dates = best_return_dates[:3] or return_candidates[:3]
 
-        # Search Google Flights for the best return dates in parallel
-        search_tasks = []
-        for ret_d in best_return_dates:
-            search_tasks.append(_search_direct(origin, destination, departure_date, ret_d, adults, max_results))
-        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-
+        # Search Google Flights for the best return dates sequentially (avoid SerpAPI rate limits)
         all_flights = []
-        for r in search_results:
-            if isinstance(r, list):
-                all_flights.extend(r)
+        for ret_d in best_return_dates:
+            try:
+                results = await _search_direct(origin, destination, departure_date, ret_d, adults, max_results)
+                all_flights.extend(results)
+            except Exception as e:
+                logger.warning("Search failed for return date %s: %s", ret_d, e)
 
     # If no or very few results, try via hub airports
     if len(all_flights) < 2 and SERPAPI_KEY:
