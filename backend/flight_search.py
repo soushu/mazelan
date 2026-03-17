@@ -125,17 +125,26 @@ async def _search_google_flights(
                 price = f.get("price")
                 duration = f.get("total_duration", 0)
 
+                # Build Google Flights search link
+                dep_airport = first_leg.get("departure_airport", {}).get("id", origin.upper())
+                arr_airport = last_leg.get("arrival_airport", {}).get("id", destination.upper())
+                gf_link = f"https://www.google.com/travel/flights?q=flights+from+{dep_airport}+to+{arr_airport}+on+{departure_date}"
+                if return_date:
+                    gf_link += f"+returning+{return_date}"
+
                 flight_info = {
                     "source": "Google Flights",
                     "airline": ", ".join(airlines),
                     "departure": first_leg.get("departure_airport", {}).get("time", ""),
                     "arrival": last_leg.get("arrival_airport", {}).get("time", ""),
-                    "departure_airport": first_leg.get("departure_airport", {}).get("id", ""),
-                    "arrival_airport": last_leg.get("arrival_airport", {}).get("id", ""),
+                    "departure_airport": dep_airport,
+                    "arrival_airport": arr_airport,
                     "duration_min": duration,
                     "stops": stops,
                     "price": price,
                     "currency": "JPY",
+                    "return_date": return_date or "",
+                    "google_flights_link": gf_link,
                     "_score": _flight_score(price, duration, stops),
                 }
                 flights.append({k: v for k, v in flight_info.items() if v is not None})
