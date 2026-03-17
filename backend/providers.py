@@ -127,10 +127,14 @@ async def _execute_tool(name: str, input_data: dict) -> str:
         results = await search_flights(
             origin=input_data.get("origin", ""),
             destination=input_data.get("destination", ""),
+            departure_month=input_data.get("departure_month", ""),
+            departure_day_from=input_data.get("departure_day_from", 1),
+            departure_day_to=input_data.get("departure_day_to", 10),
+            trip_weeks=input_data.get("trip_weeks", 2),
+            adults=input_data.get("adults", 1),
+            # Legacy support
             departure_date=input_data.get("departure_date", ""),
             return_date=input_data.get("return_date"),
-            adults=input_data.get("adults", 1),
-            max_results=input_data.get("max_results", 3),
         )
         return json.dumps(results, ensure_ascii=False)
     return json.dumps({"error": f"Unknown tool: {name}"})
