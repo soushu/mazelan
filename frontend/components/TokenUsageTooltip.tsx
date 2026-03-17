@@ -23,11 +23,21 @@ export default function TokenUsageTooltip({ usage, modelId }: Props) {
   const [show, setShow] = useState(false);
   const total = usage.input_tokens + usage.output_tokens;
 
-  // Determine if this was a free request (Google model without user API key)
-  const provider = modelId ? getProviderFromModelId(modelId) : null;
-  const isFree = provider === "google" && !getApiKeyForProvider("google");
-
   const debateModels = modelId ? parseDebateModelId(modelId) : null;
+
+  // Determine if this was a free request (Google model without user API key)
+  const isFree = (() => {
+    if (!modelId) return false;
+    const hasGoogleKey = !!getApiKeyForProvider("google");
+    if (hasGoogleKey) return false;
+    if (debateModels) {
+      // Both debate models must be Google for the whole debate to be free
+      const provA = getProviderFromModelId(debateModels.modelA);
+      const provB = getProviderFromModelId(debateModels.modelB);
+      return provA === "google" && provB === "google";
+    }
+    return getProviderFromModelId(modelId) === "google";
+  })();
 
   return (
     <div className="relative inline-block">
