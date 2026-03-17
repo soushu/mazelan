@@ -65,6 +65,106 @@ FLIGHT_SEARCH_TOOL = {
 }
 
 
+# ── Airline official websites ──
+
+AIRLINE_WEBSITES: dict[str, str] = {
+    # Japanese
+    "ANA": "https://www.ana.co.jp/",
+    "全日本空輸": "https://www.ana.co.jp/",
+    "JAL": "https://www.jal.co.jp/",
+    "日本航空": "https://www.jal.co.jp/",
+    "Peach": "https://www.flypeach.com/",
+    "ピーチ": "https://www.flypeach.com/",
+    "Jetstar": "https://www.jetstar.com/jp/",
+    "ジェットスター": "https://www.jetstar.com/jp/",
+    "Spring Japan": "https://jp.ch.com/",
+    "スプリング・ジャパン": "https://jp.ch.com/",
+    # Korean
+    "Jeju Air": "https://www.jejuair.net/",
+    "チェジュ航空": "https://www.jejuair.net/",
+    "Korean Air": "https://www.koreanair.com/",
+    "大韓航空": "https://www.koreanair.com/",
+    "Asiana Airlines": "https://flyasiana.com/",
+    "アシアナ航空": "https://flyasiana.com/",
+    "T'way Air": "https://www.twayair.com/",
+    "ティーウェイ航空": "https://www.twayair.com/",
+    "Easter Jet": "https://www.eastarjet.com/",
+    "イースター航空": "https://www.eastarjet.com/",
+    "Jin Air": "https://www.jinair.com/",
+    "ジンエアー": "https://www.jinair.com/",
+    "Air Busan": "https://www.airbusan.com/",
+    "エアプサン": "https://www.airbusan.com/",
+    "Air Premia": "https://www.airpremia.com/",
+    # Southeast Asian
+    "VietJet": "https://www.vietjetair.com/",
+    "ベトジェット・エア": "https://www.vietjetair.com/",
+    "ベトジェット": "https://www.vietjetair.com/",
+    "Vietnam Airlines": "https://www.vietnamairlines.com/",
+    "ベトナム航空": "https://www.vietnamairlines.com/",
+    "AirAsia": "https://www.airasia.com/",
+    "エアアジア": "https://www.airasia.com/",
+    "Thai Airways": "https://www.thaiairways.com/",
+    "タイ国際航空": "https://www.thaiairways.com/",
+    "Singapore Airlines": "https://www.singaporeair.com/",
+    "シンガポール航空": "https://www.singaporeair.com/",
+    "Cebu Pacific": "https://www.cebupacificair.com/",
+    "セブパシフィック航空": "https://www.cebupacificair.com/",
+    "Scoot": "https://www.flyscoot.com/",
+    "スクート": "https://www.flyscoot.com/",
+    # Chinese
+    "China Airlines": "https://www.china-airlines.com/",
+    "チャイナ エアライン": "https://www.china-airlines.com/",
+    "China Eastern": "https://www.ceair.com/",
+    "中国東方航空": "https://www.ceair.com/",
+    "China Southern": "https://www.csair.com/",
+    "中国南方航空": "https://www.csair.com/",
+    "Shanghai Airlines": "https://www.ceair.com/",
+    "上海航空": "https://www.ceair.com/",
+    "Spring Airlines": "https://www.ch.com/",
+    "春秋航空": "https://www.ch.com/",
+    "EVA Air": "https://www.evaair.com/",
+    "エバー航空": "https://www.evaair.com/",
+    "Starlux": "https://www.starlux-airlines.com/",
+    "スターラックス航空": "https://www.starlux-airlines.com/",
+    "Tigerair Taiwan": "https://www.tigerairtw.com/",
+    # Hong Kong
+    "Cathay Pacific": "https://www.cathaypacific.com/",
+    "キャセイパシフィック航空": "https://www.cathaypacific.com/",
+    "HK Express": "https://www.hkexpress.com/",
+    "香港エクスプレス航空": "https://www.hkexpress.com/",
+    "香港エクスプレス": "https://www.hkexpress.com/",
+    # Others
+    "Emirates": "https://www.emirates.com/",
+    "エミレーツ航空": "https://www.emirates.com/",
+    "Qatar Airways": "https://www.qatarairways.com/",
+    "カタール航空": "https://www.qatarairways.com/",
+    "Turkish Airlines": "https://www.turkishairlines.com/",
+    "トルコ航空": "https://www.turkishairlines.com/",
+    "Air France": "https://www.airfrance.co.jp/",
+    "エールフランス": "https://www.airfrance.co.jp/",
+    "Lufthansa": "https://www.lufthansa.com/",
+    "ルフトハンザ": "https://www.lufthansa.com/",
+    "United Airlines": "https://www.united.com/",
+    "ユナイテッド航空": "https://www.united.com/",
+    "Delta Air Lines": "https://www.delta.com/",
+    "デルタ航空": "https://www.delta.com/",
+    "Hawaiian Airlines": "https://www.hawaiianairlines.co.jp/",
+    "ハワイアン航空": "https://www.hawaiianairlines.co.jp/",
+}
+
+
+def _get_airline_url(airline_name: str) -> str:
+    """Get airline official website URL from airline name."""
+    # Try exact match first
+    if airline_name in AIRLINE_WEBSITES:
+        return AIRLINE_WEBSITES[airline_name]
+    # Try partial match (for cases like "JAL, キャセイパシフィック航空")
+    for key, url in AIRLINE_WEBSITES.items():
+        if key in airline_name:
+            return url
+    return ""
+
+
 # ── Google Flights via SerpAPI ──
 
 def _flight_score(price: int | None, duration_min: int | None, stops: int) -> float:
@@ -142,9 +242,13 @@ async def _search_google_flights(
                 except ValueError:
                     search_link = f"https://www.aviasales.com/search/{dep_airport}{arr_airport}1"
 
+                airline_str = ", ".join(airlines)
+                airline_url = _get_airline_url(airline_str)
+
                 flight_info = {
                     "source": "Google Flights",
-                    "airline": ", ".join(airlines),
+                    "airline": airline_str,
+                    "airline_url": airline_url,
                     "departure": first_leg.get("departure_airport", {}).get("time", ""),
                     "arrival": last_leg.get("arrival_airport", {}).get("time", ""),
                     "departure_airport": dep_airport,

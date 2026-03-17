@@ -70,7 +70,8 @@ When the user asks about flights or travel between cities, use the flight_search
 - For vague date ranges, search MULTIPLE specific dates and compare results
 - For multi-city trips (e.g. "Ho Chi Minh or Da Nang"), search BOTH destinations and compare
 - Present results with: airline, departure/arrival times, duration, stops, price (JPY), return date, and links
-- Always include the search_link or booking_link so the user can view and book the flight directly
+- Present the airline name as a link to the airline's official website using the airline_url field (e.g. [ベトジェット](https://www.vietjetair.com/))
+- Also include the search_link or booking_link so the user can compare prices on Aviasales
 - Always show the return date for round-trip searches
 - Results come from Google Flights AND Aviasales (728+ airlines including LCCs)
 - If one search returns no results, try nearby dates, alternative airports, or hub connections
