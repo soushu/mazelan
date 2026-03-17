@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from datetime import date, datetime
 
 import httpx
 
@@ -228,6 +229,23 @@ async def _search_direct(
 
 # ── Combined search ──
 
+def _fix_date(date_str: str) -> str:
+    """Fix past-year dates by replacing the year with the current or next year."""
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+        today = date.today()
+        if dt < today:
+            # Replace year with current year; if still past, use next year
+            fixed = dt.replace(year=today.year)
+            if fixed < today:
+                fixed = dt.replace(year=today.year + 1)
+            logger.warning("Fixed past date %s → %s", date_str, fixed.isoformat())
+            return fixed.isoformat()
+        return date_str
+    except ValueError:
+        return date_str
+
+
 async def search_flights(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
@@ -237,6 +255,11 @@ async def search_flights(
     """
     if not SERPAPI_KEY and not TRAVELPAYOUTS_TOKEN:
         return [{"error": "No flight search API configured (SERPAPI_KEY or TRAVELPAYOUTS_TOKEN)"}]
+
+    # Fix past dates (LLMs sometimes use wrong year)
+    departure_date = _fix_date(departure_date)
+    if return_date:
+        return_date = _fix_date(return_date)
 
     all_flights = await _search_direct(origin, destination, departure_date, return_date, adults, max_results)
 
