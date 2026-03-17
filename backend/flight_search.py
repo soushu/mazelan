@@ -67,10 +67,17 @@ FLIGHT_SEARCH_TOOL = {
 
 # ── Google Flights via SerpAPI ──
 
+def _flight_score(price: int | None, duration_min: int | None, stops: int) -> float:
+    """Score a flight Google Flights-style: balance price, duration, and stops.
+    Lower score = better flight."""
+    p = price or 999999
+    d = duration_min or 1440  # default 24h if unknown
+    return p * 1.0 + d * 50 + stops * 10000
+
+
 async def _search_google_flights(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 5,
-    max_stops: int = 1,
 ) -> list[dict]:
     """Search Google Flights via SerpAPI."""
     if not SERPAPI_KEY:
@@ -85,7 +92,6 @@ async def _search_google_flights(
         "currency": "JPY",
         "hl": "ja",
         "api_key": SERPAPI_KEY,
-        "stops": max_stops + 1,  # SerpAPI: 1=nonstop, 2=max 1 stop, 3=max 2 stops
     }
     if return_date:
         params["return_date"] = return_date
@@ -100,11 +106,9 @@ async def _search_google_flights(
             data = resp.json()
 
         flights = []
-        # Collect from best_flights first (Google's recommended), then other_flights (sorted by price)
+        # Collect all flights from both best and other lists
         for flight_list in [data.get("best_flights", []), data.get("other_flights", [])]:
             for f in flight_list:
-                if len(flights) >= max_results:
-                    break
                 legs = f.get("flights", [])
                 if not legs:
                     continue
@@ -113,11 +117,13 @@ async def _search_google_flights(
                 last_leg = legs[-1]
                 stops = len(legs) - 1
 
-                # Filter: skip flights with too many stops
-                if stops > max_stops:
+                # Skip 3+ stops (unreasonable)
+                if stops > 2:
                     continue
 
                 airlines = list({leg.get("airline", "") for leg in legs})
+                price = f.get("price")
+                duration = f.get("total_duration", 0)
 
                 flight_info = {
                     "source": "Google Flights",
@@ -126,14 +132,17 @@ async def _search_google_flights(
                     "arrival": last_leg.get("arrival_airport", {}).get("time", ""),
                     "departure_airport": first_leg.get("departure_airport", {}).get("id", ""),
                     "arrival_airport": last_leg.get("arrival_airport", {}).get("id", ""),
-                    "duration_min": f.get("total_duration", 0),
+                    "duration_min": duration,
                     "stops": stops,
-                    "price": f.get("price"),
+                    "price": price,
                     "currency": "JPY",
+                    "_score": _flight_score(price, duration, stops),
                 }
                 flights.append({k: v for k, v in flight_info.items() if v is not None})
 
-        return flights
+        # Sort by score (Google Flights-style: balance price, duration, stops)
+        flights.sort(key=lambda f: f.get("_score", 999999))
+        return flights[:max_results]
 
     except Exception as e:
         logger.error("Google Flights search error: %s", e)
@@ -294,8 +303,8 @@ async def search_flights(
                     "currency": "JPY",
                 })
 
-    # Sort by price
-    all_flights.sort(key=lambda f: f.get("price") or f.get("first_leg_price") or 999999)
+    # Sort by score (balance price, duration, stops) — like Google Flights "Best"
+    all_flights.sort(key=lambda f: f.get("_score") or _flight_score(f.get("price") or f.get("first_leg_price"), f.get("duration_min"), f.get("stops", 0)))
 
     if not all_flights:
         return [{"error": f"No flights found for {origin} → {destination} on {departure_date}. Try alternative dates or nearby airports."}]
