@@ -197,13 +197,16 @@ async def _search_travelpayouts(
         return []
 
 
-# ── Combined search ──
+# ── Hub airports for connection search ──
 
-async def search_flights(
+HUB_AIRPORTS = ["ICN", "TPE", "HKG", "PVG", "HAN", "BKK", "SIN", "KUL"]
+
+
+async def _search_direct(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 3,
 ) -> list[dict]:
-    """Search Google Flights and Travelpayouts, merge and sort by price."""
+    """Search both providers for a single origin-destination pair."""
     tasks = []
     if SERPAPI_KEY:
         tasks.append(_search_google_flights(origin, destination, departure_date, return_date, adults, max_results))
@@ -211,7 +214,7 @@ async def search_flights(
         tasks.append(_search_travelpayouts(origin, destination, departure_date, return_date, adults, max_results))
 
     if not tasks:
-        return [{"error": "No flight search API configured (SERPAPI_KEY or TRAVELPAYOUTS_TOKEN)"}]
+        return []
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -220,10 +223,50 @@ async def search_flights(
         if isinstance(r, list):
             all_flights.extend(r)
 
+    return all_flights
+
+
+# ── Combined search ──
+
+async def search_flights(
+    origin: str, destination: str, departure_date: str,
+    return_date: str | None = None, adults: int = 1, max_results: int = 3,
+) -> list[dict]:
+    """Search Google Flights and Travelpayouts, merge and sort by price.
+    If no results found, suggest hub connections as alternatives.
+    """
+    if not SERPAPI_KEY and not TRAVELPAYOUTS_TOKEN:
+        return [{"error": "No flight search API configured (SERPAPI_KEY or TRAVELPAYOUTS_TOKEN)"}]
+
+    all_flights = await _search_direct(origin, destination, departure_date, return_date, adults, max_results)
+
+    # If no or very few results, try via hub airports
+    if len(all_flights) < 2 and SERPAPI_KEY:
+        # Pick hubs that are geographically between origin and destination (exclude origin/dest themselves)
+        hubs_to_try = [h for h in HUB_AIRPORTS if h != origin.upper() and h != destination.upper()][:3]
+        hub_tasks = []
+        for hub in hubs_to_try:
+            hub_tasks.append(_search_google_flights(origin, hub, departure_date, adults=adults, max_results=1))
+        hub_results = await asyncio.gather(*hub_tasks, return_exceptions=True)
+
+        for i, r in enumerate(hub_results):
+            if isinstance(r, list) and r:
+                hub = hubs_to_try[i]
+                cheapest = r[0]
+                all_flights.append({
+                    "source": "Google Flights (via hub)",
+                    "route": f"{origin}→{hub}→{destination}",
+                    "hub": hub,
+                    "first_leg_price": cheapest.get("price"),
+                    "first_leg_airline": cheapest.get("airline", ""),
+                    "note": f"Connection via {hub}. Search {hub}→{destination} separately for full price.",
+                    "currency": "JPY",
+                })
+
     # Sort by price
-    all_flights.sort(key=lambda f: f.get("price") or 999999)
+    all_flights.sort(key=lambda f: f.get("price") or f.get("first_leg_price") or 999999)
 
     if not all_flights:
-        return [{"error": f"No flights found for {origin} → {destination} on {departure_date}"}]
+        return [{"error": f"No flights found for {origin} → {destination} on {departure_date}. Try alternative dates or nearby airports."}]
 
     return all_flights
