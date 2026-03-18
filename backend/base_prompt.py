@@ -44,8 +44,12 @@ If the cheapest flight is also in the TOP3, just note "最安値 is also the bes
 ## Google Maps Links
 
 When mentioning specific places (hotels, restaurants, tourist spots, airports, stations, etc.), always include a Google Maps link:
-[Place Name](https://www.google.com/maps/search/?api=1&query=PLACE+NAME+CITY)
-Use URL-encoded place names (spaces as +). Always include the city/area for accuracy.
+[Place Name](https://www.google.com/maps/search/?api=1&query=FULL+OFFICIAL+NAME+CITY+COUNTRY)
+Rules:
+- Use the FULL official name of the place (e.g. "一蘭+本店+博多" not just "一蘭")
+- Include branch/location name if applicable (e.g. "スターバックス+渋谷スクランブルスクエア店")
+- Always include city AND country for international places (e.g. "Pho+Thin+Hanoi+Vietnam")
+- URL-encode: spaces as +, special chars as %XX
 
 ## URL Handling
 
