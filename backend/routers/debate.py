@@ -21,6 +21,7 @@ from backend.context_extractor import extract_contexts
 from backend.base_prompt import build_system_prompt
 from backend.providers import (
     ALLOWED_MODELS,
+    GEMINI_FREE_POOL_MODELS,
     MODEL_REGISTRY,
     calculate_cost,
     get_provider,
@@ -302,9 +303,9 @@ async def debate(
     model_a = req.model_a if req.model_a in ALLOWED_MODELS else "claude-sonnet-4-6"
     model_b = req.model_b if req.model_b in ALLOWED_MODELS else "gpt-4o"
 
-    # Allow missing keys for Google models if free pool is available
-    key_a_ok = x_api_key_a or (get_provider(model_a) == "google" and gemini_free_pool.available)
-    key_b_ok = x_api_key_b or (get_provider(model_b) == "google" and gemini_free_pool.available)
+    # Allow missing keys for Google models if free pool is available (Flash Lite only)
+    key_a_ok = x_api_key_a or (get_provider(model_a) == "google" and gemini_free_pool.available and model_a in GEMINI_FREE_POOL_MODELS)
+    key_b_ok = x_api_key_b or (get_provider(model_b) == "google" and gemini_free_pool.available and model_b in GEMINI_FREE_POOL_MODELS)
     if not key_a_ok or not key_b_ok:
         raise HTTPException(
             status_code=400,

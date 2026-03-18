@@ -53,6 +53,9 @@ class GeminiFreeKeyPool:
 
 gemini_free_pool = GeminiFreeKeyPool()
 
+# Models allowed to use free pool keys (Tier 1: only Flash Lite is $0)
+GEMINI_FREE_POOL_MODELS = {"gemini-2.5-flash-lite"}
+
 
 # ── Exceptions ──────────────────────────────────────────────
 

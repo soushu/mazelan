@@ -21,6 +21,7 @@ from backend.context_extractor import extract_contexts
 from backend.base_prompt import build_system_prompt
 from backend.providers import (
     ALLOWED_MODELS,
+    GEMINI_FREE_POOL_MODELS,
     get_provider,
     stream_provider,
     gemini_free_pool,
@@ -86,7 +87,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
                 {"type": "text", "text": content},
             ]
 
-        if not api_key and not (get_provider(model) == "google" and gemini_free_pool.available):
+        if not api_key and not (get_provider(model) == "google" and gemini_free_pool.available and model in GEMINI_FREE_POOL_MODELS):
             yield "\n\n⚠️ APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
             return
 
@@ -176,10 +177,10 @@ async def chat(
 
     model = req.model if req.model in ALLOWED_MODELS else "gemini-2.5-flash-lite"
 
-    # For Google models, allow access without user API key if free pool is available
+    # For Google models, allow access without user API key if free pool is available (Flash Lite only)
     if not x_api_key:
-        if get_provider(model) == "google" and gemini_free_pool.available:
-            pass  # Will use free pool keys
+        if get_provider(model) == "google" and gemini_free_pool.available and model in GEMINI_FREE_POOL_MODELS:
+            pass  # Will use free pool keys (Tier 1: only Flash Lite is $0)
         else:
             raise HTTPException(status_code=400, detail="APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。")
 
