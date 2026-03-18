@@ -92,9 +92,9 @@ MODEL_REGISTRY: dict[str, dict] = {
     "o3-mini":                    {"provider": "openai",    "label": "o3-mini",         "supports_images": False, "supports_web_search": False, "input_price": 1.10,  "output_price": 4.40},
     "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False, "input_price": 2.50,  "output_price": 10.0},
     # Google (cheapest first)
-    "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": False, "input_price": 0.075, "output_price": 0.30},
-    "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
-    "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": False, "input_price": 1.25,  "output_price": 10.0},
+    "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": True,  "input_price": 0.075, "output_price": 0.30},
+    "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": True,  "input_price": 0.15,  "output_price": 0.60},
+    "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": True,  "input_price": 1.25,  "output_price": 10.0},
 }
 
 
@@ -445,14 +445,21 @@ def _is_gemini_rate_limit(err_str: str) -> bool:
     return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str or "503" in err_str or "unavailable" in err_str
 
 
-def _gemini_tools() -> list[genai_types.Tool] | None:
+def _gemini_tools(enable_search: bool = True) -> list[genai_types.Tool] | None:
     """Return Gemini-format tool definitions for available tools."""
+    tools = []
+    # Google Search Grounding (built-in, no API key needed)
+    if enable_search:
+        tools.append(genai_types.Tool(google_search=genai_types.GoogleSearch()))
+    # Custom function tools
     declarations = []
     if amazon_available():
         declarations.append(genai_types.FunctionDeclaration(name=AMAZON_SEARCH_TOOL["name"], description=AMAZON_SEARCH_TOOL["description"], parameters=AMAZON_SEARCH_TOOL["input_schema"]))
     if flights_available():
         declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
-    return [genai_types.Tool(function_declarations=declarations)] if declarations else None
+    if declarations:
+        tools.append(genai_types.Tool(function_declarations=declarations))
+    return tools if tools else None
 
 
 async def _stream_google_with_key(
