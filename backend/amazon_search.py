@@ -94,7 +94,10 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
 
     except httpx.TimeoutException:
         logger.warning("SerpAPI timeout for query: %s", query)
-        return [{"error": "Amazon search timed out. Please try again."}]
+        return [{"error": "商品検索がタイムアウトしました。しばらく経ってから再度お試しください。"}]
+    except httpx.HTTPStatusError as e:
+        logger.error("SerpAPI HTTP %s for query: %s", e.response.status_code, query)
+        return [{"error": "商品検索サービスが一時的に利用できません。しばらく経ってから再度お試しください。"}]
     except Exception as e:
         logger.error("SerpAPI error: %s", e)
-        return [{"error": f"Amazon search failed: {str(e)}"}]
+        return [{"error": "商品検索サービスが一時的に利用できません。しばらく経ってから再度お試しください。"}]

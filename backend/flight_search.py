@@ -240,10 +240,10 @@ async def _search_google_flights(
 
     except httpx.TimeoutException:
         logger.warning("Google Flights timeout: %s→%s on %s", origin, destination, departure_date)
-        return []
+        return [{"_api_error": "timeout"}]
     except httpx.HTTPStatusError as e:
         logger.error("Google Flights HTTP %s: %s→%s: %s", e.response.status_code, origin, destination, e.response.text[:200])
-        return []
+        return [{"_api_error": f"HTTP {e.response.status_code}"}]
     except Exception as e:
         logger.error("Google Flights error: %s→%s: %s", origin, destination, repr(e))
         return []
@@ -251,12 +251,22 @@ async def _search_google_flights(
 
 # ── Main search: Google Flights calendar method ──
 
+def _has_api_error(results: list[dict]) -> str | None:
+    """Check if results contain an API error. Returns error string or None."""
+    for r in results:
+        if "_api_error" in r:
+            return r["_api_error"]
+    return None
+
+
 async def _search_oneway_cheapest(
     origin: str, destination: str, dates: list[str], adults: int = 1,
 ) -> list[tuple[str, int]]:
     """Search one-way flights for multiple dates in parallel, return (date, cheapest_price) pairs."""
     async def _get_cheapest_for_date(dep_date: str) -> tuple[str, int]:
         results = await _search_google_flights(origin, destination, dep_date, None, adults, max_results=1)
+        if _has_api_error(results):
+            return (dep_date, -1)  # Signal API error
         if results and results[0].get("price"):
             return (dep_date, results[0]["price"])
         return (dep_date, 999999)
@@ -306,6 +316,9 @@ async def search_flights(
         if cached is not None:
             return cached
         results = await _search_google_flights(origin, destination, departure_date, return_date, adults, max_results)
+        api_err = _has_api_error(results)
+        if api_err:
+            return [{"error": f"フライト検索サービスが一時的に利用できません（{api_err}）。しばらく経ってから再度お試しください。"}]
         if not results:
             return [{"error": f"No flights found for {origin}→{destination} on {departure_date}"}]
         cache_put("flight", cache_params, results)
@@ -346,7 +359,12 @@ async def search_flights(
 
     # Step 2: Find cheapest outbound dates (one-way search, parallel)
     dep_prices = await _search_oneway_cheapest(origin, destination, dep_candidates, adults)
-    best_dep_dates = [d for d, p in dep_prices[:2] if p < 999999]
+
+    # Check for API errors (price == -1 signals API failure)
+    if dep_prices and all(p == -1 for _, p in dep_prices):
+        return [{"error": "フライト検索サービスが一時的に利用できません。しばらく経ってから再度お試しください。"}]
+
+    best_dep_dates = [d for d, p in dep_prices[:2] if p < 999999 and p != -1]
 
     if not best_dep_dates:
         # Fallback: use first and middle dates
