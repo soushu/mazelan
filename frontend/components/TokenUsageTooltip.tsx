@@ -25,18 +25,16 @@ export default function TokenUsageTooltip({ usage, modelId }: Props) {
 
   const debateModels = modelId ? parseDebateModelId(modelId) : null;
 
-  // Determine if this was a free request (Google model without user API key)
+  // Only Flash Lite is free (Tier 1: Flash/Pro are paid)
+  const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite"]);
   const isFree = (() => {
     if (!modelId) return false;
     const hasGoogleKey = !!getApiKeyForProvider("google");
     if (hasGoogleKey) return false;
     if (debateModels) {
-      // Both debate models must be Google for the whole debate to be free
-      const provA = getProviderFromModelId(debateModels.modelA);
-      const provB = getProviderFromModelId(debateModels.modelB);
-      return provA === "google" && provB === "google";
+      return GEMINI_FREE_MODELS.has(debateModels.modelA) && GEMINI_FREE_MODELS.has(debateModels.modelB);
     }
-    return getProviderFromModelId(modelId) === "google";
+    return GEMINI_FREE_MODELS.has(modelId);
   })();
 
   return (

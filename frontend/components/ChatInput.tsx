@@ -17,10 +17,13 @@ const COST_LABELS: Record<string, string> = {
   "claude-opus-4-6": "x19",
 };
 
+// Only Flash Lite is free on Tier 1 (Flash/Pro are paid)
+const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite"]);
+
 function getCostLabel(modelId: string, isGoogleFree: boolean): string {
   const cost = COST_LABELS[modelId] || "";
   if (!cost) return "";
-  const isFree = isGoogleFree && modelId.startsWith("gemini-");
+  const isFree = isGoogleFree && GEMINI_FREE_MODELS.has(modelId);
   return isFree ? ` (Free) ${cost}` : ` ${cost}`;
 }
 
@@ -78,7 +81,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   function isModelLocked(modelId: string, provider: string): boolean {
     if (provider === "anthropic" && !getApiKeyForProvider("anthropic")) return true;
     if (provider === "openai" && !getApiKeyForProvider("openai")) return true;
-    if (!hasGoogleKey && modelId === "gemini-2.5-pro") return true;
+    // Google: only Flash Lite is free without key; Flash and Pro require key
+    if (provider === "google" && !hasGoogleKey && !GEMINI_FREE_MODELS.has(modelId)) return true;
     return false;
   }
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
