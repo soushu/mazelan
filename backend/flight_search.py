@@ -287,7 +287,7 @@ async def search_flights(
     3. Search round-trip for top 2 date combos → get detailed results
     4. Score, merge, return best + cheapest
 
-    Total: ~8 SerpAPI calls (parallel where possible), ~10-15 seconds
+    Total: ~12 SerpAPI calls (parallel where possible), ~15-20 seconds
     """
     if not SERPAPI_KEY:
         return [{"error": "Google Flights search not configured (SERPAPI_KEY)"}]
@@ -330,8 +330,8 @@ async def search_flights(
 
     dep_candidates = []
     day_range = departure_day_to - departure_day_from + 1
-    # Pick 2 evenly spaced dates from the range (saves ~3 SerpAPI calls vs 3 candidates)
-    step = max(1, day_range // 2)
+    # Pick 3 evenly spaced dates from the range
+    step = max(1, day_range // 3)
     for day in range(departure_day_from, min(departure_day_to + 1, 29), step):
         try:
             d = date(year, month, day)
@@ -360,9 +360,9 @@ async def search_flights(
 
     for dep_str in best_dep_dates:
         dep_d = datetime.strptime(dep_str, "%Y-%m-%d").date()
-        # Check 2 return dates: trip_weeks*7 and +2 days (saves SerpAPI calls)
+        # Check 3 return dates: trip_weeks*7 -2, 0, +2 days
         ret_candidates = []
-        for offset in [0, 2]:
+        for offset in [-2, 0, 2]:
             ret_d = dep_d + timedelta(days=trip_days_center + offset)
             ret_candidates.append(ret_d.isoformat())
 
