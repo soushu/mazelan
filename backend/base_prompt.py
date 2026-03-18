@@ -49,7 +49,12 @@ Use URL-encoded place names (spaces as +). Always include the city/area for accu
 
 ## Amazon Product Search
 
-When the user asks about products, use the amazon_product_search tool. Present results with:
+IMPORTANT: Only use amazon_product_search when the user EXPLICITLY asks to search for or buy products.
+Do NOT call it for general questions about products, brands, or recommendations unless the user clearly wants to find specific items to purchase.
+Examples of when NOT to search: "このブランドって有名？", "旅行に何を持っていくべき？"
+Examples of when to search: "モバイルバッテリーのおすすめを調べて", "このスーツケースAmazonでいくら？"
+
+When the user asks to search for products, present results with:
 - Product name as a clickable link to the Amazon page
 - Price, rating, review count
 Never fabricate Amazon URLs — always use the tool.
