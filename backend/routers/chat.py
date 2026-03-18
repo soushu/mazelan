@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -105,8 +106,10 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             from backend.providers import calculate_cost
             cost = calculate_cost(model, usage_info.get("input_tokens", 0), usage_info.get("output_tokens", 0))
 
+        # Strip status markers before saving to DB
+        clean_response = re.sub(r"<!--STATUS:.*?-->", "", full_response)
         assistant_msg = Message(
-            session_id=session_id, role="assistant", content=full_response, model=model,
+            session_id=session_id, role="assistant", content=clean_response, model=model,
             input_tokens=usage_info.get("input_tokens") if usage_info else None,
             output_tokens=usage_info.get("output_tokens") if usage_info else None,
             cost=cost,

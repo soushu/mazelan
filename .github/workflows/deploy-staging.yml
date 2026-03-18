@@ -76,4 +76,4 @@ jobs:
           CHANGES="${{ steps.info.outputs.changes }}"
           curl -sX POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \
-            -d "{\"text\": \"${EMOJI} *claudia ステージング* デプロイ${STATUS} [${VERSION}]\n>${CHANGES}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Actions>\"}"
+            -d "{\"text\": \"${EMOJI} *Mazelan ステージング* デプロイ${STATUS} [${VERSION}]\n>${CHANGES}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Actions>\"}"

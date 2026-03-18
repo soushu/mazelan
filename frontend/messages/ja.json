@@ -88,6 +88,7 @@
     "finalAnswer": "統合回答",
     "thinking": "考え中...",
     "generating": "（生成中）",
+    "preparing": "次のステップを準備中...",
     "completedSteps": "完了したステップ（{count}件）",
     "viewProcess": "議論の過程を見る（{count}件）",
     "step": "ステップ {current}/{total}: {label}"

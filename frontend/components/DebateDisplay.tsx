@@ -12,6 +12,8 @@ type Props = {
   steps: DebateStep[];
   streamingStepId?: DebateStepId;
   streamingContent?: string;
+  /** True when waiting for rate limit pacing between same-provider steps */
+  isPacing?: boolean;
 };
 
 const ALL_STEP_IDS: DebateStepId[] = [
@@ -34,6 +36,7 @@ export default function DebateDisplay({
   steps,
   streamingStepId,
   streamingContent,
+  isPacing,
 }: Props) {
   const t = useTranslations();
   const [processExpanded, setProcessExpanded] = useState(false);
@@ -85,12 +88,19 @@ export default function DebateDisplay({
 
           {isStreamingProcess && (
             <div className="border border-border-secondary rounded-lg p-3">
-              <StepBlock
-                icon={getStepIcon(streamingStepId!)}
-                label={getStepLabel(streamingStepId!)}
-                content={streamingContent || ""}
-                streaming
-              />
+              {isPacing ? (
+                <div className="flex items-center gap-2 text-xs text-t-muted animate-pulse py-1">
+                  <span className="w-4 h-4 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+                  {t("debate.preparing")}
+                </div>
+              ) : (
+                <StepBlock
+                  icon={getStepIcon(streamingStepId!)}
+                  label={getStepLabel(streamingStepId!)}
+                  content={streamingContent || ""}
+                  streaming
+                />
+              )}
             </div>
           )}
 

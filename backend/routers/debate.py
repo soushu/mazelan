@@ -177,6 +177,8 @@ async def stream_debate(
 
         # ── Step 2: Model B answers ──
         yield f"\n[STEP:model_b_answer]\n"
+        if last_provider_used == provider_b:
+            yield "<!--PACING-->"
         await _pace(provider_b)
         step_text = ""
         async for t in _stream_step(model_b, messages, api_key_b):
@@ -186,6 +188,8 @@ async def stream_debate(
 
         # ── Step 3: Model A critiques Model B ──
         yield f"\n[STEP:model_a_critique]\n"
+        if last_provider_used == provider_a:
+            yield "<!--PACING-->"
         await _pace(provider_a)
         critique_msg_a = messages + [
             {"role": "assistant", "content": step_contents["model_a_answer"]},
@@ -199,6 +203,8 @@ async def stream_debate(
 
         # ── Step 4: Model B critiques Model A ──
         yield f"\n[STEP:model_b_critique]\n"
+        if last_provider_used == provider_b:
+            yield "<!--PACING-->"
         await _pace(provider_b)
         critique_msg_b = messages + [
             {"role": "assistant", "content": step_contents["model_b_answer"]},
@@ -212,6 +218,8 @@ async def stream_debate(
 
         # ── Step 5: Model A synthesizes final answer ──
         yield f"\n[STEP:final]\n"
+        if last_provider_used == provider_a:
+            yield "<!--PACING-->"
         await _pace(provider_a)
         final_msg = messages + [
             {"role": "assistant", "content": "議論を開始します。"},

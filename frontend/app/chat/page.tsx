@@ -65,6 +65,7 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [streamingModel, setStreamingModel] = useState<string | undefined>(undefined);
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [manualToggles, setManualToggles] = useState<Set<number>>(new Set());
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
   const [apiKeyModalTab, setApiKeyModalTab] = useState<string | undefined>(undefined);
@@ -411,13 +412,29 @@ export default function ChatPage() {
           setApiKeyModalOpen(true);
           return;
         }
+        let thinkingCleared = false;
+        if (thinking) setToolStatus("🧠 考え中...");
         for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey())) {
           full += chunk;
-          // Strip usage marker from display during streaming
-          const display = full.replace(/\n<!--USAGE:\{.*?\}-->$/, "");
+          // Clear thinking status once first real text arrives
+          const displayCheck = full.replace(/<!--STATUS:.*?-->/g, "").replace(/\n<!--USAGE:\{.*?\}-->$/, "");
+          if (thinking && !thinkingCleared && displayCheck.length > 0) {
+            setToolStatus(null);
+            thinkingCleared = true;
+          }
+          // Parse tool status markers
+          const statusMatch = full.match(/<!--STATUS:(.*?)-->/g);
+          if (statusMatch) {
+            const lastStatus = statusMatch[statusMatch.length - 1].match(/<!--STATUS:(.*?)-->/)![1];
+            setToolStatus(lastStatus || null);
+          }
+          // Strip status markers and usage marker from display
+          const display = full.replace(/<!--STATUS:.*?-->/g, "").replace(/\n<!--USAGE:\{.*?\}-->$/, "");
           setStreamingText(display);
         }
-        const { text: cleanText, usage } = parseUsageMarker(full);
+        setToolStatus(null);
+        const stripped = full.replace(/<!--STATUS:.*?-->/g, "");
+        const { text: cleanText, usage } = parseUsageMarker(stripped);
         setMessages((prev) => [
           ...prev,
           {
@@ -444,6 +461,7 @@ export default function ChatPage() {
       setStreamingText("");
       setStreamingModel(undefined);
       setStreamingDebate(null);
+      setToolStatus(null);
     }
   }
 
@@ -495,7 +513,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v42.0
+          DEV v42.3
         </div>
       )}
 
@@ -595,6 +613,7 @@ export default function ChatPage() {
                     streamingText={isLastAndStreaming ? streamingText : undefined}
                     streamingDebate={isLastAndStreaming ? streamingDebate : null}
                     streamingModel={isLastAndStreaming ? streamingModel : undefined}
+                    toolStatus={isLastAndStreaming ? toolStatus : null}
                   />
                 </div>
               );
@@ -617,12 +636,21 @@ export default function ChatPage() {
                   {streamingText ? (
                     <>
                       <span>{streamingText}</span>
-                      <span className="inline-flex gap-1 items-center mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
-                      </span>
+                      {toolStatus ? (
+                        <span className="block text-xs text-t-muted mt-1 animate-pulse">{toolStatus}</span>
+                      ) : (
+                        <span className="inline-flex gap-1 items-center mt-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
+                        </span>
+                      )}
                     </>
+                  ) : toolStatus ? (
+                    <span className="inline-flex items-center gap-2 text-xs text-t-muted animate-pulse py-1">
+                      <span className="w-4 h-4 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+                      {toolStatus}
+                    </span>
                   ) : (
                     <span className="inline-flex gap-1 items-center py-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />

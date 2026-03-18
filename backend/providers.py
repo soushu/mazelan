@@ -118,6 +118,19 @@ def get_provider(model_id: str) -> str:
 
 # ── Anthropic (Claude) ──────────────────────────────────────
 
+def _tool_status_message(name: str, input_data: dict) -> str:
+    """Generate a human-readable status message for a tool call."""
+    if name == "flight_search":
+        origin = input_data.get("origin", "")
+        dest = input_data.get("destination", "")
+        month = input_data.get("departure_month", "")
+        return f"<!--STATUS:🔍 {origin}→{dest} {month} のフライトを検索中...-->"
+    if name == "amazon_product_search":
+        query = input_data.get("query", "")
+        return f"<!--STATUS:🔍 「{query}」をAmazonで検索中...-->"
+    return ""
+
+
 async def _execute_tool(name: str, input_data: dict) -> str:
     """Execute a tool call and return the result as a string."""
     if name == "amazon_product_search":
@@ -200,12 +213,16 @@ async def stream_anthropic(
 
             tool_results = []
             for block in tool_use_blocks:
+                status = _tool_status_message(block.name, block.input)
+                if status:
+                    yield status
                 result = await _execute_tool(block.name, block.input)
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": block.id,
                     "content": result,
                 })
+            yield "<!--STATUS:-->"  # Clear status
             kwargs["messages"].append({"role": "user", "content": tool_results})
 
         yield {"input_tokens": total_input_tokens, "output_tokens": total_output_tokens}
@@ -359,12 +376,16 @@ async def stream_openai(
                     args = json.loads(tc["function"]["arguments"])
                 except json.JSONDecodeError:
                     args = {}
+                status = _tool_status_message(tc["function"]["name"], args)
+                if status:
+                    yield status
                 result = await _execute_tool(tc["function"]["name"], args)
                 oai_messages.append({
                     "role": "tool",
                     "tool_call_id": tc["id"],
                     "content": result,
                 })
+            yield "<!--STATUS:-->"  # Clear status
 
         yield {"input_tokens": total_input, "output_tokens": total_output}
     except OpenAIAuthError:
@@ -488,6 +509,9 @@ async def _stream_google_with_key(
                 fr_parts = []
                 for fc in function_calls:
                     args = dict(fc.args) if fc.args else {}
+                    status = _tool_status_message(fc.name, args)
+                    if status:
+                        yield status
                     result_str = await _execute_tool(fc.name, args)
                     result_data = json.loads(result_str)
                     fr_parts.append(genai_types.Part.from_function_response(
@@ -495,6 +519,7 @@ async def _stream_google_with_key(
                         response={"result": result_data},
                     ))
                 contents.append(genai_types.Content(role="user", parts=fr_parts))
+                yield "<!--STATUS:-->"  # Clear status
                 break  # Success for this round, proceed to next tool round
 
             except Exception as e:
