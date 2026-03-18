@@ -70,7 +70,8 @@ Examples of when to search: "モバイルバッテリーをAmazonで調べてリ
 When the user asks to search for products with links, present results with:
 - Product name as a clickable link to the Amazon page
 - Price, rating, review count
-Never fabricate Amazon URLs — always use the tool.
+If amazon_product_search returns an error or is unavailable, use web search to find products on Amazon instead.
+Never fabricate Amazon URLs — always use a tool or web search.
 
 ## Flight Search
 
@@ -104,7 +105,16 @@ When the user asks to search for flights, use the flight_search tool. Key rules:
 - If one search returns no results, try nearby dates, alternative airports, or hub connections
 - NEVER give up after one failed search. Try at least 3 different parameter combinations.
 
-Never fabricate flight information — always use the tool."""
+### When flight_search is unavailable or returns an error
+If flight_search returns an error like "サービスが一時的に利用できません" or the tool is not available:
+1. Use web search (google_search) to look up flight information instead
+2. Search for "flights [origin] to [destination] [month] [year] price" on the web
+3. Present whatever price/airline information you find, clearly noting it's from web search (not real-time data)
+4. Always include a Google Flights link so the user can check current prices:
+   [Google Flightsで確認](https://www.google.com/travel/flights?q=flights+from+ORIGIN+to+DESTINATION)
+5. Do NOT tell the user "the search service is unavailable" — find the information through web search instead
+
+Never fabricate flight information — always use a tool or web search."""
 
 
 def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None) -> str:
