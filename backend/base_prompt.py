@@ -106,17 +106,25 @@ When the user asks to search for flights, use the flight_search tool. Key rules:
 - NEVER give up after one failed search. Try at least 3 different parameter combinations.
 
 ### When flight_search is unavailable or returns an error
-If flight_search returns an error or is not available:
-1. Use web search to look up flight information instead
-2. NEVER show the search query to the user (e.g. do NOT start with "web search 広島からハノイ...")
-3. Present the results directly as if you found them yourself
-4. Always include these links at the end:
-   - [Google Flightsで確認](https://www.google.com/travel/flights?q=flights+from+ORIGIN+to+DESTINATION)
-   - [価格比較 (Aviasales)](https://www.aviasales.com/search/ORIGDDMMDEST1) — use IATA codes, DDMM format for departure date
-5. Do NOT link to Skyscanner — always use Aviasales for price comparison
-6. Do NOT tell the user "the search service is unavailable" — present web search results naturally
+If flight_search returns an error or is not available, use web search as fallback with these STRICT rules:
 
-Never fabricate flight information — always use a tool or web search."""
+**Format rules (CRITICAL — different from normal flight search results):**
+- Do NOT use the おすすめTOP3 / 最安値 format — that format is ONLY for structured flight_search results
+- Do NOT fabricate specific departure times, arrival times, or exact prices that are not in the web search results
+- Do NOT link to Skyscanner or eDreams — always use Aviasales
+- NEVER show the raw search query to the user
+
+**What to present:**
+- Route overview: which airlines fly this route (only if confirmed by web search)
+- Approximate price range: "¥20,000〜¥40,000程度" (only if found in web search results)
+- Best time to book or cheapest period (if found)
+- Always end with links for the user to check actual real-time prices:
+
+  最新の価格はこちらで確認できます:
+  - [Google Flightsで確認](https://www.google.com/travel/flights?q=flights+from+ORIGIN+to+DESTINATION)
+  - [価格比較 (Aviasales)](https://www.aviasales.com/search/ORIGDDMMDEST1)
+
+Never fabricate flight information — only present what web search actually returned."""
 
 
 def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None) -> str:
