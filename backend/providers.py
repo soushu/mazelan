@@ -445,34 +445,37 @@ def _is_gemini_rate_limit(err_str: str) -> bool:
     return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str or "503" in err_str or "unavailable" in err_str
 
 
-def _gemini_tools() -> list[genai_types.Tool] | None:
-    """Return Gemini-format tool definitions for available tools.
-
-    NOTE: Gemini API does not allow google_search and function_calling in the same request.
-    If custom tools (flight/amazon) are available, use those; otherwise use Google Search.
-    """
+def _gemini_function_tools() -> list[genai_types.Tool] | None:
+    """Return Gemini function calling tools (flight/amazon)."""
     declarations = []
     if amazon_available():
         declarations.append(genai_types.FunctionDeclaration(name=AMAZON_SEARCH_TOOL["name"], description=AMAZON_SEARCH_TOOL["description"], parameters=AMAZON_SEARCH_TOOL["input_schema"]))
     if flights_available():
         declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
-    if declarations:
-        # Custom tools take priority (cannot combine with google_search)
-        return [genai_types.Tool(function_declarations=declarations)]
-    # No custom tools → use Google Search Grounding
+    return [genai_types.Tool(function_declarations=declarations)] if declarations else None
+
+
+def _gemini_search_tool() -> list[genai_types.Tool]:
+    """Return Gemini Google Search Grounding tool."""
     return [genai_types.Tool(google_search=genai_types.GoogleSearch())]
 
 
 async def _stream_google_with_key(
     model: str, gemini_contents: list, config: genai_types.GenerateContentConfig, api_key: str,
+    enable_search: bool = True,
 ) -> AsyncGenerator[str | dict, None]:
-    """Attempt streaming with a single key, with exponential backoff for transient 429s."""
+    """Attempt streaming with a single key, with exponential backoff for transient 429s.
+
+    Gemini API cannot combine google_search and function_calling in one request.
+    Strategy: use function_calling first, then switch to google_search for additional rounds.
+    """
     client = genai.Client(api_key=api_key)
     max_retries = 3
     max_tool_rounds = 3
     contents = list(gemini_contents)  # copy to avoid mutating caller's list
     total_input = 0
     total_output = 0
+    used_function_calling = False  # Track if we used function calling in any round
 
     for _round in range(max_tool_rounds + 1):
         for attempt in range(max_retries):
@@ -503,13 +506,20 @@ async def _stream_google_with_key(
                     total_input += usage_data["input_tokens"]
                     total_output += usage_data["output_tokens"]
 
-                # If no function calls, we're done
+                # If no function calls, check if we should switch to google_search
                 if not function_calls:
+                    if used_function_calling and enable_search:
+                        # Function calling round completed → switch to google_search for next round
+                        # The LLM may want to search the web for additional info
+                        config.tools = _gemini_search_tool()
+                        used_function_calling = False  # Reset so we don't switch again
+                        # Add a continuation prompt so the model knows it can now search
+                        break  # Continue to next round with google_search
                     yield {"input_tokens": total_input, "output_tokens": total_output}
                     return
 
                 # Execute function calls and build responses
-                # Add model's response (with function_call parts) to contents
+                used_function_calling = True
                 fc_parts = [genai_types.Part.from_function_call(name=fc.name, args=dict(fc.args) if fc.args else {}) for fc in function_calls]
                 contents.append(genai_types.Content(role="model", parts=fc_parts))
 
@@ -568,10 +578,17 @@ async def stream_google(
         config.thinking_config = genai_types.ThinkingConfig(thinking_budget=10000)
     if system_prompt:
         config.system_instruction = system_prompt
+    enable_search = False
     if not disable_tools:
-        gemini_tool_defs = _gemini_tools()
-        if gemini_tool_defs:
-            config.tools = gemini_tool_defs
+        # Start with function calling tools; google_search will be added dynamically after
+        func_tools = _gemini_function_tools()
+        if func_tools:
+            config.tools = func_tools
+            enable_search = True  # Allow switching to google_search after function calling
+        else:
+            # No custom tools → use Google Search directly
+            config.tools = _gemini_search_tool()
+            enable_search = False  # Already using search, no need to switch
 
     # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
     keys_to_try: list[tuple[str, str]] = []  # (key, label)
@@ -591,7 +608,7 @@ async def stream_google(
     for key, label in keys_to_try:
         try:
             logger.info("Gemini: trying key [%s] for model %s", label, model)
-            async for chunk in _stream_google_with_key(model, gemini_contents, config, key):
+            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search):
                 yield chunk
             return  # Success
         except (ProviderSpendLimitError, ProviderRateLimitError) as e:
