@@ -35,6 +35,7 @@ export default function MessageContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      className="break-words overflow-hidden"
       components={{
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || "");
@@ -97,7 +98,7 @@ export default function MessageContent({ content }: { content: string }) {
           return <td className="px-3 py-2 border-t border-border-primary text-t-secondary">{children}</td>;
         },
         a({ href, children }) {
-          return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">{children}</a>;
+          return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline break-all">{children}</a>;
         },
       }}
     >
