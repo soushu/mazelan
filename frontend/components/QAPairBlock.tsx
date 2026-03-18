@@ -111,9 +111,11 @@ type Props = {
   } | null;
   /** Model ID for the streaming response (used to show correct provider icon) */
   streamingModel?: string;
+  /** Tool execution status message (e.g. "フライトを検索中...") */
+  toolStatus?: string | null;
 };
 
-export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate, streamingModel }: Props) {
+export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, streamingDebate, streamingModel, toolStatus }: Props) {
   const t = useTranslations();
   const isStreaming = streamingText !== undefined;
 
@@ -225,12 +227,21 @@ export default function QAPairBlock({ pair, collapsed, onToggle, streamingText, 
                   {streamingText ? (
                     <>
                       <MessageContent content={streamingText} />
-                      <span className="inline-flex gap-1 items-center mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
-                      </span>
+                      {toolStatus ? (
+                        <span className="block text-xs text-t-muted mt-1 animate-pulse">{toolStatus}</span>
+                      ) : (
+                        <span className="inline-flex gap-1 items-center mt-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:300ms]" />
+                        </span>
+                      )}
                     </>
+                  ) : toolStatus ? (
+                    <span className="inline-flex items-center gap-2 text-xs text-t-muted animate-pulse py-1">
+                      <span className="w-4 h-4 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+                      {toolStatus}
+                    </span>
                   ) : (
                     <span className="inline-flex gap-1 items-center py-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-t-muted animate-bounce [animation-delay:0ms]" />
