@@ -433,7 +433,8 @@ export default function ChatPage() {
           setStreamingText(display);
         }
         setToolStatus(null);
-        const { text: cleanText, usage } = parseUsageMarker(full);
+        const stripped = full.replace(/<!--STATUS:.*?-->/g, "");
+        const { text: cleanText, usage } = parseUsageMarker(stripped);
         setMessages((prev) => [
           ...prev,
           {
