@@ -24,27 +24,27 @@ export const MODEL_GROUPS: ModelGroup[] = [
     provider: "anthropic",
     label: "Anthropic",
     models: [
+      { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", supports_thinking: true },
       { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", supports_thinking: true },
       { id: "claude-opus-4-6", label: "Claude Opus 4.6", supports_thinking: true },
-      { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", supports_thinking: true },
     ],
   },
   {
     provider: "openai",
     label: "OpenAI",
     models: [
-      { id: "gpt-4o", label: "GPT-4o" },
       { id: "gpt-4o-mini", label: "GPT-4o mini" },
       { id: "o3-mini", label: "o3-mini" },
+      { id: "gpt-4o", label: "GPT-4o" },
     ],
   },
   {
     provider: "google",
     label: "Google",
     models: [
+      { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
       { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", supports_thinking: true },
       { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", supports_thinking: true },
-      { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
     ],
   },
 ];

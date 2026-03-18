@@ -83,18 +83,18 @@ class ProviderError(Exception):
 
 # Prices: USD per 1M tokens (as of 2026-03)
 MODEL_REGISTRY: dict[str, dict] = {
-    # Anthropic
+    # Anthropic (cheapest first)
+    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku 4.5",   "supports_images": True,  "supports_web_search": True,  "input_price": 0.80,  "output_price": 4.0},
     "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet 4.6",  "supports_images": True,  "supports_web_search": True,  "input_price": 3.0,   "output_price": 15.0},
     "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus 4.6",    "supports_images": True,  "supports_web_search": True,  "input_price": 15.0,  "output_price": 75.0},
-    "claude-haiku-4-5-20251001":  {"provider": "anthropic", "label": "Claude Haiku 4.5",   "supports_images": True,  "supports_web_search": True,  "input_price": 0.80,  "output_price": 4.0},
-    # OpenAI
-    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False, "input_price": 2.50,  "output_price": 10.0},
+    # OpenAI (cheapest first)
     "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
     "o3-mini":                    {"provider": "openai",    "label": "o3-mini",         "supports_images": False, "supports_web_search": False, "input_price": 1.10,  "output_price": 4.40},
-    # Google
+    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False, "input_price": 2.50,  "output_price": 10.0},
+    # Google (cheapest first)
+    "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": False, "input_price": 0.075, "output_price": 0.30},
     "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
     "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": False, "input_price": 1.25,  "output_price": 10.0},
-    "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": False, "input_price": 0.075, "output_price": 0.30},
 }
 
 
