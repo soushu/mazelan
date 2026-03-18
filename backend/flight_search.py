@@ -149,6 +149,7 @@ def _fix_date(date_str: str) -> str:
         return date_str
 
 
+
 def _build_aviasales_link(origin: str, dest: str, dep_date: str, ret_date: str | None) -> str:
     """Build Aviasales search URL."""
     try:
@@ -191,6 +192,9 @@ async def _search_google_flights(
             resp.raise_for_status()
             data = resp.json()
 
+        # Get Google Flights URL from SerpAPI response (reliable, pre-built by Google)
+        gf_url = data.get("search_metadata", {}).get("google_flights_url", "")
+
         flights = []
         for flight_list in [data.get("best_flights", []), data.get("other_flights", [])]:
             for f in flight_list:
@@ -224,6 +228,7 @@ async def _search_google_flights(
                     "departure_date": departure_date,
                     "return_date": return_date or "",
                     "search_link": _build_aviasales_link(dep_airport, arr_airport, departure_date, return_date),
+                    "google_flights_link": gf_url,
                     "_score": _flight_score(price, duration, stops),
                 })
 
