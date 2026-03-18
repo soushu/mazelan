@@ -101,6 +101,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     const { model, model2 } = getSessionModel(sessionId);
     setSelectedModel(model);
     setSecondModel(model2);
+    // Auto-focus input when opening a new/different session
+    ref.current?.focus();
   }, [sessionId]);
 
   useEffect(() => {
