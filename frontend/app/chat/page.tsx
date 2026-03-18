@@ -412,8 +412,16 @@ export default function ChatPage() {
           setApiKeyModalOpen(true);
           return;
         }
+        let thinkingCleared = false;
+        if (thinking) setToolStatus("🧠 考え中...");
         for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey())) {
           full += chunk;
+          // Clear thinking status once first real text arrives
+          const displayCheck = full.replace(/<!--STATUS:.*?-->/g, "").replace(/\n<!--USAGE:\{.*?\}-->$/, "");
+          if (thinking && !thinkingCleared && displayCheck.length > 0) {
+            setToolStatus(null);
+            thinkingCleared = true;
+          }
           // Parse tool status markers
           const statusMatch = full.match(/<!--STATUS:(.*?)-->/g);
           if (statusMatch) {
@@ -504,7 +512,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v42.1
+          DEV v42.2
         </div>
       )}
 

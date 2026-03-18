@@ -88,6 +88,7 @@
     "finalAnswer": "Final answer",
     "thinking": "Thinking...",
     "generating": "(generating)",
+    "preparing": "Preparing next step...",
     "completedSteps": "Completed steps ({count})",
     "viewProcess": "View debate process ({count})",
     "step": "Step {current}/{total}: {label}"

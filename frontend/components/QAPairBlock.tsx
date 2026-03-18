@@ -273,7 +273,7 @@ function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; mod
 
   for (let i = 1; i < parts.length; i += 2) {
     const stepId = parts[i] as DebateStepId;
-    const content = (parts[i + 1] || "").trim();
+    const content = (parts[i + 1] || "").replace(/<!--PACING-->/g, "").trim();
     if (i + 2 < parts.length) {
       completedSteps.push({ id: stepId, content });
     } else {
@@ -281,6 +281,9 @@ function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; mod
       currentContent = content;
     }
   }
+
+  // Detect pacing state: step marker received but no content yet (waiting for rate limit delay)
+  const isPacing = currentStepId !== null && currentContent === "" && rawText.includes("<!--PACING-->");
 
   if (!currentStepId && completedSteps.length === 0) {
     return <span className="animate-pulse text-t-muted">{t("debate.starting")}</span>;
@@ -292,7 +295,8 @@ function StreamingDebateView({ rawText, modelA, modelB }: { rawText: string; mod
       modelB={modelB}
       steps={completedSteps}
       streamingStepId={currentStepId || undefined}
-      streamingContent={currentContent}
+      streamingContent={isPacing ? undefined : currentContent}
+      isPacing={isPacing}
     />
   );
 }
