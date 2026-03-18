@@ -118,10 +118,6 @@ def get_provider(model_id: str) -> str:
 
 # ── Anthropic (Claude) ──────────────────────────────────────
 
-# Tools that should only be called once per conversation turn (to save API quota)
-ONE_SHOT_TOOLS = {"flight_search"}
-
-
 async def _execute_tool(name: str, input_data: dict) -> str:
     """Execute a tool call and return the result as a string."""
     if name == "amazon_product_search":
@@ -182,17 +178,9 @@ async def stream_anthropic(
     total_input_tokens = 0
     total_output_tokens = 0
     max_tool_rounds = 3  # Prevent infinite tool loops
-    used_tools: set[str] = set()  # Track tools used for one-shot limiting
 
     try:
         for _round in range(max_tool_rounds + 1):
-            # Remove one-shot tools that have already been used
-            if _round > 0 and "tools" in kwargs:
-                filtered = [t for t in kwargs["tools"] if t.get("name") not in (used_tools & ONE_SHOT_TOOLS)]
-                kwargs["tools"] = filtered if filtered else kwargs.pop("tools", None) or []
-                if not kwargs.get("tools"):
-                    kwargs.pop("tools", None)
-
             async with client.messages.stream(**kwargs) as stream:
                 async for text in stream.text_stream:
                     yield text
@@ -212,7 +200,6 @@ async def stream_anthropic(
 
             tool_results = []
             for block in tool_use_blocks:
-                used_tools.add(block.name)
                 result = await _execute_tool(block.name, block.input)
                 tool_results.append({
                     "type": "tool_result",
@@ -305,16 +292,9 @@ async def stream_openai(
     max_tool_rounds = 3
     total_input = 0
     total_output = 0
-    used_tools: set[str] = set()
 
     try:
         for _round in range(max_tool_rounds + 1):
-            # Remove one-shot tools that have already been used
-            if _round > 0 and tools:
-                tools = [t for t in tools if t["function"]["name"] not in (used_tools & ONE_SHOT_TOOLS)]
-                if not tools:
-                    tools = None
-
             create_kwargs: dict = dict(
                 model=model,
                 messages=oai_messages,
@@ -379,7 +359,6 @@ async def stream_openai(
                     args = json.loads(tc["function"]["arguments"])
                 except json.JSONDecodeError:
                     args = {}
-                used_tools.add(tc["function"]["name"])
                 result = await _execute_tool(tc["function"]["name"], args)
                 oai_messages.append({
                     "role": "tool",
@@ -465,20 +444,8 @@ async def _stream_google_with_key(
     contents = list(gemini_contents)  # copy to avoid mutating caller's list
     total_input = 0
     total_output = 0
-    used_tools: set[str] = set()
 
     for _round in range(max_tool_rounds + 1):
-        # Remove one-shot tools that have already been used
-        if _round > 0 and config.tools:
-            filtered_decls = [
-                d for d in config.tools[0].function_declarations
-                if d.name not in (used_tools & ONE_SHOT_TOOLS)
-            ]
-            if filtered_decls:
-                config.tools = [genai_types.Tool(function_declarations=filtered_decls)]
-            else:
-                config.tools = None
-
         for attempt in range(max_retries):
             try:
                 stream = await client.aio.models.generate_content_stream(
@@ -521,7 +488,6 @@ async def _stream_google_with_key(
                 fr_parts = []
                 for fc in function_calls:
                     args = dict(fc.args) if fc.args else {}
-                    used_tools.add(fc.name)
                     result_str = await _execute_tool(fc.name, args)
                     result_data = json.loads(result_str)
                     fr_parts.append(genai_types.Part.from_function_response(
