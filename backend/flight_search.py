@@ -12,6 +12,8 @@ from datetime import date, datetime, timedelta
 
 import httpx
 
+from backend.serpapi_cache import get as cache_get, put as cache_put
+
 logger = logging.getLogger(__name__)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
@@ -29,9 +31,10 @@ def is_available() -> bool:
 FLIGHT_SEARCH_TOOL = {
     "name": "flight_search",
     "description": (
-        "Search for flights between two cities/airports. Call this ONCE per destination — "
-        "the tool internally searches multiple dates and return periods to find the best deals. "
-        "Returns top recommended flights + cheapest option with prices, airlines, and booking links."
+        "Search for flights between two cities/airports. "
+        "ONLY use this when the user EXPLICITLY asks to search for flights, prices, or tickets. "
+        "Do NOT use for general airline questions. "
+        "Call ONCE per destination — the tool internally searches multiple dates to find the best deals."
     ),
     "input_schema": {
         "type": "object",
@@ -297,15 +300,27 @@ async def search_flights(
         departure_date = _fix_date(departure_date)
         if return_date:
             return_date = _fix_date(return_date)
+        # Check cache
+        cache_params = {"origin": origin, "dest": destination, "dep": departure_date, "ret": return_date, "adults": adults}
+        cached = cache_get("flight", cache_params)
+        if cached is not None:
+            return cached
         results = await _search_google_flights(origin, destination, departure_date, return_date, adults, max_results)
         if not results:
             return [{"error": f"No flights found for {origin}→{destination} on {departure_date}"}]
+        cache_put("flight", cache_params, results)
         return results
 
     # === Google Flights calendar method ===
 
     if not departure_month:
         departure_month = date.today().strftime("%Y-%m")
+
+    # Check cache for calendar method
+    cache_params = {"origin": origin, "dest": destination, "month": departure_month, "from": departure_day_from, "to": departure_day_to, "weeks": trip_weeks, "adults": adults}
+    cached = cache_get("flight", cache_params)
+    if cached is not None:
+        return cached
 
     # Step 1: Generate departure date candidates (spread across range)
     try:
@@ -385,4 +400,5 @@ async def search_flights(
         cheapest_copy["_cheapest"] = True
         best_flights.append(cheapest_copy)
 
+    cache_put("flight", cache_params, best_flights)
     return best_flights

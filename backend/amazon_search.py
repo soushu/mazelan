@@ -5,6 +5,8 @@ import os
 
 import httpx
 
+from backend.serpapi_cache import get as cache_get, put as cache_put
+
 logger = logging.getLogger(__name__)
 
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
@@ -20,10 +22,10 @@ def is_available() -> bool:
 AMAZON_SEARCH_TOOL = {
     "name": "amazon_product_search",
     "description": (
-        "Search Amazon.co.jp for products matching a query. "
-        "Returns product titles, prices, ratings, and direct links. "
-        "Use this when the user asks about purchasing products, "
-        "recommends items, or wants product comparisons."
+        "Search Amazon.co.jp for products. "
+        "ONLY use this when the user EXPLICITLY asks to search for products with purchase links "
+        "(e.g. 'Amazonで調べてリンク教えて'). "
+        "Do NOT use for general product recommendations or advice."
     ),
     "input_schema": {
         "type": "object",
@@ -49,6 +51,12 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
         return [{"error": "Amazon search is not configured (SERPAPI_KEY not set)"}]
 
     max_results = max(1, min(5, max_results))
+
+    # Check cache (1 hour TTL for Amazon)
+    cache_params = {"query": query, "max_results": max_results}
+    cached = cache_get("amazon", cache_params)
+    if cached is not None:
+        return cached
 
     params = {
         "engine": "amazon",
@@ -81,6 +89,7 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
         if not products:
             return [{"error": f"No products found for '{query}'"}]
 
+        cache_put("amazon", cache_params, products, ttl=3600)  # 1 hour for Amazon
         return products
 
     except httpx.TimeoutException:
