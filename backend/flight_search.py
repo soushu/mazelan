@@ -224,6 +224,7 @@ async def _search_google_flights(
                     "departure_date": departure_date,
                     "return_date": return_date or "",
                     "search_link": _build_aviasales_link(dep_airport, arr_airport, departure_date, return_date),
+                    "google_flights_link": f"https://www.google.com/search?q={dep_airport}+to+{arr_airport}+flights+{departure_date}" + (f"+to+{return_date}" if return_date else ""),
                     "_score": _flight_score(price, duration, stops),
                 })
 
