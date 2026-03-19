@@ -123,10 +123,11 @@ Use web search to find and present:
 - Keep URLs short and simple — never generate long/complex URLs
 - Do NOT show raw search queries to the user
 
-Always end with:
-  最新の正確な価格はこちらで確認できます:
-  - [Google Flightsで確認](https://www.google.com/travel/flights?q=flights+from+ORIGIN+to+DESTINATION)
-  - [価格比較 (Aviasales)](https://www.aviasales.com/search/ORIGDDMMDEST1)
+Always end with EXACTLY this disclaimer and links (MANDATORY — never omit):
+
+  ⚠️ 上記はWeb検索による参考情報です。実際の価格・便名・時刻は異なる場合があります。ご予約前に必ず以下のリンクで最新情報をご確認ください。
+  - [Google Flightsで最新価格を確認](https://www.google.com/travel/flights?q=flights+from+ORIGIN+to+DESTINATION)
+  - [Aviasalesで価格比較](https://www.aviasales.com/search/ORIGDDMMDEST1)
 
 Never fabricate flight information — present what web search returned, clearly marked as approximate."""
 
