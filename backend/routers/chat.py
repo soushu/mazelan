@@ -106,8 +106,9 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             from backend.providers import calculate_cost
             cost = calculate_cost(model, usage_info.get("input_tokens", 0), usage_info.get("output_tokens", 0))
 
-        # Strip status markers before saving to DB
+        # Strip status markers and excessively long URLs before saving to DB
         clean_response = re.sub(r"<!--STATUS:.*?-->", "", full_response)
+        clean_response = re.sub(r"\[([^\]]*)\]\(https?://[^\)]{500,}\)", r"[\1](リンク省略)", clean_response)
         assistant_msg = Message(
             session_id=session_id, role="assistant", content=clean_response, model=model,
             input_tokens=usage_info.get("input_tokens") if usage_info else None,
