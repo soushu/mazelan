@@ -102,7 +102,7 @@ def send_daily_summary() -> None:
 
 
 def _scheduler_loop() -> None:
-    """Background thread: check thresholds hourly, send daily summary at midnight UTC."""
+    """Background thread: check thresholds hourly, send daily summary at 1:00 AM JST (16:00 UTC)."""
     last_summary_date = ""
     while True:
         try:
@@ -112,8 +112,8 @@ def _scheduler_loop() -> None:
             # Hourly threshold check
             check_and_alert()
 
-            # Daily summary at midnight UTC (once per day)
-            if now.hour == 0 and last_summary_date != today:
+            # Daily summary at 1:00 AM JST = 16:00 UTC
+            if now.hour == 16 and last_summary_date != today:
                 send_daily_summary()
                 last_summary_date = today
 
