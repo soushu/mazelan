@@ -15,6 +15,7 @@ from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError,
 
 from backend.amazon_search import AMAZON_SEARCH_TOOL, search_amazon, is_available as amazon_available
 from backend.flight_search import FLIGHT_SEARCH_TOOL, search_flights, is_available as flights_available
+from backend.maps_search import MAPS_SEARCH_TOOL, search_maps, is_available as maps_available
 from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
@@ -128,6 +129,9 @@ def _tool_status_message(name: str, input_data: dict) -> str:
     if name == "amazon_product_search":
         query = input_data.get("query", "")
         return f"<!--STATUS:🔍 「{query}」をAmazonで検索中...-->"
+    if name == "google_maps_search":
+        query = input_data.get("query", "")
+        return f"<!--STATUS:📍 「{query}」をGoogle Mapsで確認中...-->"
     return ""
 
 
@@ -146,12 +150,18 @@ async def _execute_tool(name: str, input_data: dict) -> str:
             departure_month=input_data.get("departure_month", ""),
             departure_day_from=input_data.get("departure_day_from", 1),
             departure_day_to=input_data.get("departure_day_to", 10),
+            return_month=input_data.get("return_month", ""),
+            return_day_from=input_data.get("return_day_from", 0),
+            return_day_to=input_data.get("return_day_to", 0),
             trip_weeks=input_data.get("trip_weeks", 2),
             adults=input_data.get("adults", 1),
             # Legacy support
             departure_date=input_data.get("departure_date", ""),
             return_date=input_data.get("return_date"),
         )
+        return json.dumps(results, ensure_ascii=False)
+    if name == "google_maps_search":
+        results = await search_maps(query=input_data.get("query", ""))
         return json.dumps(results, ensure_ascii=False)
     return json.dumps({"error": f"Unknown tool: {name}"})
 
@@ -185,6 +195,8 @@ async def stream_anthropic(
                 tools.append(AMAZON_SEARCH_TOOL)
             if flights_available():
                 tools.append(FLIGHT_SEARCH_TOOL)
+            if maps_available():
+                tools.append(MAPS_SEARCH_TOOL)
         if tools:
             kwargs["tools"] = tools
     if system_prompt:
@@ -292,6 +304,8 @@ def _openai_tools() -> list[dict] | None:
         tools.append({"type": "function", "function": {"name": AMAZON_SEARCH_TOOL["name"], "description": AMAZON_SEARCH_TOOL["description"], "parameters": AMAZON_SEARCH_TOOL["input_schema"]}})
     if flights_available():
         tools.append({"type": "function", "function": {"name": FLIGHT_SEARCH_TOOL["name"], "description": FLIGHT_SEARCH_TOOL["description"], "parameters": FLIGHT_SEARCH_TOOL["input_schema"]}})
+    if maps_available():
+        tools.append({"type": "function", "function": {"name": MAPS_SEARCH_TOOL["name"], "description": MAPS_SEARCH_TOOL["description"], "parameters": MAPS_SEARCH_TOOL["input_schema"]}})
     return tools or None
 
 
@@ -455,6 +469,8 @@ def _gemini_function_tools() -> list[genai_types.Tool] | None:
         declarations.append(genai_types.FunctionDeclaration(name=AMAZON_SEARCH_TOOL["name"], description=AMAZON_SEARCH_TOOL["description"], parameters=AMAZON_SEARCH_TOOL["input_schema"]))
     if flights_available():
         declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
+    if maps_available():
+        declarations.append(genai_types.FunctionDeclaration(name=MAPS_SEARCH_TOOL["name"], description=MAPS_SEARCH_TOOL["description"], parameters=MAPS_SEARCH_TOOL["input_schema"]))
     return [genai_types.Tool(function_declarations=declarations)] if declarations else None
 
 
