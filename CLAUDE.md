@@ -47,16 +47,15 @@ feature/* を develop にマージする前に必ず以下を実行:
 
 ## 環境
 
-| 環境 | ブランチ | ドメイン | Backend | Frontend | DB | .env |
-|------|----------|----------|---------|----------|-----|------|
-| 本番 | main | mazelan.ai | :8000 | :3000 | claudia | ~/claudia/.env |
-| ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging | ~/claudia-staging/.env |
+| 環境 | ブランチ | ドメイン | Backend | Frontend | DB |
+|------|----------|----------|---------|----------|-----|
+| 本番 | main | mazelan.ai | :8000 | :3000 | claudia |
+| ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging |
 
-GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot (instance), yutookiguchi (SSH user), us-west1-b
+GCP: e2-small (0.5vCPU / 2GB RAM), us-west1-b
 全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
 
 **環境変数の追加・変更時は必ず本番とステージング両方の `.env` に反映すること。**
-SSH接続: `ssh -i ~/.ssh/google_compute_engine yutookiguchi@136.117.90.183`
 
 ## セキュリティ
 
