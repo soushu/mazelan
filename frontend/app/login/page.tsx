@@ -198,6 +198,14 @@ function LoginForm() {
             </button>
           </form>
 
+          {!isSignUp && (
+            <p className="text-center">
+              <Link href="/reset-password" className="text-xs text-t-muted hover:text-accent transition-colors">
+                {t("auth.forgotPassword")}
+              </Link>
+            </p>
+          )}
+
           <p className="text-center text-sm text-t-muted">
             {isSignUp ? t("auth.hasAccount") : t("auth.noAccount")}{" "}
             <button
