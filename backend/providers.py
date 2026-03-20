@@ -137,6 +137,9 @@ def _tool_status_message(name: str, input_data: dict) -> str:
 
 async def _execute_tool(name: str, input_data: dict) -> str:
     """Execute a tool call and return the result as a string."""
+    from backend.serpapi_monitor import record_usage
+    if name in ("amazon_product_search", "flight_search", "google_maps_search"):
+        record_usage(name)
     if name == "amazon_product_search":
         results = await search_amazon(
             query=input_data.get("query", ""),
