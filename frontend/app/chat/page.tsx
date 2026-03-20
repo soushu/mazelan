@@ -124,6 +124,9 @@ export default function ChatPage() {
   const shouldScrollToQuestion = useRef(false);
   // Track if we need to re-scroll when first streaming chunk arrives (mobile keyboard dismiss fix)
   const needsStreamingScroll = useRef(false);
+  // Ref to track streaming state for visibility change handler
+  const streamingRef = useRef(false);
+  useEffect(() => { streamingRef.current = streaming; }, [streaming]);
 
   // When user sends a message, scroll so the question appears at the top of the viewport
   useLayoutEffect(() => {
@@ -152,6 +155,34 @@ export default function ChatPage() {
     }
     vv.addEventListener("resize", handleResize);
     return () => vv.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Foreground resume: reload messages from DB if streaming was interrupted by background
+  const activeIdRef = useRef(activeId);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible" && streamingRef.current && activeIdRef.current) {
+        // App came back to foreground while streaming — reload from DB
+        const sid = activeIdRef.current;
+        getMessages(sid).then((msgs) => {
+          if (msgs.length > 0) {
+            setMessages(msgs);
+            try {
+              const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+              localStorage.setItem(`mazelan_msgs_${sid}`, JSON.stringify(light));
+            } catch {}
+          }
+          setStreaming(false);
+          setStreamingText("");
+          setStreamingModel(undefined);
+          setStreamingDebate(null);
+          setToolStatus(null);
+        }).catch(() => {});
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   // Dynamic spacer: use layoutEffect to set height before paint, avoiding flicker
@@ -513,7 +544,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v43.32
+          DEV v43.42
         </div>
       )}
 
