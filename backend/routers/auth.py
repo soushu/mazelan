@@ -1,7 +1,6 @@
-import asyncio
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Request
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session as DBSession
 from passlib.context import CryptContext
@@ -54,6 +53,7 @@ class LoginRequest(BaseModel):
 def upsert_user(
     request: Request,
     req: UpsertUserRequest,
+    background_tasks: BackgroundTasks,
     db: DBSession = Depends(get_db),
     x_internal_api_key: str = Header(alias="X-Internal-API-Key", default=""),
 ):
@@ -79,14 +79,14 @@ def upsert_user(
         db.add(user)
         db.commit()
         db.refresh(user)
-        asyncio.create_task(notify_new_user(req.email, "google"))
+        background_tasks.add_task(notify_new_user, req.email, "google")
 
     return {"id": str(user.id), "email": user.email, "name": user.name}
 
 
 @router.post("/register")
 @limiter.limit("3/minute")
-def register(request: Request, req: RegisterRequest, db: DBSession = Depends(get_db)):
+def register(request: Request, req: RegisterRequest, background_tasks: BackgroundTasks, db: DBSession = Depends(get_db)):
     """メール/パスワードで新規ユーザー登録。"""
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
@@ -101,7 +101,7 @@ def register(request: Request, req: RegisterRequest, db: DBSession = Depends(get
     db.add(user)
     db.commit()
     db.refresh(user)
-    asyncio.create_task(notify_new_user(req.email, "email"))
+    background_tasks.add_task(notify_new_user, req.email, "email")
     return {"id": str(user.id), "email": user.email, "name": user.name}
 
 
