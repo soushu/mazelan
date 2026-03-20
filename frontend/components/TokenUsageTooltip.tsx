@@ -56,11 +56,11 @@ export default function TokenUsageTooltip({ usage, modelId }: Props) {
             {debateModels ? (
               <div className="pb-1 mb-1 border-b border-border-primary space-y-1">
                 <div className="flex justify-between gap-4">
-                  <span className="text-t-muted whitespace-nowrap">Model A</span>
+                  <span className="text-t-muted whitespace-nowrap">{t("debate.modelA")}</span>
                   <span className="font-medium whitespace-nowrap">{getModelLabel(debateModels.modelA)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-t-muted whitespace-nowrap">Model B</span>
+                  <span className="text-t-muted whitespace-nowrap">{t("debate.modelB")}</span>
                   <span className="font-medium whitespace-nowrap">{getModelLabel(debateModels.modelB)}</span>
                 </div>
               </div>
@@ -72,15 +72,15 @@ export default function TokenUsageTooltip({ usage, modelId }: Props) {
             ) : null}
             <div className="flex justify-between gap-4">
               <span className="text-t-muted whitespace-nowrap">{t("usage.input")}</span>
-              <span className="whitespace-nowrap">{usage.input_tokens.toLocaleString()} tokens</span>
+              <span className="whitespace-nowrap">{usage.input_tokens.toLocaleString()} {t("usage.tokens")}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-t-muted whitespace-nowrap">{t("usage.output")}</span>
-              <span className="whitespace-nowrap">{usage.output_tokens.toLocaleString()} tokens</span>
+              <span className="whitespace-nowrap">{usage.output_tokens.toLocaleString()} {t("usage.tokens")}</span>
             </div>
             <div className="border-t border-border-primary pt-1 mt-1 flex justify-between gap-4">
               <span className="text-t-muted whitespace-nowrap">{t("usage.total")}</span>
-              <span className="whitespace-nowrap">{total.toLocaleString()} tokens</span>
+              <span className="whitespace-nowrap">{total.toLocaleString()} {t("usage.tokens")}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-t-muted">{t("usage.cost")}</span>

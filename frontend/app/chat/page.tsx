@@ -463,7 +463,7 @@ export default function ChatPage() {
           return;
         }
         let thinkingCleared = false;
-        if (thinking) setToolStatus("🧠 考え中...");
+        if (thinking) setToolStatus(`🧠 ${t("chat.thinkingStatus")}`);
         for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey())) {
           full += chunk;
           // Clear thinking status once first real text arrives
@@ -578,7 +578,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v45.0
+          DEV v45.1
         </div>
       )}
 

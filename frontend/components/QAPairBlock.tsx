@@ -60,7 +60,7 @@ function UserBubble({ user }: { user: QAPair["user"] }) {
               <img
                 key={i}
                 src={img.preview_url || `data:${img.media_type};base64,${img.data}`}
-                alt={`attach ${i + 1}`}
+                alt={t("chat.imageAlt", { number: i + 1 })}
                 className="max-w-[150px] max-h-[150px] md:max-w-[200px] md:max-h-[200px] object-contain rounded-lg"
               />
             ))}

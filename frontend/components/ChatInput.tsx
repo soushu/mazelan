@@ -227,12 +227,13 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
               <div key={i} className="relative group">
                 <img
                   src={url}
-                  alt={`attach ${i + 1}`}
+                  alt={t("chat.imageAlt", { number: i + 1 })}
                   className="w-16 h-16 object-cover rounded-lg border border-border-secondary"
                 />
                 <button
                   onClick={() => removeImage(i)}
                   className="absolute -top-1.5 -right-1.5 w-6 h-6 md:w-5 md:h-5 bg-theme-hover hover:bg-red-500 text-white rounded-full text-xs flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  title={t("chat.removeImage")}
                 >
                   x
                 </button>

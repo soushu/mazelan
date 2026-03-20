@@ -47,7 +47,10 @@
     "errorSending": "メッセージの送信中にエラーが発生しました。もう一度お試しください。",
     "errorApiKeyInvalid": "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。",
     "errorApiKeyMissing": "{provider} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。",
-    "fork": "ここから分岐"
+    "fork": "ここから分岐",
+    "thinkingStatus": "考え中...",
+    "removeImage": "画像を削除",
+    "imageAlt": "添付画像 {number}"
   },
   "sidebar": {
     "newChat": "+ New",
@@ -98,7 +101,9 @@
     "preparing": "次のステップを準備中...",
     "completedSteps": "完了したステップ（{count}件）",
     "viewProcess": "議論の過程を見る（{count}件）",
-    "step": "ステップ {current}/{total}: {label}"
+    "step": "ステップ {current}/{total}: {label}",
+    "modelA": "モデルA",
+    "modelB": "モデルB"
   },
   "systemPrompt": {
     "title": "システムプロンプト",
@@ -141,7 +146,8 @@
     "total": "合計",
     "cost": "コスト",
     "model": "モデル",
-    "free": "{cost} (Free)"
+    "free": "{cost} (Free)",
+    "tokens": "トークン"
   },
   "copy": {
     "copied": "コピーしました！",
