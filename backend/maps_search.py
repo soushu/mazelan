@@ -86,7 +86,7 @@ async def search_maps(query: str) -> list[dict]:
         }
         result = [{k: v for k, v in place.items() if v is not None and v != ""}]
 
-        cache_put("maps", cache_params, result, ttl=86400)  # 24 hour cache
+        cache_put("maps", cache_params, result, ttl=1209600)  # 2 week cache
         return result
 
     except httpx.TimeoutException:
