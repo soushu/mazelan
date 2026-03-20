@@ -9,6 +9,13 @@ export const metadata: Metadata = {
   description: "AI-powered travel planning assistant",
   icons: {
     icon: "/favicon.svg",
+    apple: "/icons/icon-180x180.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Mazelan",
   },
 };
 
@@ -16,6 +23,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  themeColor: "#0369A1",
 };
 
 export default async function RootLayout({

@@ -9,6 +9,7 @@ import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
 import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate, forkSession } from "@/lib/api";
+import { enqueue, processQueue } from "@/lib/offlineQueue";
 import { getApiKeyForProvider, getGoogleFallbackKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
 import { getProviderForModel, parseDebateContent, parseUsageMarker } from "@/lib/types";
@@ -185,6 +186,14 @@ export default function ChatPage() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
+  // Process offline queue on mount and when connectivity is restored
+  useEffect(() => {
+    if (navigator.onLine) processQueue();
+    const handleOnline = () => processQueue();
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
   // Dynamic spacer: use layoutEffect to set height before paint, avoiding flicker
   useLayoutEffect(() => {
     if (!scrollContainerRef.current || !lastPairRef.current || !spacerRef.current) return;
@@ -252,19 +261,28 @@ export default function ChatPage() {
   }
 
   async function handleDelete(id: string) {
-    await deleteSession(id);
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (activeId === id) handleNew();
+    try {
+      if (!navigator.onLine) throw new Error("offline");
+      await deleteSession(id);
+    } catch {
+      enqueue({ type: "delete", sessionId: id });
+    }
   }
 
   async function handleRename(id: string, newTitle: string) {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s))
+    );
     try {
+      if (!navigator.onLine) throw new Error("offline");
       const updated = await updateSession(id, newTitle);
       setSessions((prev) =>
         prev.map((s) => (s.id === id ? { ...s, title: updated.title } : s))
       );
-    } catch (err) {
-      console.error(err);
+    } catch {
+      enqueue({ type: "rename", sessionId: id, title: newTitle });
     }
   }
 
@@ -287,22 +305,23 @@ export default function ChatPage() {
   }, [sessions, activeId, messages]);
 
   async function handleToggleStar(id: string) {
+    setSessions((prev) => {
+      const toggled = prev.map((s) => (s.id === id ? { ...s, is_starred: !s.is_starred } : s));
+      const target = toggled.find((s) => s.id === id)!;
+      const rest = toggled.filter((s) => s.id !== id);
+      const starred = rest.filter((s) => s.is_starred);
+      const unstarred = rest.filter((s) => !s.is_starred);
+      if (target.is_starred) {
+        return [target, ...starred, ...unstarred];
+      } else {
+        return [...starred, target, ...unstarred];
+      }
+    });
     try {
-      const updated = await toggleSessionStar(id);
-      setSessions((prev) => {
-        const toggled = prev.map((s) => (s.id === id ? { ...s, is_starred: updated.is_starred } : s));
-        const target = toggled.find((s) => s.id === id)!;
-        const rest = toggled.filter((s) => s.id !== id);
-        const starred = rest.filter((s) => s.is_starred);
-        const unstarred = rest.filter((s) => !s.is_starred);
-        if (target.is_starred) {
-          return [target, ...starred, ...unstarred];
-        } else {
-          return [...starred, target, ...unstarred];
-        }
-      });
-    } catch (err) {
-      console.error(err);
+      if (!navigator.onLine) throw new Error("offline");
+      await toggleSessionStar(id);
+    } catch {
+      enqueue({ type: "star", sessionId: id });
     }
   }
 
@@ -559,7 +578,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v44.0
+          DEV v45.0
         </div>
       )}
 

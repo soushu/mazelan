@@ -1,0 +1,28 @@
+{
+  "name": "Mazelan - AI Travel Planner",
+  "short_name": "Mazelan",
+  "description": "AI-powered travel planning assistant",
+  "start_url": "/chat",
+  "display": "standalone",
+  "background_color": "#020509",
+  "theme_color": "#0369A1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
