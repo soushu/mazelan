@@ -163,6 +163,82 @@ def toggle_star(
     )
 
 
+class ForkRequest(BaseModel):
+    pair_index: int  # 0-based index of the QA pair to fork up to (inclusive)
+
+
+@router.post("/{session_id}/fork", response_model=SessionResponse)
+@limiter.limit("10/minute")
+def fork_session(
+    request: Request,
+    session_id: uuid.UUID,
+    req: ForkRequest,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Get all messages ordered by created_at
+    messages = (
+        db.query(Message)
+        .filter(Message.session_id == session_id)
+        .order_by(Message.created_at)
+        .all()
+    )
+
+    # Group into QA pairs and calculate how many messages to copy
+    msg_count = 0
+    pair_idx = -1
+    for m in messages:
+        msg_count += 1
+        if m.role == "user":
+            pair_idx += 1
+        elif m.role == "assistant":
+            if pair_idx == req.pair_index:
+                break  # Include this assistant message and stop
+
+    if pair_idx < req.pair_index:
+        raise HTTPException(status_code=400, detail="Pair index out of range")
+
+    messages_to_copy = messages[:msg_count]
+
+    # Create new session
+    new_session = ChatSession(
+        user_id=current_user_id,
+        title=f"{session.title[:50]} (fork)",
+        system_prompt=session.system_prompt,
+    )
+    db.add(new_session)
+    db.flush()  # Get new_session.id
+
+    # Copy messages
+    for m in messages_to_copy:
+        new_msg = Message(
+            session_id=new_session.id,
+            role=m.role,
+            content=m.content,
+            images=m.images,
+            model=m.model,
+            input_tokens=m.input_tokens,
+            output_tokens=m.output_tokens,
+            cost=m.cost,
+        )
+        db.add(new_msg)
+
+    db.commit()
+    db.refresh(new_session)
+    return SessionResponse(
+        id=new_session.id,
+        title=new_session.title,
+        is_starred=new_session.is_starred,
+        created_at=new_session.created_at.isoformat(),
+    )
+
+
 class SystemPromptRequest(BaseModel):
     system_prompt: str | None = None
 

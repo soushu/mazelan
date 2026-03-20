@@ -52,6 +52,16 @@ export async function deleteSession(sessionId: string): Promise<void> {
   });
 }
 
+export async function forkSession(sessionId: string, pairIndex: number): Promise<Session> {
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}/fork`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ pair_index: pairIndex }),
+  });
+  return res.json();
+}
+
 export async function* streamChat(
   sessionId: string,
   content: string,

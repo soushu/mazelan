@@ -8,7 +8,7 @@ import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
-import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate } from "@/lib/api";
+import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate, forkSession } from "@/lib/api";
 import { getApiKeyForProvider, getGoogleFallbackKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
 import { getProviderForModel, parseDebateContent, parseUsageMarker } from "@/lib/types";
@@ -496,6 +496,21 @@ export default function ChatPage() {
     }
   }
 
+  async function handleFork(pairIndex: number) {
+    if (!activeId) return;
+    try {
+      const newSession = await forkSession(activeId, pairIndex);
+      // Add new session to list and switch to it
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveId(newSession.id);
+      const msgs = await getMessages(newSession.id);
+      setMessages(msgs);
+      setManualToggles(new Set());
+    } catch (err) {
+      console.error("Fork failed:", err);
+    }
+  }
+
   function isCollapsed(pairIndex: number): boolean {
     const isLastPair = pairIndex === pairs.length - 1 && !streaming;
     const isStreamingPair = pairIndex === pairs.length - 1 && streaming;
@@ -544,7 +559,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v43.52
+          DEV v44.0
         </div>
       )}
 
@@ -645,6 +660,8 @@ export default function ChatPage() {
                     streamingDebate={isLastAndStreaming ? streamingDebate : null}
                     streamingModel={isLastAndStreaming ? streamingModel : undefined}
                     toolStatus={isLastAndStreaming ? toolStatus : null}
+                    pairIndex={i}
+                    onFork={!streaming && pair.assistant ? handleFork : undefined}
                   />
                 </div>
               );

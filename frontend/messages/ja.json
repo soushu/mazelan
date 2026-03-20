@@ -46,7 +46,8 @@
     "errorGeneric": "エラーが発生しました。",
     "errorSending": "メッセージの送信中にエラーが発生しました。もう一度お試しください。",
     "errorApiKeyInvalid": "APIキーが無効です。サイドバーの「API Key 設定」から正しいキーを設定してください。",
-    "errorApiKeyMissing": "{provider} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
+    "errorApiKeyMissing": "{provider} APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。",
+    "fork": "ここから分岐"
   },
   "sidebar": {
     "newChat": "+ New",
