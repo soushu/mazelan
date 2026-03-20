@@ -154,7 +154,9 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    // PC: Enter = send, Shift/Ctrl/Cmd+Enter = newline
+    // Mobile: Enter = newline (send via button only)
+    if (e.key === "Enter" && !isMobile && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       submit();
     }
