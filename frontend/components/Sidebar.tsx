@@ -296,7 +296,14 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
               {t("sidebar.theme", { theme: themeLabel })}
             </button>
             <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => {
+                // Clear session cache so next user doesn't see previous user's data
+                try {
+                  const keys = Object.keys(localStorage).filter(k => k.startsWith("mazelan_sessions") || k.startsWith("mazelan_msgs_") || k.startsWith("mazelan_active_session"));
+                  keys.forEach(k => localStorage.removeItem(k));
+                } catch {}
+                signOut({ callbackUrl: "/login" });
+              }}
               className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors mt-1"
             >
               {t("auth.signOut")}
