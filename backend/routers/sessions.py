@@ -173,6 +173,15 @@ def toggle_star(
 class ForkRequest(BaseModel):
     pair_index: int  # 0-based index of the QA pair to fork up to (inclusive)
 
+    @field_validator("pair_index")
+    @classmethod
+    def validate_pair_index(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("Pair index cannot be negative")
+        if v > 1000:
+            raise ValueError("Pair index exceeds maximum")
+        return v
+
 
 @router.post("/{session_id}/fork", response_model=SessionResponse)
 @limiter.limit("10/minute")

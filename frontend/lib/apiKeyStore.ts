@@ -112,7 +112,10 @@ async function loadCache(): Promise<void> {
       try {
         const encrypted = await encryptValue(raw);
         localStorage.setItem(storageKey, encrypted);
-      } catch {}
+      } catch (err) {
+        console.warn("[apiKeyStore] Failed to encrypt key, removing plaintext:", err);
+        localStorage.removeItem(storageKey);
+      }
     }
   }
 }
@@ -142,8 +145,9 @@ export async function setApiKeyForProvider(provider: Provider, key: string): Pro
   try {
     const encrypted = await encryptValue(key);
     localStorage.setItem(storageKey, encrypted);
-  } catch {
-    localStorage.setItem(storageKey, key); // fallback to plaintext
+  } catch (err) {
+    console.warn("[apiKeyStore] Encryption failed, not saving key:", err);
+    // Do NOT fall back to plaintext — key stays in memory cache only
   }
 }
 
@@ -195,8 +199,8 @@ export async function setGoogleFallbackKey(key: string): Promise<void> {
   try {
     const encrypted = await encryptValue(key);
     localStorage.setItem(GOOGLE_FALLBACK_KEY, encrypted);
-  } catch {
-    localStorage.setItem(GOOGLE_FALLBACK_KEY, key);
+  } catch (err) {
+    console.warn("[apiKeyStore] Encryption failed for fallback key:", err);
   }
 }
 

@@ -392,6 +392,7 @@ async def stream_openai(
                 try:
                     args = json.loads(tc["function"]["arguments"])
                 except json.JSONDecodeError:
+                    logger.warning("Failed to parse tool arguments for %s: %s", tc["function"]["name"], tc["function"]["arguments"][:200])
                     args = {}
                 status = _tool_status_message(tc["function"]["name"], args)
                 if status:
