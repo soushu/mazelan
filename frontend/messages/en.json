@@ -27,6 +27,9 @@
     "errorSignInFailed": "Sign in failed. Please try again.",
     "errorEmailExists": "This email is already registered.",
     "errorRegistrationFailed": "Registration failed.",
+    "deleteAccount": "Delete account",
+    "deleteAccountConfirm": "Are you sure you want to delete your account? All conversation history and data will be permanently deleted. This action cannot be undone.",
+    "deleteAccountFailed": "Failed to delete account.",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy"
   },

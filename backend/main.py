@@ -36,9 +36,22 @@ app.add_middleware(
 )
 
 
-# Production error handlers: hide internal details
+# Production error handlers: hide internal details, except auth endpoints
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Auth endpoints: show specific validation errors (e.g. password strength)
+    if str(request.url.path).startswith("/auth/"):
+        messages = []
+        for err in exc.errors():
+            msg = err.get("msg", "")
+            # Pydantic wraps field_validator messages as "Value error, ..."
+            if msg.startswith("Value error, "):
+                msg = msg[len("Value error, "):]
+            messages.append(msg)
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "; ".join(messages) if messages else "Invalid request"},
+        )
     return JSONResponse(
         status_code=422,
         content={"detail": "Invalid request"},
@@ -48,6 +61,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception: %s", exc, exc_info=True)
+    from backend.slack_notify import notify_error
+    notify_error(str(request.url.path), str(exc))
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

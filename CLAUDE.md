@@ -52,8 +52,10 @@ feature/* を develop にマージする前に必ず以下を実行:
 | 本番 | main | mazelan.ai | :8000 | :3000 | claudia |
 | ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging |
 
-GCP: e2-small (0.5vCPU / 2GB RAM), bitpoint-bot, us-west1-b
+GCP: e2-small (0.5vCPU / 2GB RAM), us-west1-b
 全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
+
+**環境変数の追加・変更時は必ず本番とステージング両方の `.env` に反映すること。**
 
 ## セキュリティ
 

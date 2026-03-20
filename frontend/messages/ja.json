@@ -27,6 +27,9 @@
     "errorSignInFailed": "ログインに失敗しました。もう一度お試しください。",
     "errorEmailExists": "このメールアドレスは既に登録されています。",
     "errorRegistrationFailed": "登録に失敗しました。",
+    "deleteAccount": "アカウント削除",
+    "deleteAccountConfirm": "本当にアカウントを削除しますか？全ての会話履歴とデータが完全に削除されます。この操作は取り消せません。",
+    "deleteAccountFailed": "アカウントの削除に失敗しました。",
     "terms": "利用規約",
     "privacy": "プライバシーポリシー"
   },

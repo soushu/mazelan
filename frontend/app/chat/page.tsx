@@ -86,6 +86,17 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
+    // Clear cache if user changed (e.g. logged in as different account)
+    const userId = (authSession?.user as { id?: string })?.id || "";
+    const cachedUserId = localStorage.getItem("mazelan_user_id") || "";
+    if (userId && cachedUserId && userId !== cachedUserId) {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith("mazelan_sessions") || k.startsWith("mazelan_msgs_") || k.startsWith("mazelan_active_session"));
+      keys.forEach(k => localStorage.removeItem(k));
+      setSessions([]);
+      setActiveId(null);
+      setMessages([]);
+    }
+    if (userId) localStorage.setItem("mazelan_user_id", userId);
     // If we have cached sessions, show them immediately and skip loading state
     const hasCached = sessions.length > 0;
     if (!hasCached) setLoadingSessions(true);
@@ -578,7 +589,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v46.2
+          DEV v46.6
         </div>
       )}
 
