@@ -151,7 +151,7 @@ async def stream_debate(
         async def _stream_step(mdl, msgs, key):
             nonlocal total_input_tokens, total_output_tokens, total_cost
             fb = google_fallback if get_provider(mdl) == "google" else None
-            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking, google_fallback=fb, disable_tools=True):
+            async for chunk in stream_provider(mdl, msgs, key, system_prompt, thinking=thinking, google_fallback=fb, web_search_only=True):
                 if isinstance(chunk, dict):
                     total_input_tokens += chunk.get("input_tokens", 0)
                     total_output_tokens += chunk.get("output_tokens", 0)
@@ -347,7 +347,11 @@ async def debate(
         context_lines = [f"- {c.content}" for c in active_contexts]
         context_block = "<context_memory>\nHere are things you know about the user:\n" + "\n".join(context_lines) + "\n</context_memory>"
 
-    system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=False)
+    has_web_search = (
+        MODEL_REGISTRY.get(model_a, {}).get("supports_web_search", False)
+        or MODEL_REGISTRY.get(model_b, {}).get("supports_web_search", False)
+    )
+    system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search)
 
     return StreamingResponse(
         stream_debate(

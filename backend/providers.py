@@ -163,6 +163,7 @@ async def stream_anthropic(
     system_prompt: str | None = None,
     thinking: bool = False,
     disable_tools: bool = False,
+    web_search_only: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = AsyncAnthropic(api_key=api_key)
     kwargs: dict = dict(
@@ -174,15 +175,16 @@ async def stream_anthropic(
     if thinking:
         kwargs["thinking"] = {"type": "enabled", "budget_tokens": 10000}
         kwargs["max_tokens"] = 16000
-    # Tools: web search (Claude built-in) + custom tools (disabled in debate mode)
+    # Tools: web search (Claude built-in) + custom tools
     if not disable_tools:
         tools: list[dict] = []
         if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
             tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
-        if amazon_available():
-            tools.append(AMAZON_SEARCH_TOOL)
-        if flights_available():
-            tools.append(FLIGHT_SEARCH_TOOL)
+        if not web_search_only:
+            if amazon_available():
+                tools.append(AMAZON_SEARCH_TOOL)
+            if flights_available():
+                tools.append(FLIGHT_SEARCH_TOOL)
         if tools:
             kwargs["tools"] = tools
     if system_prompt:
@@ -299,6 +301,7 @@ async def stream_openai(
     api_key: str,
     system_prompt: str | None = None,
     disable_tools: bool = False,
+    web_search_only: bool = False,
 ) -> AsyncGenerator[str, None]:
     client = AsyncOpenAI(api_key=api_key)
     oai_messages = _convert_messages_for_openai(messages, model, system_prompt)
@@ -559,6 +562,7 @@ async def stream_google(
     thinking: bool = False,
     fallback_key: str | None = None,
     disable_tools: bool = False,
+    web_search_only: bool = False,
 ) -> AsyncGenerator[str, None]:
     gemini_contents = _convert_messages_for_gemini(messages)
     if not gemini_contents:
@@ -570,12 +574,16 @@ async def stream_google(
     if system_prompt:
         config.system_instruction = system_prompt
     if not disable_tools:
-        # Combine function calling tools with Google Search so the model
-        # can use web search for any query AND custom tools for travel queries.
-        # If the API rejects the combination, fall back to google_search only.
-        func_tools = _gemini_function_tools()
-        search_tools = _gemini_search_tool()
-        config.tools = (func_tools or []) + search_tools
+        if web_search_only:
+            # Only Google Search, no custom tools (e.g. debate mode)
+            config.tools = _gemini_search_tool()
+        else:
+            # Combine function calling tools with Google Search so the model
+            # can use web search for any query AND custom tools for travel queries.
+            # If the API rejects the combination, fall back to google_search only.
+            func_tools = _gemini_function_tools()
+            search_tools = _gemini_search_tool()
+            config.tools = (func_tools or []) + search_tools
 
     # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
     keys_to_try: list[tuple[str, str]] = []  # (key, label)
@@ -628,6 +636,7 @@ async def stream_provider(
     thinking: bool = False,
     google_fallback: str | None = None,
     disable_tools: bool = False,
+    web_search_only: bool = False,
 ) -> AsyncGenerator[str | dict, None]:
     """Route to the correct provider's streaming function.
     Yields str chunks for content, and a final dict with usage info.
@@ -636,11 +645,11 @@ async def stream_provider(
     provider = get_provider(model)
 
     if provider == "anthropic":
-        gen = stream_anthropic(model, messages, api_key, system_prompt, thinking=thinking, disable_tools=disable_tools)
+        gen = stream_anthropic(model, messages, api_key, system_prompt, thinking=thinking, disable_tools=disable_tools, web_search_only=web_search_only)
     elif provider == "openai":
-        gen = stream_openai(model, messages, api_key, system_prompt, disable_tools=disable_tools)
+        gen = stream_openai(model, messages, api_key, system_prompt, disable_tools=disable_tools, web_search_only=web_search_only)
     elif provider == "google":
-        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback, disable_tools=disable_tools)
+        gen = stream_google(model, messages, api_key, system_prompt, thinking=thinking, fallback_key=google_fallback, disable_tools=disable_tools, web_search_only=web_search_only)
     else:
         raise ProviderError(f"Unsupported provider: {provider}")
 
