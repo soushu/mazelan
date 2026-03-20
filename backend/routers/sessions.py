@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -95,6 +95,13 @@ def get_messages(
 
 class SessionUpdateRequest(BaseModel):
     title: str
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v: str) -> str:
+        if len(v) > 60:
+            return v[:60]
+        return v
 
 
 @router.put("/{session_id}", response_model=SessionResponse)
@@ -241,6 +248,13 @@ def fork_session(
 
 class SystemPromptRequest(BaseModel):
     system_prompt: str | None = None
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt(cls, v: str | None) -> str | None:
+        if v is not None and len(v) > 2000:
+            raise ValueError("システムプロンプトは2000文字以内にしてください。")
+        return v
 
 
 @router.get("/user/system-prompt")

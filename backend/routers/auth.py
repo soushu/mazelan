@@ -33,8 +33,12 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("パスワードは8文字以上で入力してください。")
+        if len(v) < 12:
+            raise ValueError("パスワードは12文字以上で入力してください。")
+        if not any(c.isupper() for c in v):
+            raise ValueError("パスワードには大文字を含めてください。")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("パスワードには数字を含めてください。")
         return v
 
 
@@ -99,7 +103,7 @@ def register(request: Request, req: RegisterRequest, db: DBSession = Depends(get
 
 
 @router.post("/login")
-@limiter.limit("5/minute")
+@limiter.limit("3/minute")
 def login(request: Request, req: LoginRequest, db: DBSession = Depends(get_db)):
     """CredentialsProvider から呼ばれる。email+password を検証する。"""
     user = db.query(User).filter(User.email == req.email).first()

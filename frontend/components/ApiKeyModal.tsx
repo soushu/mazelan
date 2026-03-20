@@ -49,14 +49,14 @@ export default function ApiKeyModal({ open, onClose, initialTab }: Props) {
     }
   }, [open, initialTab]);
 
-  function handleSave() {
+  async function handleSave() {
     const trimmed = keys[activeTab].trim();
     const validationError = validateApiKey(activeTab, trimmed);
     if (validationError) {
       setError(validationError);
       return;
     }
-    setApiKeyForProvider(activeTab, trimmed);
+    await setApiKeyForProvider(activeTab, trimmed);
     setSaved((prev) => ({ ...prev, [activeTab]: true }));
     setError("");
   }
