@@ -128,6 +128,15 @@ def start_monitor() -> None:
     if not SERPAPI_KEY:
         logger.info("SerpAPI monitor disabled (no API key)")
         return
+    # Pre-populate alerted thresholds so restart doesn't re-trigger alerts
+    account = check_account()
+    if account:
+        remaining = account.get("total_searches_left", 0)
+        with _lock:
+            for threshold in ALERT_THRESHOLDS:
+                if remaining <= threshold:
+                    _alerted_thresholds.add(threshold)
+        logger.info("SerpAPI monitor: %d searches remaining, pre-set thresholds %s", remaining, _alerted_thresholds)
     t = threading.Thread(target=_scheduler_loop, daemon=True, name="serpapi-monitor")
     t.start()
     logger.info("SerpAPI usage monitor started")
