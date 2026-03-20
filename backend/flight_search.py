@@ -53,17 +53,29 @@ FLIGHT_SEARCH_TOOL = {
             },
             "departure_day_from": {
                 "type": "integer",
-                "description": "Earliest departure day of month (e.g. 1 for 'early month'). Default: 1",
+                "description": "Earliest departure day of month. Default: 1",
                 "default": 1,
             },
             "departure_day_to": {
                 "type": "integer",
-                "description": "Latest departure day of month (e.g. 10 for 'early month'). Default: 10",
+                "description": "Latest departure day of month. Default: 10",
                 "default": 10,
+            },
+            "return_month": {
+                "type": "string",
+                "description": "Return month in YYYY-MM format. If omitted, calculated from departure + trip_weeks.",
+            },
+            "return_day_from": {
+                "type": "integer",
+                "description": "Earliest return day of month. Used with return_month.",
+            },
+            "return_day_to": {
+                "type": "integer",
+                "description": "Latest return day of month. Used with return_month.",
             },
             "trip_weeks": {
                 "type": "integer",
-                "description": "Approximate trip duration in weeks (2 or 3). Default: 2",
+                "description": "Approximate trip duration in weeks (fallback if return_month not set). Default: 2",
                 "default": 2,
             },
             "adults": {
@@ -285,19 +297,19 @@ async def search_flights(
     origin: str, destination: str,
     departure_month: str = "",  # YYYY-MM
     departure_day_from: int = 1, departure_day_to: int = 10,
+    return_month: str = "",  # YYYY-MM (optional, explicit return date range)
+    return_day_from: int = 0, return_day_to: int = 0,
     trip_weeks: int = 2, adults: int = 1,
     # Legacy params (backward compat)
     departure_date: str = "", return_date: str | None = None, max_results: int = 5,
 ) -> list[dict]:
-    """Smart flight search using Google Flights calendar method.
+    """Flight search using Google Flights calendar method.
 
-    Like a user manually checking Google Flights:
-    1. Check one-way outbound prices for ~4 dates → find 2 cheapest departure dates
-    2. For each cheap departure, check one-way return prices for ~4 dates → find cheapest return
+    Searches exactly the dates the user specified:
+    1. Check one-way outbound prices for all dates in user's range → find 2 cheapest
+    2. For each cheap departure, check return prices (±1 day from trip_weeks) → find cheapest
     3. Search round-trip for top 2 date combos → get detailed results
     4. Score, merge, return best + cheapest
-
-    Total: ~12 SerpAPI calls (parallel where possible), ~15-20 seconds
     """
     if not SERPAPI_KEY:
         return [{"error": "Google Flights search not configured (SERPAPI_KEY)"}]
@@ -330,28 +342,36 @@ async def search_flights(
         departure_month = date.today().strftime("%Y-%m")
 
     # Check cache for calendar method
-    cache_params = {"origin": origin, "dest": destination, "month": departure_month, "from": departure_day_from, "to": departure_day_to, "weeks": trip_weeks, "adults": adults}
+    cache_params = {"origin": origin, "dest": destination, "month": departure_month, "from": departure_day_from, "to": departure_day_to, "ret_month": return_month, "ret_from": return_day_from, "ret_to": return_day_to, "weeks": trip_weeks, "adults": adults}
     cached = cache_get("flight", cache_params)
     if cached is not None:
         return cached
 
-    # Step 1: Generate departure date candidates (spread across range)
+    # Step 1: Generate departure date candidates from user-specified range
     try:
         year, month = map(int, departure_month.split("-"))
     except ValueError:
         return [{"error": f"Invalid departure_month: {departure_month}"}]
 
     dep_candidates = []
-    day_range = departure_day_to - departure_day_from + 1
-    # Pick 3 evenly spaced dates from the range
-    step = max(1, day_range // 3)
-    for day in range(departure_day_from, min(departure_day_to + 1, 29), step):
-        try:
-            d = date(year, month, day)
-            if d >= date.today():
-                dep_candidates.append(d.isoformat())
-        except ValueError:
-            continue
+    if departure_day_from == departure_day_to:
+        # Specific day (e.g. "4月1日頃") → search ±1 day
+        for offset in [-1, 0, 1]:
+            try:
+                d = date(year, month, departure_day_from) + timedelta(days=offset)
+                if d >= date.today():
+                    dep_candidates.append(d.isoformat())
+            except ValueError:
+                continue
+    else:
+        # Range (e.g. "4月最初の週") → search all days in range
+        for day in range(departure_day_from, departure_day_to + 1):
+            try:
+                d = date(year, month, day)
+                if d >= date.today():
+                    dep_candidates.append(d.isoformat())
+            except ValueError:
+                continue
     if not dep_candidates:
         return [{"error": f"No valid dates in {departure_month} day {departure_day_from}-{departure_day_to}"}]
 
@@ -372,21 +392,52 @@ async def search_flights(
 
     logger.info("Flight search %s→%s: cheapest outbound dates %s", origin, destination, best_dep_dates)
 
-    # Step 3: For each departure, find cheapest return dates (one-way reverse, parallel)
-    trip_days_center = trip_weeks * 7
+    # Step 3: Find cheapest return dates
     date_pairs: list[tuple[str, str]] = []
 
-    for dep_str in best_dep_dates:
-        dep_d = datetime.strptime(dep_str, "%Y-%m-%d").date()
-        # Check 3 return dates: trip_weeks*7 -2, 0, +2 days
-        ret_candidates = []
-        for offset in [-2, 0, 2]:
-            ret_d = dep_d + timedelta(days=trip_days_center + offset)
-            ret_candidates.append(ret_d.isoformat())
+    if return_month and return_day_from and return_day_to:
+        # User specified explicit return date range (e.g. "5月第3週に帰国")
+        try:
+            ret_year, ret_month = map(int, return_month.split("-"))
+        except ValueError:
+            ret_year, ret_month = year, month  # fallback
 
-        ret_prices = await _search_oneway_cheapest(destination, origin, ret_candidates, adults)
-        best_ret = ret_prices[0][0] if ret_prices and ret_prices[0][1] < 999999 else (dep_d + timedelta(days=trip_days_center)).isoformat()
-        date_pairs.append((dep_str, best_ret))
+        ret_candidates = []
+        if return_day_from == return_day_to:
+            # Specific return day → ±1 day
+            for offset in [-1, 0, 1]:
+                try:
+                    d = date(ret_year, ret_month, return_day_from) + timedelta(days=offset)
+                    ret_candidates.append(d.isoformat())
+                except ValueError:
+                    continue
+        else:
+            # Return date range → all days
+            for day in range(return_day_from, return_day_to + 1):
+                try:
+                    ret_candidates.append(date(ret_year, ret_month, day).isoformat())
+                except ValueError:
+                    continue
+
+        if ret_candidates:
+            ret_prices = await _search_oneway_cheapest(destination, origin, ret_candidates, adults)
+            best_ret = ret_prices[0][0] if ret_prices and ret_prices[0][1] < 999999 else ret_candidates[len(ret_candidates) // 2]
+            for dep_str in best_dep_dates:
+                date_pairs.append((dep_str, best_ret))
+
+    if not date_pairs:
+        # Fallback: calculate return from trip_weeks
+        trip_days_center = trip_weeks * 7
+        for dep_str in best_dep_dates:
+            dep_d = datetime.strptime(dep_str, "%Y-%m-%d").date()
+            ret_candidates = []
+            for offset in [-1, 0, 1]:
+                ret_d = dep_d + timedelta(days=trip_days_center + offset)
+                ret_candidates.append(ret_d.isoformat())
+
+            ret_prices = await _search_oneway_cheapest(destination, origin, ret_candidates, adults)
+            best_ret = ret_prices[0][0] if ret_prices and ret_prices[0][1] < 999999 else (dep_d + timedelta(days=trip_days_center)).isoformat()
+            date_pairs.append((dep_str, best_ret))
 
     logger.info("Flight search %s→%s: searching round-trips %s", origin, destination, date_pairs)
 
