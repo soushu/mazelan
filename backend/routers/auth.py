@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
@@ -7,6 +8,7 @@ from passlib.context import CryptContext
 
 from backend.database import get_db
 from backend.models import User
+from backend.slack_notify import notify_new_user
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -77,6 +79,7 @@ def upsert_user(
         db.add(user)
         db.commit()
         db.refresh(user)
+        asyncio.create_task(notify_new_user(req.email, "google"))
 
     return {"id": str(user.id), "email": user.email, "name": user.name}
 
@@ -99,6 +102,7 @@ def register(request: Request, req: RegisterRequest, db: DBSession = Depends(get
     db.add(user)
     db.commit()
     db.refresh(user)
+    asyncio.create_task(notify_new_user(req.email, "email"))
     return {"id": str(user.id), "email": user.email, "name": user.name}
 
 
