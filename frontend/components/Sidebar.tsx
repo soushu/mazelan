@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import type { Session } from "@/lib/types";
 import { hasAnyApiKey as checkAnyApiKey } from "@/lib/apiKeyStore";
+import { deleteAccount } from "@/lib/api";
 import { useTheme } from "@/lib/themeContext";
 import { useTranslations } from "next-intl";
 
@@ -307,6 +308,24 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
               className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors mt-1"
             >
               {t("auth.signOut")}
+            </button>
+            <button
+              onClick={async () => {
+                if (!window.confirm(t("auth.deleteAccountConfirm"))) return;
+                try {
+                  await deleteAccount();
+                  try {
+                    const keys = Object.keys(localStorage).filter(k => k.startsWith("mazelan_"));
+                    keys.forEach(k => localStorage.removeItem(k));
+                  } catch {}
+                  signOut({ callbackUrl: "/login" });
+                } catch {
+                  alert(t("auth.deleteAccountFailed"));
+                }
+              }}
+              className="w-full py-1.5 px-3 rounded-lg text-danger/70 hover:bg-red-900/20 hover:text-danger text-sm transition-colors"
+            >
+              {t("auth.deleteAccount")}
             </button>
             <div className="flex gap-3 mt-2 px-3">
               <Link href="/terms" className="text-xs text-t-muted hover:text-t-secondary transition-colors">{t("auth.terms")}</Link>

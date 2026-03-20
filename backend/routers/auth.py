@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session as DBSession
 from passlib.context import CryptContext
 
 from backend.database import get_db
-from backend.models import User
+from backend.dependencies import get_current_user_id
+from backend.models import User, ChatSession, Message, Context
 from backend.slack_notify import notify_new_user
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -118,3 +119,28 @@ def login(request: Request, req: LoginRequest, db: DBSession = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     return {"id": str(user.id), "email": user.email, "name": user.name}
+
+
+import uuid
+
+@router.delete("/account")
+@limiter.limit("3/minute")
+def delete_account(
+    request: Request,
+    current_user_id: uuid.UUID = Depends(get_current_user_id),
+    db: DBSession = Depends(get_db),
+):
+    """ユーザーアカウントと関連データを全て削除。"""
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete all user data: contexts → messages → sessions → user
+    db.query(Context).filter(Context.user_id == current_user_id).delete()
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user_id).all()
+    for session in sessions:
+        db.query(Message).filter(Message.session_id == session.id).delete()
+    db.query(ChatSession).filter(ChatSession.user_id == current_user_id).delete()
+    db.delete(user)
+    db.commit()
+    return {"detail": "Account deleted"}

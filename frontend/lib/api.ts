@@ -242,3 +242,11 @@ export async function toggleContext(id: string): Promise<ContextItem> {
   if (!res.ok) throw new Error("Failed to toggle context");
   return res.json();
 }
+
+export async function deleteAccount(): Promise<void> {
+  const res = await fetch(`${BACKEND}/auth/account`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete account");
+}
