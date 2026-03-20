@@ -47,7 +47,10 @@
     "errorSending": "An error occurred while sending the message. Please try again.",
     "errorApiKeyInvalid": "API key is invalid. Please set the correct key in \"API Key\" settings in the sidebar.",
     "errorApiKeyMissing": "{provider} API key is not configured. Please set the key in \"API Key\" settings in the sidebar.",
-    "fork": "Fork from here"
+    "fork": "Fork from here",
+    "thinkingStatus": "Thinking...",
+    "removeImage": "Remove image",
+    "imageAlt": "Attached image {number}"
   },
   "sidebar": {
     "newChat": "+ New",
@@ -98,7 +101,9 @@
     "preparing": "Preparing next step...",
     "completedSteps": "Completed steps ({count})",
     "viewProcess": "View debate process ({count})",
-    "step": "Step {current}/{total}: {label}"
+    "step": "Step {current}/{total}: {label}",
+    "modelA": "Model A",
+    "modelB": "Model B"
   },
   "systemPrompt": {
     "title": "System Prompt",
@@ -141,7 +146,8 @@
     "total": "Total",
     "cost": "Cost",
     "model": "Model",
-    "free": "{cost} (Free)"
+    "free": "{cost} (Free)",
+    "tokens": "tokens"
   },
   "copy": {
     "copied": "Copied!",
