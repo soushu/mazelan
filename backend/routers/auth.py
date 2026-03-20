@@ -33,8 +33,8 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
-        if len(v) < 12:
-            raise ValueError("パスワードは12文字以上で入力してください。")
+        if len(v) < 8:
+            raise ValueError("パスワードは8文字以上で入力してください。")
         if not any(c.isupper() for c in v):
             raise ValueError("パスワードには大文字を含めてください。")
         if not any(c.isdigit() for c in v):

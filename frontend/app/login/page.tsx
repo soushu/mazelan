@@ -180,7 +180,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={12}
+              minLength={8}
               className="w-full rounded-lg border border-border-input bg-theme-input px-4 py-3 text-sm text-t-primary placeholder-t-placeholder focus:border-border-secondary focus:outline-none"
             />
             <button
