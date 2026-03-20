@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cyan Theme - User Bubble Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', -apple-system, sans-serif; background: #1a1a2e; color: #fff; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 22px; }
+  p.sub { text-align: center; color: #94a3b8; margin-bottom: 32px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+  .theme-card { border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .theme-label { padding: 10px 16px; background: #0f172a; font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .theme-label span { color: #94a3b8; font-weight: 400; font-size: 11px; }
+  .theme-label .color-hex { font-family: monospace; color: #67e8f9; }
+  .mock-messages { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; background: #ecfeff; }
+  .bubble { padding: 10px 16px; border-radius: 18px; font-size: 13px; line-height: 1.5; max-width: 85%; }
+  .bubble-user { align-self: flex-end; }
+  .bubble-assistant { align-self: flex-start; background: #edfeff; color: #334155; border: 1px solid #a5f3fc; }
+</style>
+</head>
+<body>
+
+<h1>Cyan Theme - User Bubble Color</h1>
+<p class="sub">Current + 7 candidates</p>
+
+<div class="grid">
+
+  <div class="theme-card">
+    <div class="theme-label">0. Current <span class="color-hex">#0891b2</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #0891b2; color: #fff;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #0891b2; color: #fff;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">A. Light Cyan <span class="color-hex">#22d3ee</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #22d3ee; color: #164e63;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #22d3ee; color: #164e63;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">B. Pastel Cyan <span class="color-hex">#a5f3fc</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #a5f3fc; color: #164e63;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #a5f3fc; color: #164e63;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">C. Soft Teal <span class="color-hex">#99f6e4</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #99f6e4; color: #134e4a;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #99f6e4; color: #134e4a;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">D. Mint <span class="color-hex">#6ee7b7</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #6ee7b7; color: #064e3b;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #6ee7b7; color: #064e3b;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">E. Aqua Mist <span class="color-hex">#67e8f9</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #67e8f9; color: #164e63;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #67e8f9; color: #164e63;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">F. Pale Turquoise <span class="color-hex">#b2f5ea</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #b2f5ea; color: #234e52;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #b2f5ea; color: #234e52;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+  <div class="theme-card">
+    <div class="theme-label">G. Ice Blue <span class="color-hex">#bae6fd</span></div>
+    <div class="mock-messages">
+      <div class="bubble bubble-user" style="background: #bae6fd; color: #0c4a6e;">Tokyo in March - what should I see?</div>
+      <div class="bubble bubble-assistant">Cherry blossom season! I'd recommend Ueno Park and Shinjuku Gyoen.</div>
+      <div class="bubble bubble-user" style="background: #bae6fd; color: #0c4a6e;">Best area to stay for first-timers?</div>
+      <div class="bubble bubble-assistant">Shinjuku or Shibuya - great access to JR lines and vibrant neighborhoods.</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
