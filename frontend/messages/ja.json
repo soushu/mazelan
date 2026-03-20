@@ -39,6 +39,8 @@
     "typeMessage": "メッセージを入力...",
     "send": "送信",
     "attachImage": "画像を添付",
+    "choosePhoto": "写真を選択",
+    "takePhoto": "カメラで撮影",
     "dropImages": "画像をドロップして添付",
     "imageQuestion": "画像の質問",
     "errorGeneric": "エラーが発生しました。",

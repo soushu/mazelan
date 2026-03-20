@@ -39,6 +39,8 @@
     "typeMessage": "Type a message...",
     "send": "Send",
     "attachImage": "Attach image",
+    "choosePhoto": "Choose photo",
+    "takePhoto": "Take photo",
     "dropImages": "Drop images to attach",
     "imageQuestion": "Image question",
     "errorGeneric": "An error occurred.",

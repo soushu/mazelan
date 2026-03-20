@@ -69,7 +69,11 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => getSessionModel(null).model);
@@ -112,15 +116,18 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   }, [previews]);
 
   useEffect(() => {
-    if (!modeMenuOpen) return;
+    if (!modeMenuOpen && !attachMenuOpen) return;
     function handleClick(e: MouseEvent) {
-      if (modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) {
+      if (modeMenuOpen && modeMenuRef.current && !modeMenuRef.current.contains(e.target as Node)) {
         setModeMenuOpen(false);
+      }
+      if (attachMenuOpen && attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setAttachMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [modeMenuOpen]);
+  }, [modeMenuOpen, attachMenuOpen]);
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -250,23 +257,66 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           />
           {/* Toolbar row inside the box: paperclip, mode selector + send */}
           <div className="flex items-center px-2 pb-2">
-            {/* Left: paperclip */}
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={disabled}
-              className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
-              title={t("chat.attachImage")}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-              </svg>
-            </button>
+            {/* Left: paperclip with optional camera menu on mobile */}
+            <div className="relative" ref={attachMenuRef}>
+              <button
+                onClick={() => {
+                  if (isMobile) {
+                    setAttachMenuOpen(!attachMenuOpen);
+                  } else {
+                    fileRef.current?.click();
+                  }
+                }}
+                disabled={disabled}
+                className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
+                title={t("chat.attachImage")}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                </svg>
+              </button>
+
+              {attachMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 bg-theme-elevated border border-border-primary rounded-lg shadow-lg overflow-hidden min-w-[160px] z-50">
+                  <button
+                    onClick={() => { setAttachMenuOpen(false); fileRef.current?.click(); }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-t-secondary hover:bg-theme-hover transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    {t("chat.choosePhoto")}
+                  </button>
+                  <button
+                    onClick={() => { setAttachMenuOpen(false); cameraRef.current?.click(); }}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-t-secondary hover:bg-theme-hover transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                    </svg>
+                    {t("chat.takePhoto")}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <input
               ref={fileRef}
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp"
               multiple
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              capture="environment"
               className="hidden"
               onChange={(e) => {
                 handleFiles(e.target.files);
