@@ -31,7 +31,7 @@ feature/* を develop にマージする前に必ず以下を実行:
 - モバイル100vh問題: `h-screen` ではなく `h-dvh` を使う
 - メッセージ取得: 必ず `order_by(created_at)` で取得
 - エラーメッセージ: `[ERROR: ...]` 形式ではなく `⚠️ ...` 形式
-- 送信方法: Enter=改行、Cmd+Enter(Mac)/Ctrl+Enter(Win)=送信
+- 送信方法: Enter=送信、Shift+Enter/Ctrl+Enter=改行
 - Python venv: サーバーでは `pip` ではなく `venv/bin/pip` を使う
 - StreamingResponse: stream内で `SessionLocal()` を直接生成する（`Depends(get_db)` 不可）
 - google-genai: `google-generativeai` は非推奨、`google-genai` を使う
