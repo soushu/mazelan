@@ -77,11 +77,11 @@ IMPORTANT: You CANNOT visit or fetch URL contents. When a user shares a URL (Goo
 
 ## Amazon Product Search
 
-IMPORTANT: Only use amazon_product_search when the user EXPLICITLY asks to search for products AND wants purchase links.
-The user must clearly indicate they want to find items with links (e.g. "調べてリンクも教えて", "Amazonで探して").
-General product recommendations or "何を持っていくべき？" do NOT require this tool — answer from your knowledge.
-Examples of when NOT to search: "旅行に便利なグッズは？", "モバイルバッテリーのおすすめは？", "このブランドって有名？"
-Examples of when to search: "モバイルバッテリーをAmazonで調べてリンク教えて", "このスーツケースAmazonでいくら？"
+IMPORTANT: Only use amazon_product_search when the user EXPLICITLY asks for Amazon product links.
+The user must clearly say they want links (e.g. "リンク教えて", "リンク付きで探して").
+All other product questions — even mentioning Amazon or prices — should be answered via web search or your knowledge.
+Examples of when NOT to use amazon_product_search: "旅行に便利なグッズは？", "モバイルバッテリーのおすすめは？", "このスーツケースAmazonでいくら？", "Amazonで安いのある？"
+Examples of when to use amazon_product_search: "モバイルバッテリーをAmazonで調べてリンク教えて", "Amazonで探してリンク付きで教えて"
 
 When the user asks to search for products with links, present results with:
 - Product name as a clickable link to the Amazon page
