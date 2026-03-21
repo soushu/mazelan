@@ -93,9 +93,9 @@ const cacheListeners: Array<() => void> = [];
 
 /** Subscribe to cache ready event. Returns unsubscribe function. */
 export function onCacheReady(fn: () => void): () => void {
-  if (cacheLoaded) { fn(); return () => {}; }
-  cacheListeners.push(fn);
-  return () => { const i = cacheListeners.indexOf(fn); if (i >= 0) cacheListeners.splice(i, 1); };
+  // Always wait for the promise — cacheLoaded is set before async work completes
+  cacheReadyPromise.then(fn);
+  return () => {};
 }
 
 /** Wait for cache to be loaded. */
