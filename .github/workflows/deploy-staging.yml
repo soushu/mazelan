@@ -50,15 +50,15 @@ jobs:
 
       - name: Deploy to staging
         run: |
-          gcloud compute ssh yutookiguchi@bitpoint-bot \
-            --zone=us-west1-b \
+          gcloud compute ssh ${{ secrets.GCE_SSH_USER }}@${{ secrets.GCE_INSTANCE }} \
+            --zone=${{ secrets.GCE_ZONE }} \
             --tunnel-through-iap \
-            --command="DEPLOY_USER=yutookiguchi bash /home/yutookiguchi/claudia-staging/deploy/deploy-staging.sh"
+            --command="DEPLOY_USER=${{ secrets.GCE_SSH_USER }} bash /home/${{ secrets.GCE_SSH_USER }}/${{ secrets.GCE_DEPLOY_DIR_STAGING }}/deploy/deploy-staging.sh"
 
       - name: Health check
         run: |
-          gcloud compute ssh yutookiguchi@bitpoint-bot \
-            --zone=us-west1-b \
+          gcloud compute ssh ${{ secrets.GCE_SSH_USER }}@${{ secrets.GCE_INSTANCE }} \
+            --zone=${{ secrets.GCE_ZONE }} \
             --tunnel-through-iap \
             --command="curl -sf http://127.0.0.1:8002/health"
 
