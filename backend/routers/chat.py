@@ -158,12 +158,12 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
     except ProviderError as e:
         db.rollback()
         logger.error("ProviderError: %s", e)
-        yield "\n\n⚠️ メッセージの生成中にエラーが発生しました。しばらく待ってから再度お試しください。"
+        yield f"\n\n⚠️ メッセージの生成中にエラーが発生しました。({type(e).__name__}: {e})"
 
     except Exception as e:
         db.rollback()
         logger.error("Unexpected error in stream_response: %s", e, exc_info=True)
-        yield "\n\n⚠️ メッセージの生成中にエラーが発生しました。しばらく待ってから再度お試しください。"
+        yield f"\n\n⚠️ メッセージの生成中にエラーが発生しました。({type(e).__name__}: {e})"
 
     finally:
         db.close()
