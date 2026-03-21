@@ -70,8 +70,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const attachMenuRef = useRef<HTMLDivElement>(null);
@@ -130,72 +128,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [modeMenuOpen, attachMenuOpen]);
-
-  async function openCamera() {
-    try {
-      // Step 1: Find rear camera deviceId via enumerateDevices
-      let rearDeviceId: string | undefined;
-      try {
-        // Need initial getUserMedia call to get permission before enumerateDevices returns labels
-        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        tempStream.getTracks().forEach((t) => t.stop());
-
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter((d) => d.kind === "videoinput");
-        // Look for rear/back/environment camera by label
-        const rearDevice = videoDevices.find((d) =>
-          /back|rear|environment|背面|外側/i.test(d.label)
-        );
-        // If no label match, use last device (typically rear on Android)
-        rearDeviceId = rearDevice?.deviceId || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1].deviceId : undefined);
-      } catch {}
-
-      // Step 2: Open camera with deviceId (most reliable) or facingMode fallback
-      const constraints: MediaStreamConstraints = {
-        video: rearDeviceId
-          ? { deviceId: { exact: rearDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-          : { facingMode: { exact: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setCameraOpen(true);
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      });
-    } catch {
-      // Fallback to file input if getUserMedia fails
-      cameraRef.current?.click();
-    }
-  }
-
-  function capturePhoto() {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
-        handleFiles(new DataTransfer().files); // no-op to satisfy type
-        setAttachedImages((prev) => [...prev, file]);
-        setPreviews((prev) => [...prev, URL.createObjectURL(file)]);
-      }
-      closeCamera();
-    }, "image/jpeg", 0.9);
-  }
-
-  function closeCamera() {
-    const video = videoRef.current;
-    if (video?.srcObject) {
-      (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
-    }
-    setCameraOpen(false);
-  }
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -371,7 +303,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                     {t("chat.choosePhoto")}
                   </button>
                   <button
-                    onClick={() => { setAttachMenuOpen(false); openCamera(); }}
+                    onClick={() => { setAttachMenuOpen(false); cameraRef.current?.click(); }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-sm text-t-secondary hover:bg-theme-hover transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -398,7 +330,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             <input
               ref={cameraRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/gif,image/webp"
               capture="environment"
               className="hidden"
               onChange={(e) => {
@@ -406,19 +338,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                 e.target.value = "";
               }}
             />
-
-            {/* Camera modal using getUserMedia for reliable rear camera */}
-            {cameraOpen && (
-              <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-                <video ref={videoRef} autoPlay playsInline muted className="flex-1 object-cover" />
-                <div className="flex items-center justify-center gap-8 py-6 bg-black/80">
-                  <button onClick={closeCamera} className="text-white text-lg px-6 py-3">
-                    {t("sidebar.cancel")}
-                  </button>
-                  <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 active:bg-white/50" />
-                </div>
-              </div>
-            )}
 
             {/* Spacer */}
             <div className="flex-1" />
