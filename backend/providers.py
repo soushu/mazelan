@@ -137,36 +137,40 @@ def _tool_status_message(name: str, input_data: dict) -> str:
 
 async def _execute_tool(name: str, input_data: dict) -> str:
     """Execute a tool call and return the result as a string."""
-    from backend.serpapi_monitor import record_usage
-    if name in ("amazon_product_search", "flight_search", "google_maps_search"):
-        record_usage(name)
-    if name == "amazon_product_search":
-        results = await search_amazon(
-            query=input_data.get("query", ""),
-            max_results=input_data.get("max_results", 3),
-        )
-        return json.dumps(results, ensure_ascii=False)
-    if name == "flight_search":
-        results = await search_flights(
-            origin=input_data.get("origin", ""),
-            destination=input_data.get("destination", ""),
-            departure_month=input_data.get("departure_month", ""),
-            departure_day_from=input_data.get("departure_day_from", 1),
-            departure_day_to=input_data.get("departure_day_to", 10),
-            return_month=input_data.get("return_month", ""),
-            return_day_from=input_data.get("return_day_from", 0),
-            return_day_to=input_data.get("return_day_to", 0),
-            trip_weeks=input_data.get("trip_weeks", 2),
-            adults=input_data.get("adults", 1),
-            # Legacy support
-            departure_date=input_data.get("departure_date", ""),
-            return_date=input_data.get("return_date"),
-        )
-        return json.dumps(results, ensure_ascii=False)
-    if name == "google_maps_search":
-        results = await search_maps(query=input_data.get("query", ""))
-        return json.dumps(results, ensure_ascii=False)
-    return json.dumps({"error": f"Unknown tool: {name}"})
+    try:
+        from backend.serpapi_monitor import record_usage
+        if name in ("amazon_product_search", "flight_search", "google_maps_search"):
+            record_usage(name)
+        if name == "amazon_product_search":
+            results = await search_amazon(
+                query=input_data.get("query", ""),
+                max_results=int(input_data.get("max_results", 3)),
+            )
+            return json.dumps(results, ensure_ascii=False)
+        if name == "flight_search":
+            results = await search_flights(
+                origin=input_data.get("origin", ""),
+                destination=input_data.get("destination", ""),
+                departure_month=input_data.get("departure_month", ""),
+                departure_day_from=int(input_data.get("departure_day_from", 1)),
+                departure_day_to=int(input_data.get("departure_day_to", 10)),
+                return_month=input_data.get("return_month", ""),
+                return_day_from=int(input_data.get("return_day_from", 0)),
+                return_day_to=int(input_data.get("return_day_to", 0)),
+                trip_weeks=int(input_data.get("trip_weeks", 2)),
+                adults=int(input_data.get("adults", 1)),
+                # Legacy support
+                departure_date=input_data.get("departure_date", ""),
+                return_date=input_data.get("return_date"),
+            )
+            return json.dumps(results, ensure_ascii=False)
+        if name == "google_maps_search":
+            results = await search_maps(query=input_data.get("query", ""))
+            return json.dumps(results, ensure_ascii=False)
+        return json.dumps({"error": f"Unknown tool: {name}"})
+    except Exception as e:
+        logger.error("Tool execution error (%s): %s", name, repr(e), exc_info=True)
+        return json.dumps({"error": f"Tool execution failed: {repr(e)}"})
 
 
 async def stream_anthropic(
