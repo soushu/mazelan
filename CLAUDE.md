@@ -30,7 +30,7 @@ main(本番) → develop(統合) → feature/*(機能) の3層構成。
 5. feature/* → develop にマージ（`--no-ff`）→ ステージングにデプロイ
 6. **Playwright MCP でブラウザ動作確認**（dev.mazelan.ai）
 7. 問題があれば 2 に戻り、**問題がなくなるまで繰り返す**
-8. 問題がなくなったら **Slack 通知を送信**（SLACK_OPS_WEBHOOK_URL 経由）
+8. 問題がなくなったら **Slack 通知を送信**（SLACK_OPS_WEBHOOK_URL 経由、Python で送信。curl は Windows で日本語が文字化けするため使わない）
 9. **main へのマージはユーザーの明示的な指示があるまで行わない**
 
 ## デプロイ前チェック（厳守）
