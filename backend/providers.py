@@ -117,6 +117,53 @@ def get_provider(model_id: str) -> str:
     return info["provider"]
 
 
+# ── Tool filtering ──────────────────────────────────────────
+
+import re
+
+_AMAZON_KEYWORDS = re.compile(
+    r'amazon|アマゾン|リンク.{0,5}(探|教|検索|調)|'
+    r'(探|教|検索|調).{0,5}リンク|リンク付',
+    re.IGNORECASE,
+)
+_MAPS_KEYWORDS = re.compile(
+    r'営業|開い[てる]|閉[まめ店]|やって[るい]|閉業|閉店|'
+    r'(確認|チェック).{0,5}(店|レストラン|カフェ|ホテル)|'
+    r'(店|レストラン|カフェ|ホテル).{0,5}(確認|チェック)|'
+    r'google\s*maps|グーグルマップ',
+    re.IGNORECASE,
+)
+_FLIGHT_KEYWORDS = re.compile(
+    r'フライト|飛行機|航空|空港|航空券|チケット|'
+    r'flight|plane|ticket|airline|'
+    r'行.{0,3}(飛行|便)|便.{0,3}(調|探|検索)',
+    re.IGNORECASE,
+)
+
+
+def _filter_tools_by_message(messages: list[dict]) -> set[str]:
+    """Determine which custom tools to include based on the latest user message."""
+    # Get last user message text
+    last_msg = ""
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            content = m.get("content", "")
+            if isinstance(content, str):
+                last_msg = content
+            elif isinstance(content, list):
+                last_msg = " ".join(b.get("text", "") for b in content if b.get("type") == "text")
+            break
+
+    active = set()
+    if _FLIGHT_KEYWORDS.search(last_msg):
+        active.add("flight_search")
+    if _AMAZON_KEYWORDS.search(last_msg):
+        active.add("amazon_product_search")
+    if _MAPS_KEYWORDS.search(last_msg):
+        active.add("google_maps_search")
+    return active
+
+
 # ── Anthropic (Claude) ──────────────────────────────────────
 
 def _tool_status_message(name: str, input_data: dict) -> str:
@@ -198,11 +245,12 @@ async def stream_anthropic(
         if MODEL_REGISTRY.get(model, {}).get("supports_web_search"):
             tools.append({"type": "web_search_20250305", "name": "web_search", "max_uses": 3})
         if not web_search_only:
-            if amazon_available():
+            active = _filter_tools_by_message(messages)
+            if amazon_available() and "amazon_product_search" in active:
                 tools.append(AMAZON_SEARCH_TOOL)
-            if flights_available():
+            if flights_available() and "flight_search" in active:
                 tools.append(FLIGHT_SEARCH_TOOL)
-            if maps_available():
+            if maps_available() and "google_maps_search" in active:
                 tools.append(MAPS_SEARCH_TOOL)
         if tools:
             kwargs["tools"] = tools
@@ -304,14 +352,15 @@ def _convert_messages_for_openai(
     return oai_messages
 
 
-def _openai_tools() -> list[dict] | None:
+def _openai_tools(messages: list[dict]) -> list[dict] | None:
     """Return OpenAI-format tool definitions for available tools."""
+    active = _filter_tools_by_message(messages)
     tools = []
-    if amazon_available():
+    if amazon_available() and "amazon_product_search" in active:
         tools.append({"type": "function", "function": {"name": AMAZON_SEARCH_TOOL["name"], "description": AMAZON_SEARCH_TOOL["description"], "parameters": AMAZON_SEARCH_TOOL["input_schema"]}})
-    if flights_available():
+    if flights_available() and "flight_search" in active:
         tools.append({"type": "function", "function": {"name": FLIGHT_SEARCH_TOOL["name"], "description": FLIGHT_SEARCH_TOOL["description"], "parameters": FLIGHT_SEARCH_TOOL["input_schema"]}})
-    if maps_available():
+    if maps_available() and "google_maps_search" in active:
         tools.append({"type": "function", "function": {"name": MAPS_SEARCH_TOOL["name"], "description": MAPS_SEARCH_TOOL["description"], "parameters": MAPS_SEARCH_TOOL["input_schema"]}})
     return tools or None
 
@@ -329,7 +378,7 @@ async def stream_openai(
 
     # o-series models (o1, o3, etc.) require max_completion_tokens instead of max_tokens
     token_param = "max_completion_tokens" if model.startswith("o") else "max_tokens"
-    tools = None if disable_tools else _openai_tools()
+    tools = None if disable_tools else _openai_tools(oai_messages)
     max_tool_rounds = 3
     total_input = 0
     total_output = 0
@@ -470,14 +519,24 @@ def _is_gemini_rate_limit(err_str: str) -> bool:
     return "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str or "503" in err_str or "unavailable" in err_str
 
 
-def _gemini_function_tools() -> list[genai_types.Tool] | None:
-    """Return Gemini function calling tools (flight/amazon)."""
+def _gemini_function_tools(messages: list) -> list[genai_types.Tool] | None:
+    """Return Gemini function calling tools filtered by user message content."""
+    # Convert Gemini Content objects to dicts for keyword filtering
+    msg_dicts = []
+    for c in messages:
+        if hasattr(c, "role") and hasattr(c, "parts"):
+            text = " ".join(getattr(p, "text", "") or "" for p in c.parts if hasattr(p, "text"))
+            msg_dicts.append({"role": c.role, "content": text})
+        elif isinstance(c, dict):
+            msg_dicts.append(c)
+    active = _filter_tools_by_message(msg_dicts) if msg_dicts else set()
+
     declarations = []
-    if amazon_available():
+    if amazon_available() and "amazon_product_search" in active:
         declarations.append(genai_types.FunctionDeclaration(name=AMAZON_SEARCH_TOOL["name"], description=AMAZON_SEARCH_TOOL["description"], parameters=AMAZON_SEARCH_TOOL["input_schema"]))
-    if flights_available():
+    if flights_available() and "flight_search" in active:
         declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
-    if maps_available():
+    if maps_available() and "google_maps_search" in active:
         declarations.append(genai_types.FunctionDeclaration(name=MAPS_SEARCH_TOOL["name"], description=MAPS_SEARCH_TOOL["description"], parameters=MAPS_SEARCH_TOOL["input_schema"]))
     return [genai_types.Tool(function_declarations=declarations)] if declarations else None
 
@@ -628,7 +687,7 @@ async def stream_google(
         else:
             # Start with function calling tools only; switch to google_search after
             # Gemini API cannot combine google_search and function_calling
-            func_tools = _gemini_function_tools()
+            func_tools = _gemini_function_tools(gemini_contents)
             if func_tools:
                 config.tools = func_tools
                 enable_search = True  # Allow switching to google_search after function calling
