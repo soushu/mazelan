@@ -324,6 +324,14 @@ async def search_flights(
     origin = origin.upper()
     destination = destination.upper()
 
+    # Gemini protobuf Struct returns integers as floats — cast to int
+    departure_day_from = int(departure_day_from)
+    departure_day_to = int(departure_day_to)
+    return_day_from = int(return_day_from)
+    return_day_to = int(return_day_to)
+    trip_weeks = int(trip_weeks)
+    adults = int(adults)
+
     # Handle legacy single-date calls
     if departure_date and not departure_month:
         departure_date = _fix_date(departure_date)
