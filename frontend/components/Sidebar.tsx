@@ -106,7 +106,7 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex-shrink-0 flex flex-col h-dvh bg-theme-surface border-r border-border-primary transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 flex-shrink-0 flex flex-col h-dvh bg-theme-surface border-r border-border-primary transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
