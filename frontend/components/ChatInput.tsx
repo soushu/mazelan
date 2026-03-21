@@ -133,11 +133,31 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
 
   async function openCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-      });
+      // Step 1: Find rear camera deviceId via enumerateDevices
+      let rearDeviceId: string | undefined;
+      try {
+        // Need initial getUserMedia call to get permission before enumerateDevices returns labels
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        tempStream.getTracks().forEach((t) => t.stop());
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        // Look for rear/back/environment camera by label
+        const rearDevice = videoDevices.find((d) =>
+          /back|rear|environment|背面|外側/i.test(d.label)
+        );
+        // If no label match, use last device (typically rear on Android)
+        rearDeviceId = rearDevice?.deviceId || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1].deviceId : undefined);
+      } catch {}
+
+      // Step 2: Open camera with deviceId (most reliable) or facingMode fallback
+      const constraints: MediaStreamConstraints = {
+        video: rearDeviceId
+          ? { deviceId: { exact: rearDeviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+          : { facingMode: { exact: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setCameraOpen(true);
-      // Wait for videoRef to be available after render
       requestAnimationFrame(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
