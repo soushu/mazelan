@@ -64,6 +64,7 @@
     "takePhoto": "Take photo",
     "dropImages": "Drop images to attach",
     "imageQuestion": "Image question",
+    "linkOmitted": "Link omitted",
     "errorGeneric": "An error occurred.",
     "errorSending": "An error occurred while sending the message. Please try again.",
     "errorApiKeyInvalid": "API key is invalid. Please set the correct key in \"API Key\" settings in the sidebar.",

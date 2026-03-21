@@ -30,6 +30,7 @@ function CopyButton({ text }: { text: string }) {
 
 export default function MessageContent({ content }: { content: string }) {
   const { theme } = useTheme();
+  const t = useTranslations();
   const codeStyle = theme === "dark" ? oneDark : coldarkCold;
 
   return (
@@ -99,7 +100,7 @@ export default function MessageContent({ content }: { content: string }) {
         },
         a({ href, children }) {
           // Skip rendering broken/excessively long URLs (prevents page slowdown)
-          if (href && href.length > 500) return <span className="text-t-muted">[リンク省略]</span>;
+          if (href && href.length > 500) return <span className="text-t-muted">[{t("chat.linkOmitted")}]</span>;
           return <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline break-all">{children}</a>;
         },
       }}
