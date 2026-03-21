@@ -260,13 +260,30 @@ async def stream_anthropic(
     total_input_tokens = 0
     total_output_tokens = 0
     max_tool_rounds = 3  # Prevent infinite tool loops
+    has_web_search = any(t.get("type", "").startswith("web_search") for t in kwargs.get("tools", []))
 
     try:
         for _round in range(max_tool_rounds + 1):
-            async with client.messages.stream(**kwargs) as stream:
-                async for text in stream.text_stream:
-                    yield text
-                final = await stream.get_final_message()
+            try:
+                async with client.messages.stream(**kwargs) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+                    final = await stream.get_final_message()
+            except Exception as e:
+                if has_web_search and _round == 0:
+                    # Web search may have caused the error — retry without it
+                    logger.warning("Anthropic stream error with web_search, retrying without: %s", repr(e))
+                    kwargs["tools"] = [t for t in kwargs.get("tools", []) if not t.get("type", "").startswith("web_search")]
+                    if not kwargs["tools"]:
+                        del kwargs["tools"]
+                    has_web_search = False
+                    kwargs["messages"] = list(messages)  # reset messages
+                    async with client.messages.stream(**kwargs) as stream:
+                        async for text in stream.text_stream:
+                            yield text
+                        final = await stream.get_final_message()
+                else:
+                    raise
 
             total_input_tokens += final.usage.input_tokens
             total_output_tokens += final.usage.output_tokens
