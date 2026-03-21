@@ -1,0 +1,14 @@
+[Unit]
+Description=Claudia Backend (FastAPI)
+After=network.target postgresql.service
+
+[Service]
+User=yutookiguchi
+WorkingDirectory=/home/yutookiguchi/claudia
+ExecStart=/home/yutookiguchi/claudia/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000
+EnvironmentFile=/home/yutookiguchi/claudia/.env
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

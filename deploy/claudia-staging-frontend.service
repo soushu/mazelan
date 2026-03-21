@@ -1,0 +1,14 @@
+[Unit]
+Description=Claudia Staging Frontend (Next.js)
+After=network.target claudia-staging-backend.service
+
+[Service]
+User=yutookiguchi
+WorkingDirectory=/home/yutookiguchi/claudia-staging/frontend
+ExecStart=/usr/bin/node /home/yutookiguchi/claudia-staging/frontend/node_modules/.bin/next start -p 3002
+EnvironmentFile=/home/yutookiguchi/claudia-staging/frontend/.env.local
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
