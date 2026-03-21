@@ -548,7 +548,7 @@ def _gemini_search_tool() -> list[genai_types.Tool]:
 
 async def _stream_google_with_key(
     model: str, gemini_contents: list, config: genai_types.GenerateContentConfig, api_key: str,
-    enable_search: bool = False,
+    enable_search: bool = False, has_tool_keywords: bool = False,
 ) -> AsyncGenerator[str | dict, None]:
     """Attempt streaming with a single key, with exponential backoff for transient 429s."""
     client = genai.Client(api_key=api_key)
@@ -559,6 +559,7 @@ async def _stream_google_with_key(
     total_output = 0
     used_function_calling = False
     is_first_round = True
+    tool_retry_done = False
     for _round in range(max_tool_rounds + 1):
         for attempt in range(max_retries):
             try:
@@ -596,6 +597,11 @@ async def _stream_google_with_key(
                 # If no function calls, done or switch to google_search
                 if not function_calls:
                     if not used_function_calling and enable_search:
+                        if has_tool_keywords and not tool_retry_done:
+                            # Tool keywords detected but model didn't call tools — retry once
+                            tool_retry_done = True
+                            is_first_round = False
+                            break  # Retry with same function_calling tools
                         # No tool use at all → discard buffered text, switch to google_search
                         config.tools = _gemini_search_tool()
                         enable_search = False
@@ -694,6 +700,14 @@ async def stream_google(
             else:
                 config.tools = _gemini_search_tool()
 
+    # Check if user message contains tool-related keywords (for retry logic)
+    msg_dicts = []
+    for c in gemini_contents:
+        if hasattr(c, "role") and hasattr(c, "parts"):
+            text = " ".join(getattr(p, "text", "") or "" for p in c.parts if hasattr(p, "text"))
+            msg_dicts.append({"role": c.role, "content": text})
+    has_tool_keywords = bool(_filter_tools_by_message(msg_dicts))
+
     # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
     keys_to_try: list[tuple[str, str]] = []  # (key, label)
     if api_key:
@@ -712,7 +726,7 @@ async def stream_google(
     for key, label in keys_to_try:
         try:
             logger.info("Gemini: trying key [%s] for model %s", label, model)
-            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search):
+            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search, has_tool_keywords=has_tool_keywords):
                 yield chunk
             return  # Success
         except (ProviderSpendLimitError, ProviderRateLimitError) as e:
