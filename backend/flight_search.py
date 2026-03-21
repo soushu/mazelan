@@ -195,9 +195,9 @@ async def _search_google_flights(
     }
     if return_date:
         params["return_date"] = return_date
-        params["type"] = "1"
+        params["flight_type"] = "round_trip"
     else:
-        params["type"] = "2"
+        params["flight_type"] = "one_way"
 
     try:
         async with httpx.AsyncClient(timeout=25.0) as client:
@@ -205,8 +205,9 @@ async def _search_google_flights(
             resp.raise_for_status()
             data = resp.json()
 
-        # Get Google Flights URL from SerpAPI response (reliable, pre-built by Google)
-        gf_url = data.get("search_metadata", {}).get("google_flights_url", "")
+        # Get Google Flights URL from response
+        metadata = data.get("search_metadata", {})
+        gf_url = metadata.get("google_flights_url", "") or metadata.get("request_url", "")
 
         flights = []
         for flight_list in [data.get("best_flights", []), data.get("other_flights", [])]:
