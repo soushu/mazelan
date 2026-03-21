@@ -59,9 +59,9 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
         return cached
 
     params = {
-        "engine": "amazon",
+        "engine": "amazon_search",
         "amazon_domain": "amazon.co.jp",
-        "k": query,
+        "q": query,
         "api_key": SEARCHAPI_KEY,
     }
 
