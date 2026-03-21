@@ -74,6 +74,10 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+  // Android Chrome has a known bug where capture="environment" opens front camera
+  // Workaround: use "user" on Android (which paradoxically opens the rear camera)
+  const cameraCapture = isAndroid ? "user" : "environment";
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => getSessionModel(null).model);
@@ -330,8 +334,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             <input
               ref={cameraRef}
               type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              capture="environment"
+              accept="image/*"
+              capture={cameraCapture}
               className="hidden"
               onChange={(e) => {
                 handleFiles(e.target.files);
