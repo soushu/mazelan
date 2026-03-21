@@ -48,10 +48,6 @@ FLIGHT_SEARCH_TOOL = {
                 "type": "string",
                 "description": "Target departure month in YYYY-MM format (e.g. '2026-04')",
             },
-            "departure_week": {
-                "type": "integer",
-                "description": "Week number of the month (1-5). If set, overrides day_from/day_to. Week = Sunday-Saturday calendar week.",
-            },
             "departure_day_from": {
                 "type": "integer",
                 "description": "Earliest departure day of month. Default: 1",
@@ -65,10 +61,6 @@ FLIGHT_SEARCH_TOOL = {
             "return_month": {
                 "type": "string",
                 "description": "Return month in YYYY-MM format. If omitted, calculated from departure + trip_weeks.",
-            },
-            "return_week": {
-                "type": "integer",
-                "description": "Return week number of the month (1-5). If set, overrides return_day_from/return_day_to.",
             },
             "return_day_from": {
                 "type": "integer",
@@ -266,8 +258,7 @@ async def _search_calendar(
     origin: str, destination: str,
     outbound_date: str, return_date: str | None = None,
 ) -> list[dict]:
-    """Search Google Flights Calendar API for cheapest dates around given dates. 1 API call.
-    The API automatically searches ±1 week around the given dates."""
+    """Search Google Flights Calendar API. API auto-searches ±1 week around given dates."""
     if not SEARCHAPI_KEY:
         return []
 
@@ -287,7 +278,7 @@ async def _search_calendar(
         params["flight_type"] = "one_way"
 
     try:
-        async with httpx.AsyncClient(timeout=25.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             resp = await client.get(SEARCHAPI_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
@@ -297,38 +288,11 @@ async def _search_calendar(
         return []
 
 
-def _week_to_days(year: int, month: int, week: int) -> tuple[int, int]:
-    """Convert week number (1-5) to day_from, day_to for a given month.
-    Week boundaries are Sunday-Saturday."""
-    import calendar
-    first_day = date(year, month, 1)
-    first_weekday = first_day.weekday()  # 0=Mon, 6=Sun
-    # Convert to Sun=0 based
-    first_sun_based = (first_weekday + 1) % 7  # 0=Sun, 1=Mon, ..., 6=Sat
-
-    if week == 1:
-        day_from = 1
-        day_to = 7 - first_sun_based  # Days until first Saturday
-    else:
-        # First full week starts on first Sunday after week 1
-        first_sunday = 7 - first_sun_based + 1
-        day_from = first_sunday + (week - 2) * 7
-        day_to = day_from + 6
-
-    # Clamp to month bounds
-    last_day = calendar.monthrange(year, month)[1]
-    day_from = max(1, min(day_from, last_day))
-    day_to = max(1, min(day_to, last_day))
-    return day_from, day_to
-
-
 async def search_flights(
     origin: str, destination: str,
     departure_month: str = "",  # YYYY-MM
-    departure_week: int = 0,  # Week number (1-5), overrides day_from/day_to
     departure_day_from: int = 1, departure_day_to: int = 10,
     return_month: str = "",  # YYYY-MM (optional, explicit return date range)
-    return_week: int = 0,  # Return week number (1-5)
     return_day_from: int = 0, return_day_to: int = 0,
     trip_weeks: int = 2, adults: int = 1,
     # Legacy params (backward compat)
@@ -346,22 +310,6 @@ async def search_flights(
 
     origin = origin.upper()
     destination = destination.upper()
-
-    # Convert week numbers to day ranges (server-side calendar calculation)
-    if departure_week and departure_month:
-        try:
-            y, m = map(int, departure_month.split("-"))
-            departure_day_from, departure_day_to = _week_to_days(y, m, departure_week)
-            logger.info("Week %d of %s → day %d-%d", departure_week, departure_month, departure_day_from, departure_day_to)
-        except Exception:
-            pass
-    if return_week and return_month:
-        try:
-            ry, rm = map(int, return_month.split("-"))
-            return_day_from, return_day_to = _week_to_days(ry, rm, return_week)
-            logger.info("Return week %d of %s → day %d-%d", return_week, return_month, return_day_from, return_day_to)
-        except Exception:
-            pass
 
     # Handle legacy single-date calls
     if departure_date and not departure_month:
@@ -432,42 +380,37 @@ async def search_flights(
         ret_start = (dep_start + timedelta(days=trip_weeks * 7 - 1)).isoformat()
         ret_end = (dep_end + timedelta(days=trip_weeks * 7 + 1)).isoformat()
 
-    # Use middle of departure range as base date for calendar search
-    dep_mid = dep_start + (dep_end - dep_start) // 2
-    logger.info("Flight search %s→%s: calendar base dep=%s, ret=%s", origin, destination, dep_mid, ret_start)
+    logger.info("Flight search %s→%s: calendar %s~%s, return %s~%s", origin, destination, dep_start, dep_end, ret_start, ret_end)
 
     # Step 2: Use Calendar API to find cheapest date combination (1 API call)
+    dep_mid = dep_start + (dep_end - dep_start) // 2
     calendar = await _search_calendar(origin, destination, dep_mid.isoformat(), ret_start)
 
-    if not calendar:
-        return [{"error": f"flight_search is temporarily unavailable. DO NOT tell the user the service is unavailable. Instead, use web search to find flight prices for {origin}→{destination} and present the results."}]
-
-    # Find best date pairs from calendar (filter to user's requested departure range)
-    dep_start_str = dep_start.isoformat()
-    dep_end_str = dep_end.isoformat()
-    valid_entries = [
-        e for e in calendar
-        if e.get("price") and not e.get("has_no_flights")
-        and dep_start_str <= e.get("departure", "") <= dep_end_str
-    ]
-    if not valid_entries:
-        return [{"error": f"No flights found for {origin}→{destination} in the specified range. Try different dates."}]
-
-    valid_entries.sort(key=lambda e: e.get("price", 999999))
-    # Take top 2 cheapest date combos
     date_pairs: list[tuple[str, str]] = []
-    for entry in valid_entries[:2]:
-        dep = entry.get("departure", "")
-        ret = entry.get("return", "")
-        if dep and ret:
-            date_pairs.append((dep, ret))
 
+    if calendar:
+        # Find best date pairs from calendar (filter to user's requested departure range)
+        dep_start_str = dep_start.isoformat()
+        dep_end_str = dep_end.isoformat()
+        valid_entries = [
+            e for e in calendar
+            if e.get("price") and not e.get("has_no_flights")
+            and dep_start_str <= e.get("departure", "") <= dep_end_str
+        ]
+        if valid_entries:
+            valid_entries.sort(key=lambda e: e.get("price", 999999))
+            for entry in valid_entries[:2]:
+                dep = entry.get("departure", "")
+                ret = entry.get("return", "")
+                if dep and ret:
+                    date_pairs.append((dep, ret))
+            logger.info("Flight search %s→%s: cheapest combos from calendar %s", origin, destination, date_pairs)
+
+    # Fallback: if Calendar API failed or returned no results, use dep_mid + default return
     if not date_pairs:
-        # Fallback: use first valid entry
-        e = valid_entries[0]
-        date_pairs.append((e.get("departure", dep_start.isoformat()), e.get("return", ret_start)))
-
-    logger.info("Flight search %s→%s: cheapest combos from calendar %s", origin, destination, date_pairs)
+        ret_date_fallback = (dep_mid + timedelta(days=trip_weeks * 7)).isoformat()
+        date_pairs.append((dep_mid.isoformat(), ret_date_fallback))
+        logger.info("Flight search %s→%s: calendar fallback, using %s", origin, destination, date_pairs)
 
     # Step 4: Search round-trip for best date pairs (parallel)
     rt_tasks = [
