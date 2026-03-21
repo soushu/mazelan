@@ -1,4 +1,4 @@
-"""Google Maps place verification via SerpAPI.
+"""Google Maps place verification via SearchApi.io.
 
 Used to verify business status (open/closed) and get current info
 before recommending places to users.
@@ -13,12 +13,12 @@ from backend.serpapi_cache import get as cache_get, put as cache_put
 
 logger = logging.getLogger(__name__)
 
-SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
-SERPAPI_BASE = "https://serpapi.com/search.json"
+SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
+SEARCHAPI_BASE = "https://www.searchapi.io/api/v1/search"
 
 
 def is_available() -> bool:
-    return bool(SERPAPI_KEY)
+    return bool(SEARCHAPI_KEY)
 
 
 MAPS_SEARCH_TOOL = {
@@ -42,8 +42,8 @@ MAPS_SEARCH_TOOL = {
 
 
 async def search_maps(query: str) -> list[dict]:
-    """Search Google Maps via SerpAPI and return place info."""
-    if not SERPAPI_KEY:
+    """Search Google Maps via SearchApi.io and return place info."""
+    if not SEARCHAPI_KEY:
         return [{"error": "Google Maps search is not configured"}]
 
     cache_params = {"query": query}
@@ -55,12 +55,12 @@ async def search_maps(query: str) -> list[dict]:
         "engine": "google_maps",
         "q": query,
         "hl": "ja",
-        "api_key": SERPAPI_KEY,
+        "api_key": SEARCHAPI_KEY,
     }
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(SERPAPI_BASE, params=params)
+            resp = await client.get(SEARCHAPI_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
 
@@ -86,7 +86,7 @@ async def search_maps(query: str) -> list[dict]:
         }
         result = [{k: v for k, v in place.items() if v is not None and v != ""}]
 
-        cache_put("maps", cache_params, result, ttl=1209600)  # 2 week cache
+        cache_put("maps", cache_params, result, ttl=1209600)
         return result
 
     except httpx.TimeoutException:

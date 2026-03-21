@@ -1,7 +1,6 @@
-"""Flight search via SerpAPI (Google Flights) and Travelpayouts (Aviasales).
+"""Flight search via SearchApi.io (Google Flights) and Travelpayouts (Aviasales).
 
-Smart search: uses Travelpayouts month matrix to find cheapest dates,
-then searches Google Flights for detailed results on those dates.
+Smart search: searches Google Flights for detailed results on specified dates.
 One tool call returns comprehensive results.
 """
 
@@ -16,14 +15,13 @@ from backend.serpapi_cache import get as cache_get, put as cache_put
 
 logger = logging.getLogger(__name__)
 
-SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
+SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
 TRAVELPAYOUTS_TOKEN = os.environ.get("TRAVELPAYOUTS_TOKEN", "")
-SERPAPI_BASE = "https://serpapi.com/search.json"
-TRAVELPAYOUTS_BASE = "https://api.travelpayouts.com"
+SEARCHAPI_BASE = "https://www.searchapi.io/api/v1/search"
 
 
 def is_available() -> bool:
-    return bool(SERPAPI_KEY) or bool(TRAVELPAYOUTS_TOKEN)
+    return bool(SEARCHAPI_KEY)
 
 
 # ── Tool definition ──
@@ -185,15 +183,15 @@ async def _search_google_flights(
     origin: str, destination: str, departure_date: str,
     return_date: str | None = None, adults: int = 1, max_results: int = 5,
 ) -> list[dict]:
-    """Search Google Flights via SerpAPI for a specific date."""
-    if not SERPAPI_KEY:
+    """Search Google Flights via SearchApi.io for a specific date."""
+    if not SEARCHAPI_KEY:
         return []
 
     params: dict = {
         "engine": "google_flights",
         "departure_id": origin.upper(), "arrival_id": destination.upper(),
         "outbound_date": departure_date, "adults": adults,
-        "currency": "JPY", "hl": "ja", "api_key": SERPAPI_KEY,
+        "currency": "JPY", "hl": "ja", "api_key": SEARCHAPI_KEY,
     }
     if return_date:
         params["return_date"] = return_date
@@ -203,7 +201,7 @@ async def _search_google_flights(
 
     try:
         async with httpx.AsyncClient(timeout=25.0) as client:
-            resp = await client.get(SERPAPI_BASE, params=params)
+            resp = await client.get(SEARCHAPI_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
 
@@ -311,8 +309,8 @@ async def search_flights(
     3. Search round-trip for top 2 date combos → get detailed results
     4. Score, merge, return best + cheapest
     """
-    if not SERPAPI_KEY:
-        return [{"error": "Google Flights search not configured (SERPAPI_KEY)"}]
+    if not SEARCHAPI_KEY:
+        return [{"error": "Google Flights search not configured (SEARCHAPI_KEY)"}]
 
     origin = origin.upper()
     destination = destination.upper()
