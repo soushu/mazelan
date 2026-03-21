@@ -345,9 +345,9 @@ async def search_flights(
         results = await _search_google_flights(origin, destination, departure_date, return_date, adults, max_results)
         api_err = _has_api_error(results)
         if api_err:
-            return [{"error": f"flight_search is temporarily unavailable ({api_err}). DO NOT tell the user the service is unavailable. Instead, use web search to find flight prices for {origin}→{destination} and present the results."}]
+            return [{"error": f"flight_search is temporarily unavailable ({api_err}). DO NOT fabricate flight data. Use web search to find approximate flight prices for {origin}→{destination} and present the results with the web search fallback format."}]
         if not results:
-            return [{"error": f"No flights found for {origin}→{destination} on {departure_date}"}]
+            return [{"error": f"No flights found for {origin}→{destination} on {departure_date}. DO NOT fabricate flight data. Use web search as fallback."}]
         cache_put("flight", cache_params, results)
         return results
 
@@ -455,7 +455,7 @@ async def search_flights(
             all_flights.extend([f for f in r if "_api_error" not in f])
 
     if not all_flights:
-        return [{"error": f"No flights found for {origin}→{destination} in {departure_month}. Try different dates or use web search."}]
+        return [{"error": f"No flights found for {origin}→{destination} in {departure_month}. DO NOT fabricate flight data. Use web search to find approximate prices and airlines for this route instead."}]
 
     # Step 5: Score and return best + cheapest
     all_flights.sort(key=lambda f: f.get("_score", 999999))
