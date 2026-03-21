@@ -1,4 +1,4 @@
-"""Amazon product search via SerpAPI."""
+"""Amazon product search via SearchApi.io."""
 
 import logging
 import os
@@ -9,13 +9,13 @@ from backend.serpapi_cache import get as cache_get, put as cache_put
 
 logger = logging.getLogger(__name__)
 
-SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
-SERPAPI_BASE = "https://serpapi.com/search.json"
+SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
+SEARCHAPI_BASE = "https://www.searchapi.io/api/v1/search"
 
 
 def is_available() -> bool:
-    """Check if SerpAPI is configured."""
-    return bool(SERPAPI_KEY)
+    """Check if SearchApi.io is configured."""
+    return bool(SEARCHAPI_KEY)
 
 
 # Tool definition for Claude function calling
@@ -46,9 +46,9 @@ AMAZON_SEARCH_TOOL = {
 
 
 async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
-    """Search Amazon.co.jp via SerpAPI and return product info."""
-    if not SERPAPI_KEY:
-        return [{"error": "Amazon search is not configured (SERPAPI_KEY not set)"}]
+    """Search Amazon.co.jp via SearchApi.io and return product info."""
+    if not SEARCHAPI_KEY:
+        return [{"error": "Amazon search is not configured (SEARCHAPI_KEY not set)"}]
 
     max_results = max(1, min(5, max_results))
 
@@ -62,12 +62,12 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
         "engine": "amazon",
         "amazon_domain": "amazon.co.jp",
         "k": query,
-        "api_key": SERPAPI_KEY,
+        "api_key": SEARCHAPI_KEY,
     }
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(SERPAPI_BASE, params=params)
+            resp = await client.get(SEARCHAPI_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
 
@@ -83,21 +83,20 @@ async def search_amazon(query: str, max_results: int = 3) -> list[dict]:
                 "reviews_count": r.get("reviews", {}).get("total_reviews") if isinstance(r.get("reviews"), dict) else None,
                 "asin": r.get("asin", ""),
             }
-            # Clean up None values
             products.append({k: v for k, v in product.items() if v is not None})
 
         if not products:
             return [{"error": f"No products found for '{query}'"}]
 
-        cache_put("amazon", cache_params, products, ttl=3600)  # 1 hour for Amazon
+        cache_put("amazon", cache_params, products, ttl=3600)
         return products
 
     except httpx.TimeoutException:
-        logger.warning("SerpAPI timeout for query: %s", query)
+        logger.warning("SearchApi.io timeout for query: %s", query)
         return [{"error": f"amazon_product_search timed out. DO NOT tell the user the service is unavailable. Instead, use web search to find '{query}' on Amazon and present the results."}]
     except httpx.HTTPStatusError as e:
-        logger.error("SerpAPI HTTP %s for query: %s", e.response.status_code, query)
+        logger.error("SearchApi.io HTTP %s for query: %s", e.response.status_code, query)
         return [{"error": f"amazon_product_search is temporarily unavailable. DO NOT tell the user the service is unavailable. Instead, use web search to find '{query}' on Amazon and present the results."}]
     except Exception as e:
-        logger.error("SerpAPI error: %s", e)
+        logger.error("SearchApi.io error: %s", e)
         return [{"error": f"amazon_product_search is temporarily unavailable. DO NOT tell the user the service is unavailable. Instead, use web search to find '{query}' on Amazon and present the results."}]

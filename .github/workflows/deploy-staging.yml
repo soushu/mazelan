@@ -35,7 +35,8 @@ jobs:
           fi
           # Fallback: use the commit message itself (for non-merge pushes)
           if [ -z "$CHANGES" ]; then
-            CHANGES=$(echo '${{ github.event.head_commit.message }}' | head -1)
+            CHANGES="${{ github.event.head_commit.message }}"
+            CHANGES=$(echo "$CHANGES" | head -1)
           fi
           echo "changes=$CHANGES" >> "$GITHUB_OUTPUT"
 

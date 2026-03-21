@@ -137,36 +137,40 @@ def _tool_status_message(name: str, input_data: dict) -> str:
 
 async def _execute_tool(name: str, input_data: dict) -> str:
     """Execute a tool call and return the result as a string."""
-    from backend.serpapi_monitor import record_usage
-    if name in ("amazon_product_search", "flight_search", "google_maps_search"):
-        record_usage(name)
-    if name == "amazon_product_search":
-        results = await search_amazon(
-            query=input_data.get("query", ""),
-            max_results=input_data.get("max_results", 3),
-        )
-        return json.dumps(results, ensure_ascii=False)
-    if name == "flight_search":
-        results = await search_flights(
-            origin=input_data.get("origin", ""),
-            destination=input_data.get("destination", ""),
-            departure_month=input_data.get("departure_month", ""),
-            departure_day_from=input_data.get("departure_day_from", 1),
-            departure_day_to=input_data.get("departure_day_to", 10),
-            return_month=input_data.get("return_month", ""),
-            return_day_from=input_data.get("return_day_from", 0),
-            return_day_to=input_data.get("return_day_to", 0),
-            trip_weeks=input_data.get("trip_weeks", 2),
-            adults=input_data.get("adults", 1),
-            # Legacy support
-            departure_date=input_data.get("departure_date", ""),
-            return_date=input_data.get("return_date"),
-        )
-        return json.dumps(results, ensure_ascii=False)
-    if name == "google_maps_search":
-        results = await search_maps(query=input_data.get("query", ""))
-        return json.dumps(results, ensure_ascii=False)
-    return json.dumps({"error": f"Unknown tool: {name}"})
+    try:
+        from backend.serpapi_monitor import record_usage
+        if name in ("amazon_product_search", "flight_search", "google_maps_search"):
+            record_usage(name)
+        if name == "amazon_product_search":
+            results = await search_amazon(
+                query=input_data.get("query", ""),
+                max_results=int(input_data.get("max_results", 3)),
+            )
+            return json.dumps(results, ensure_ascii=False)
+        if name == "flight_search":
+            results = await search_flights(
+                origin=input_data.get("origin", ""),
+                destination=input_data.get("destination", ""),
+                departure_month=input_data.get("departure_month", ""),
+                departure_day_from=int(input_data.get("departure_day_from", 1)),
+                departure_day_to=int(input_data.get("departure_day_to", 10)),
+                return_month=input_data.get("return_month", ""),
+                return_day_from=int(input_data.get("return_day_from", 0)),
+                return_day_to=int(input_data.get("return_day_to", 0)),
+                trip_weeks=int(input_data.get("trip_weeks", 2)),
+                adults=int(input_data.get("adults", 1)),
+                # Legacy support
+                departure_date=input_data.get("departure_date", ""),
+                return_date=input_data.get("return_date"),
+            )
+            return json.dumps(results, ensure_ascii=False)
+        if name == "google_maps_search":
+            results = await search_maps(query=input_data.get("query", ""))
+            return json.dumps(results, ensure_ascii=False)
+        return json.dumps({"error": f"Unknown tool: {name}"})
+    except Exception as e:
+        logger.error("Tool execution error (%s): %s", name, repr(e), exc_info=True)
+        return json.dumps({"error": f"Tool execution failed: {repr(e)}"})
 
 
 async def stream_anthropic(
@@ -485,6 +489,7 @@ def _gemini_search_tool() -> list[genai_types.Tool]:
 
 async def _stream_google_with_key(
     model: str, gemini_contents: list, config: genai_types.GenerateContentConfig, api_key: str,
+    enable_search: bool = False,
 ) -> AsyncGenerator[str | dict, None]:
     """Attempt streaming with a single key, with exponential backoff for transient 429s."""
     client = genai.Client(api_key=api_key)
@@ -493,6 +498,7 @@ async def _stream_google_with_key(
     contents = list(gemini_contents)  # copy to avoid mutating caller's list
     total_input = 0
     total_output = 0
+    used_function_calling = False
     for _round in range(max_tool_rounds + 1):
         for attempt in range(max_retries):
             try:
@@ -522,12 +528,19 @@ async def _stream_google_with_key(
                     total_input += usage_data["input_tokens"]
                     total_output += usage_data["output_tokens"]
 
-                # If no function calls, we're done
+                # If no function calls, done or switch to google_search
                 if not function_calls:
+                    if not used_function_calling and enable_search:
+                        # No tool use at all → general question, switch to google_search
+                        config.tools = _gemini_search_tool()
+                        enable_search = False
+                        break  # Retry with google_search
+                    # Done — either tool was used or no search needed
                     yield {"input_tokens": total_input, "output_tokens": total_output}
                     return
 
                 # Execute function calls and build responses
+                used_function_calling = True
                 fc_parts = [genai_types.Part.from_function_call(name=fc.name, args=dict(fc.args) if fc.args else {}) for fc in function_calls]
                 contents.append(genai_types.Content(role="model", parts=fc_parts))
 
@@ -593,17 +606,20 @@ async def stream_google(
         config.thinking_config = genai_types.ThinkingConfig(thinking_budget=10000)
     if system_prompt:
         config.system_instruction = system_prompt
+    enable_search = False
     if not disable_tools:
         if web_search_only:
             # Only Google Search, no custom tools (e.g. debate mode)
             config.tools = _gemini_search_tool()
         else:
-            # Combine function calling tools with Google Search so the model
-            # can use web search for any query AND custom tools for travel queries.
-            # If the API rejects the combination, fall back to google_search only.
+            # Start with function calling tools only; switch to google_search after
+            # Gemini API cannot combine google_search and function_calling
             func_tools = _gemini_function_tools()
-            search_tools = _gemini_search_tool()
-            config.tools = (func_tools or []) + search_tools
+            if func_tools:
+                config.tools = func_tools
+                enable_search = True  # Allow switching to google_search after function calling
+            else:
+                config.tools = _gemini_search_tool()
 
     # Build key chain: user key (if provided) → free pool keys → fallback (paid) key
     keys_to_try: list[tuple[str, str]] = []  # (key, label)
@@ -623,7 +639,7 @@ async def stream_google(
     for key, label in keys_to_try:
         try:
             logger.info("Gemini: trying key [%s] for model %s", label, model)
-            async for chunk in _stream_google_with_key(model, gemini_contents, config, key):
+            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search):
                 yield chunk
             return  # Success
         except (ProviderSpendLimitError, ProviderRateLimitError) as e:
