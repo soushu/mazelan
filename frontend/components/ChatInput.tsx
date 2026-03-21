@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo, KeyboardEvent, DragEvent } from "react";
 import { MODEL_GROUPS, type ModelId } from "@/lib/types";
-import { getApiKeyForProvider, onCacheReady } from "@/lib/apiKeyStore";
+import { getApiKeyForProvider, waitForCache } from "@/lib/apiKeyStore";
 import { useTranslations } from "next-intl";
 
 const COST_LABELS: Record<string, string> = {
@@ -80,8 +80,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
-  const [keysReady, setKeysReady] = useState(false);
-  useEffect(() => onCacheReady(() => setKeysReady(true)), []);
+  const [, forceUpdate] = useState(0);
+  useEffect(() => { waitForCache().then(() => forceUpdate((n) => n + 1)); }, []);
   const hasGoogleKey = !!getApiKeyForProvider("google");
 
   function isModelLocked(modelId: string, provider: string): boolean {
