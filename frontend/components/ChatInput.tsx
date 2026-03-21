@@ -70,14 +70,12 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const attachMenuRef = useRef<HTMLDivElement>(null);
   const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
-  // Android Chrome has a known bug where capture="environment" opens front camera
-  // Workaround: use "user" on Android (which paradoxically opens the rear camera)
-  const cameraCapture = isAndroid ? "user" : "environment";
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>(() => getSessionModel(null).model);
@@ -132,6 +130,52 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [modeMenuOpen, attachMenuOpen]);
+
+  async function openCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      });
+      setCameraOpen(true);
+      // Wait for videoRef to be available after render
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      });
+    } catch {
+      // Fallback to file input if getUserMedia fails
+      cameraRef.current?.click();
+    }
+  }
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        handleFiles(new DataTransfer().files); // no-op to satisfy type
+        setAttachedImages((prev) => [...prev, file]);
+        setPreviews((prev) => [...prev, URL.createObjectURL(file)]);
+      }
+      closeCamera();
+    }, "image/jpeg", 0.9);
+  }
+
+  function closeCamera() {
+    const video = videoRef.current;
+    if (video?.srcObject) {
+      (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+      video.srcObject = null;
+    }
+    setCameraOpen(false);
+  }
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -307,7 +351,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                     {t("chat.choosePhoto")}
                   </button>
                   <button
-                    onClick={() => { setAttachMenuOpen(false); cameraRef.current?.click(); }}
+                    onClick={() => { setAttachMenuOpen(false); openCamera(); }}
                     className="flex items-center gap-3 w-full px-4 py-3 text-sm text-t-secondary hover:bg-theme-hover transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -335,13 +379,26 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
               ref={cameraRef}
               type="file"
               accept="image/*"
-              capture={cameraCapture}
+              capture="environment"
               className="hidden"
               onChange={(e) => {
                 handleFiles(e.target.files);
                 e.target.value = "";
               }}
             />
+
+            {/* Camera modal using getUserMedia for reliable rear camera */}
+            {cameraOpen && (
+              <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+                <video ref={videoRef} autoPlay playsInline muted className="flex-1 object-cover" />
+                <div className="flex items-center justify-center gap-8 py-6 bg-black/80">
+                  <button onClick={closeCamera} className="text-white text-lg px-6 py-3">
+                    {t("sidebar.cancel")}
+                  </button>
+                  <button onClick={capturePhoto} className="w-16 h-16 rounded-full border-4 border-white bg-white/20 active:bg-white/50" />
+                </div>
+              </div>
+            )}
 
             {/* Spacer */}
             <div className="flex-1" />
