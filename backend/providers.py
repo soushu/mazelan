@@ -715,8 +715,18 @@ async def stream_google(
     enable_search = False
     has_flight = False
     func_tools = None
+    # Detect if message contains images (google_search grounding is incompatible with images)
+    has_images = any(
+        hasattr(p, "inline_data") and p.inline_data
+        for c in gemini_contents if hasattr(c, "parts")
+        for p in c.parts
+    )
     if not disable_tools:
-        if web_search_only:
+        if has_images:
+            # Skip google_search when images are present — Gemini google_search
+            # grounding doesn't support image inputs
+            pass
+        elif web_search_only:
             config.tools = _gemini_search_tool()
         else:
             msg_dicts = []
@@ -729,8 +739,6 @@ async def stream_google(
             func_tools = _gemini_function_tools(gemini_contents)
 
             if has_flight and func_tools:
-                # Flight search: start with google_search (verify airport codes),
-                # then switch to function_calling
                 config.tools = _gemini_search_tool()
                 enable_search = True
             elif func_tools:
