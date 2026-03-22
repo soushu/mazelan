@@ -1,4 +1,4 @@
-"""Google Maps place verification via SearchApi.io.
+"""Google Maps place verification via SerpAPI or SearchApi.io (switchable).
 
 Used to verify business status (open/closed) and get current info
 before recommending places to users.
@@ -13,12 +13,17 @@ from backend.serpapi_cache import get as cache_get, put as cache_put
 
 logger = logging.getLogger(__name__)
 
+_PROVIDER = os.environ.get("FLIGHT_API_PROVIDER", "serpapi").lower()
+
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
-SEARCHAPI_BASE = "https://www.searchapi.io/api/v1/search"
+
+_API_KEY = SEARCHAPI_KEY if _PROVIDER == "searchapi" else SERPAPI_KEY
+_API_BASE = "https://www.searchapi.io/api/v1/search" if _PROVIDER == "searchapi" else "https://serpapi.com/search.json"
 
 
 def is_available() -> bool:
-    return bool(SEARCHAPI_KEY)
+    return bool(_API_KEY)
 
 
 MAPS_SEARCH_TOOL = {
@@ -42,8 +47,8 @@ MAPS_SEARCH_TOOL = {
 
 
 async def search_maps(query: str) -> list[dict]:
-    """Search Google Maps via SearchApi.io and return place info."""
-    if not SEARCHAPI_KEY:
+    """Search Google Maps and return place info."""
+    if not _API_KEY:
         return [{"error": "Google Maps search is not configured"}]
 
     cache_params = {"query": query}
@@ -55,12 +60,12 @@ async def search_maps(query: str) -> list[dict]:
         "engine": "google_maps",
         "q": query,
         "hl": "ja",
-        "api_key": SEARCHAPI_KEY,
+        "api_key": _API_KEY,
     }
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(SEARCHAPI_BASE, params=params)
+            resp = await client.get(_API_BASE, params=params)
             resp.raise_for_status()
             data = resp.json()
 
@@ -90,11 +95,11 @@ async def search_maps(query: str) -> list[dict]:
         return result
 
     except httpx.TimeoutException:
-        logger.warning("Google Maps search timeout: %s", query)
+        logger.warning("Google Maps search timeout (%s): %s", _PROVIDER, query)
         return [{"error": "Google Maps search timed out"}]
     except httpx.HTTPStatusError as e:
-        logger.error("Google Maps HTTP %s: %s", e.response.status_code, query)
+        logger.error("Google Maps HTTP %s (%s): %s", e.response.status_code, _PROVIDER, query)
         return [{"error": "Google Maps search temporarily unavailable"}]
     except Exception as e:
-        logger.error("Google Maps error: %s", repr(e))
+        logger.error("Google Maps error (%s): %s", _PROVIDER, repr(e))
         return [{"error": "Google Maps search temporarily unavailable"}]

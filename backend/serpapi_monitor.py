@@ -12,8 +12,12 @@ from backend.slack_notify import notify
 
 logger = logging.getLogger(__name__)
 
+_PROVIDER = os.environ.get("FLIGHT_API_PROVIDER", "serpapi").lower()
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
+_API_KEY = SEARCHAPI_KEY if _PROVIDER == "searchapi" else SERPAPI_KEY
 SEARCHAPI_ACCOUNT_URL = "https://www.searchapi.io/api/v1/me"
+SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
 
 # In-memory daily counters (reset at midnight UTC)
 _lock = threading.Lock()
@@ -44,16 +48,20 @@ def get_daily_counts() -> dict[str, int]:
 
 
 def check_account() -> dict | None:
-    """Fetch SearchApi.io account info."""
-    if not SEARCHAPI_KEY:
+    """Fetch API account info."""
+    if not _API_KEY:
         return None
     try:
+        if _PROVIDER == "searchapi":
+            url = SEARCHAPI_ACCOUNT_URL
+        else:
+            url = SERPAPI_ACCOUNT_URL
         with httpx.Client(timeout=10.0) as client:
-            resp = client.get(SEARCHAPI_ACCOUNT_URL, params={"api_key": SEARCHAPI_KEY})
+            resp = client.get(url, params={"api_key": _API_KEY})
             if resp.status_code == 200:
                 return resp.json()
     except Exception as e:
-        logger.warning("SearchApi.io account check failed: %s", e)
+        logger.warning("API account check failed (%s): %s", _PROVIDER, e)
     return None
 
 
