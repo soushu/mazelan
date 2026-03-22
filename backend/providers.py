@@ -89,9 +89,9 @@ MODEL_REGISTRY: dict[str, dict] = {
     "claude-sonnet-4-6":          {"provider": "anthropic", "label": "Claude Sonnet 4.6",  "supports_images": True,  "supports_web_search": True,  "input_price": 3.0,   "output_price": 15.0},
     "claude-opus-4-6":            {"provider": "anthropic", "label": "Claude Opus 4.6",    "supports_images": True,  "supports_web_search": True,  "input_price": 15.0,  "output_price": 75.0},
     # OpenAI (cheapest first)
-    "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": False, "input_price": 0.15,  "output_price": 0.60},
+    "gpt-4o-mini":                {"provider": "openai",    "label": "GPT-4o mini",    "supports_images": True,  "supports_web_search": True,  "input_price": 0.15,  "output_price": 0.60},
     "o3-mini":                    {"provider": "openai",    "label": "o3-mini",         "supports_images": False, "supports_web_search": False, "input_price": 1.10,  "output_price": 4.40},
-    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": False, "input_price": 2.50,  "output_price": 10.0},
+    "gpt-4o":                     {"provider": "openai",    "label": "GPT-4o",         "supports_images": True,  "supports_web_search": True,  "input_price": 2.50,  "output_price": 10.0},
     # Google (cheapest first)
     "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": True,  "input_price": 0.075, "output_price": 0.30},
     "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": True,  "input_price": 0.15,  "output_price": 0.60},
@@ -400,10 +400,17 @@ async def stream_openai(
     total_input = 0
     total_output = 0
 
+    # Web search: use search-preview model when no custom tools and web search is supported
+    has_web_search = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
+    search_model_map = {"gpt-4o": "gpt-4o-search-preview", "gpt-4o-mini": "gpt-4o-mini-search-preview"}
+    use_web_search = has_web_search and not tools and not disable_tools and model in search_model_map
+
     try:
         for _round in range(max_tool_rounds + 1):
+            # Use search-preview model when web search is active and no custom tools
+            active_model = search_model_map[model] if use_web_search and not tools else model
             create_kwargs: dict = dict(
-                model=model,
+                model=active_model,
                 messages=oai_messages,
                 stream=True,
                 stream_options={"include_usage": True},
@@ -411,6 +418,8 @@ async def stream_openai(
             )
             if tools:
                 create_kwargs["tools"] = tools
+            if use_web_search and not tools:
+                create_kwargs["web_search_options"] = {"search_context_size": "medium"}
 
             stream = await client.chat.completions.create(**create_kwargs)
 
