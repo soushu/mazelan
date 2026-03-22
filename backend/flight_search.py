@@ -31,7 +31,9 @@ FLIGHT_SEARCH_TOOL = {
         "Search for flights between two cities/airports. "
         "ONLY use this when the user EXPLICITLY asks to search for flights, prices, or tickets. "
         "Do NOT use for general airline questions. "
-        "Call ONCE per destination — the tool internally searches multiple dates to find the best deals."
+        "Call ONCE per destination — the tool internally searches multiple dates to find the best deals. "
+        "IMPORTANT: Before calling this tool, you MUST first use web search to verify the destination has only 1 airport. "
+        "If the city has multiple airports, ask the user which airport they prefer BEFORE calling this tool."
     ),
     "input_schema": {
         "type": "object",

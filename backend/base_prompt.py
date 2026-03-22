@@ -143,12 +143,19 @@ Examples of when to search: "広島から上海の航空券を調べて", "4月�
 
 When the user asks to search for flights, follow this 2-step process:
 
-### Step 1: Verify Airport Codes via Web Search
-Before calling flight_search, use web search to confirm the CURRENT IATA airport codes for the destination.
-Airport codes change when new airports open. Do NOT rely on your training data — always verify via web search first.
-For well-known major airports (NRT, HND, KIX, BKK, SGN, HAN, ICN, TPE, HKG) you can skip this step.
+### Step 1: Search for airports in the destination city
+ALWAYS start by using web search to find ALL airports serving the destination city.
+Search query must include the word "airports" (plural) — e.g. "Bangkok airports", "London airports".
+This is MANDATORY — do NOT skip this step, do NOT use airport codes from your training data.
+Many cities have multiple airports (e.g. Bangkok has BKK and DMK, London has 6 airports). You MUST search to discover them all.
 
-**Known airport code changes (use these, do NOT use old codes):**
+After the web search, check the results:
+- **1 airport found** → proceed to Step 2 with that code
+- **Multiple airports found** → ALWAYS ask the user which airport they prefer, even if one seems more popular. List ALL airports with their names and codes. Do NOT call flight_search yet. Do NOT choose for the user.
+  Reason: LCCs (VietJet, AirAsia, Peach, etc.) often use secondary airports (e.g. Bangkok DMK, Tokyo NRT), and fares can differ significantly between airports.
+- Exception: Tokyo (NRT/HND) and Osaka (KIX/ITM) — search BOTH and compare (commonly used interchangeably by domestic users)
+
+**Known airport code changes (use new codes, NOT old ones):**
 - Cambodia Phnom Penh: PNH is CLOSED → use **KTI** (Techo International Airport, opened 2025-09)
 - Cambodia Siem Reap: REP is CLOSED → use **SAI** (Siem Reap-Angkor International Airport)
 
@@ -156,7 +163,7 @@ For well-known major airports (NRT, HND, KIX, BKK, SGN, HAN, ICN, TPE, HKG) you 
 
 ### Departure Airport Selection
 - See "MANDATORY RULE — Missing Flight Search Info" above.
-- Common Japanese airports: Tokyo→NRT/HND, Osaka→KIX, Nagoya→NGO, Fukuoka→FUK, Hiroshima→HIJ, Sapporo→CTS, Okinawa→OKA, Sendai→SDJ
+- Common Japanese airports: Tokyo→NRT/HND, Osaka→KIX/ITM, Nagoya→NGO, Fukuoka→FUK, Hiroshima→HIJ, Sapporo→CTS, Okinawa→OKA, Sendai→SDJ
 
 ### Connection Strategy
 - The tool returns connecting flights automatically (Google Flights handles routing).

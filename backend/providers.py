@@ -400,27 +400,99 @@ async def stream_openai(
     total_input = 0
     total_output = 0
 
-    # Web search: use search-preview model when no custom tools and web search is supported
-    # Search-preview models don't support image inputs
-    has_web_search = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
+    # Web search setup
+    has_web_search_support = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
     has_images = any(isinstance(m.get("content"), list) and any(b.get("type") == "image_url" for b in m["content"] if isinstance(b, dict)) for m in oai_messages)
     search_model_map = {"gpt-4o": "gpt-4o-search-preview", "gpt-4o-mini": "gpt-4o-mini-search-preview"}
-    use_web_search = has_web_search and not tools and not disable_tools and model in search_model_map and not has_images
+    can_web_search = has_web_search_support and model in search_model_map and not disable_tools and not has_images
+
+    # Flight search: web_search first (airport code verification), then function_calling
+    active_tools = _filter_tools_by_message(oai_messages) if not disable_tools else set()
+    has_flight = "flight_search" in active_tools
+    flight_phase = "search" if has_flight and tools and can_web_search else None  # "search" → "tools"
+
+    # Determine initial web_search state
+    use_web_search = can_web_search and (not tools or flight_phase == "search")
 
     try:
+        # 2-step image handling for OpenAI (same as Gemini)
+        if has_images and has_web_search_support and model in search_model_map and not disable_tools:
+            # Step 1: Image recognition with regular model (no web search)
+            img_kwargs: dict = dict(
+                model=model, messages=oai_messages,
+                stream=False, **{token_param: 1024},
+            )
+            img_response = await client.chat.completions.create(**img_kwargs)
+            image_description = img_response.choices[0].message.content or ""
+            total_input += img_response.usage.prompt_tokens if img_response.usage else 0
+            total_output += img_response.usage.completion_tokens if img_response.usage else 0
+
+            # Step 2: Search with text-only query
+            last_user_text = ""
+            for m in reversed(messages):
+                if m.get("role") == "user":
+                    c = m.get("content", "")
+                    last_user_text = c if isinstance(c, str) else " ".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
+                    break
+            combined_query = f"[画像の内容: {image_description}]\n\nユーザーの質問: {last_user_text}"
+            search_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
+            search_messages.append({"role": "user", "content": combined_query})
+
+            search_kwargs: dict = dict(
+                model=search_model_map[model], messages=search_messages,
+                stream=True, stream_options={"include_usage": True},
+                web_search_options={"search_context_size": "medium"},
+                **{token_param: 4096},
+            )
+            stream = await client.chat.completions.create(**search_kwargs)
+            async for chunk in stream:
+                if chunk.usage:
+                    total_input += chunk.usage.prompt_tokens
+                    total_output += chunk.usage.completion_tokens
+                delta = chunk.choices[0].delta if chunk.choices else None
+                if delta and delta.content:
+                    yield delta.content
+            yield {"input_tokens": total_input, "output_tokens": total_output}
+            return
+
+        # For flight search phase, use airport-specific system prompt
+        airport_search_messages = None
+        if flight_phase == "search":
+            from datetime import date as _date
+            _today = _date.today()
+            airport_prompt = (
+                f"今日は{_today.isoformat()}です。年は{_today.year}年です。"
+                "あなたはフライト検索アシスタントです。ユーザーのメッセージに含まれる目的地の都市について、"
+                "その都市にある全ての空港名とIATAコードをWeb検索で調べてください。"
+                "もし空港が2つ以上ある場合は、全ての空港名とコードを一覧にして「どちらの空港をご希望ですか？」と質問してください。"
+                "空港が1つだけの場合は、その空港名とコードを回答してください。"
+                "注意: カンボジアのプノンペンはPNHではなくKTI、シェムリアップはREPではなくSAIです。"
+                "東京(NRT/HND)と大阪(KIX/ITM)の場合は質問せず、両方のコードを回答してください。"
+            )
+            # Extract last user message
+            last_user_msg = ""
+            for m in reversed(oai_messages):
+                if m.get("role") == "user":
+                    c = m.get("content", "")
+                    last_user_msg = c if isinstance(c, str) else str(c)
+                    break
+            airport_search_messages = [
+                {"role": "system", "content": airport_prompt},
+                {"role": "user", "content": last_user_msg},
+            ]
+
         for _round in range(max_tool_rounds + 1):
-            # Use search-preview model when web search is active and no custom tools
-            active_model = search_model_map[model] if use_web_search and not tools else model
+            active_model = search_model_map.get(model, model) if use_web_search else model
             create_kwargs: dict = dict(
                 model=active_model,
-                messages=oai_messages,
+                messages=airport_search_messages if (flight_phase == "search" and use_web_search and airport_search_messages) else oai_messages,
                 stream=True,
                 stream_options={"include_usage": True},
                 **{token_param: 4096},
             )
-            if tools:
+            if tools and not use_web_search:
                 create_kwargs["tools"] = tools
-            if use_web_search and not tools:
+            if use_web_search:
                 create_kwargs["web_search_options"] = {"search_context_size": "medium"}
 
             stream = await client.chat.completions.create(**create_kwargs)
@@ -428,6 +500,7 @@ async def stream_openai(
             usage_data = None
             tool_calls_acc: dict[int, dict] = {}  # index -> {id, name, arguments}
             finish_reason = None
+            streamed_text = []  # Accumulate text for question detection
 
             async for chunk in stream:
                 if chunk.usage:
@@ -438,6 +511,8 @@ async def stream_openai(
 
                 if delta and delta.content:
                     yield delta.content
+                    if flight_phase == "search":
+                        streamed_text.append(delta.content)
 
                 # Accumulate tool call chunks
                 if delta and delta.tool_calls:
@@ -458,6 +533,15 @@ async def stream_openai(
 
             # Check if model wants to call tools
             if finish_reason != "tool_calls" or not tool_calls_acc:
+                # Flight search 2-step: check if model asked about airports
+                if flight_phase == "search":
+                    search_response = "".join(streamed_text)
+                    if "？" in search_response or "?" in search_response:
+                        break  # Model asked about airports → stop, wait for user
+                    flight_phase = "tools"
+                    use_web_search = False
+                    airport_search_messages = None  # Use original messages for tools phase
+                    continue  # Next round with function_calling tools
                 break
 
             # Build assistant message with tool_calls
@@ -628,8 +712,16 @@ async def _stream_google_with_key(
                 if not function_calls:
                     if not used_function_calling and enable_search:
                         if func_tools_for_later and not switched_to_function_calling:
-                            # google_search phase done → switch to function_calling
-                            # (flight search: web search verified airport codes, now call tool)
+                            # google_search phase done → check if model is asking a question
+                            buffered_str = "".join(buffered_text)
+                            if "？" in buffered_str or "?" in buffered_str:
+                                # Model is asking user a question (e.g. which airport)
+                                # Show the question and stop — don't proceed to flight_search
+                                for t in buffered_text:
+                                    yield t
+                                yield {"input_tokens": total_input, "output_tokens": total_output}
+                                return
+                            # No question — switch to function_calling
                             config.tools = func_tools_for_later
                             switched_to_function_calling = True
                             is_first_round = False
@@ -753,6 +845,24 @@ async def stream_google(
             if has_flight and func_tools:
                 config.tools = _gemini_search_tool()
                 enable_search = True
+                # Override system prompt for airport search phase
+                # Extract destination city from user message for targeted search
+                last_text = ""
+                for m in reversed(msg_dicts):
+                    if m.get("role") == "user":
+                        last_text = m.get("content", "")
+                        break
+                from datetime import date as _date
+                _today = _date.today()
+                config.system_instruction = (
+                    f"今日は{_today.isoformat()}です。年は{_today.year}年です。"
+                    "あなたはフライト検索アシスタントです。ユーザーのメッセージに含まれる目的地の都市について、"
+                    "その都市にある全ての空港名とIATAコードをWeb検索で調べてください。"
+                    "もし空港が2つ以上ある場合は、全ての空港名とコードを一覧にして「どちらの空港をご希望ですか？」と質問してください。"
+                    "空港が1つだけの場合は、その空港名とコードを回答してください。"
+                    "注意: カンボジアのプノンペンはPNHではなくKTI（テチョー国際空港）、シェムリアップはREPではなくSAI（シェムリアップ・アンコール国際空港）です。"
+                    "東京(NRT/HND)と大阪(KIX/ITM)の場合は質問せず、両方のコードを回答してください。"
+                )
             elif func_tools:
                 config.tools = func_tools
                 enable_search = True
@@ -782,49 +892,70 @@ async def stream_google(
 
             # 2-step image handling: recognize image first, then search with text
             if has_images and not disable_tools:
-                client = genai.Client(api_key=key)
-                # Step 1: Image recognition (no tools, with image)
-                img_config = genai_types.GenerateContentConfig(max_output_tokens=1024)
-                if system_prompt:
+                try:
+                    client = genai.Client(api_key=key)
+                    # Step 1: Image recognition (no tools, with image)
+                    img_config = genai_types.GenerateContentConfig(max_output_tokens=1024)
                     img_config.system_instruction = "Describe what you see in the image concisely in the same language as the user's message."
-                img_response = await client.aio.models.generate_content(
-                    model=model, contents=gemini_contents, config=img_config,
-                )
-                image_description = img_response.text or ""
-                logger.info("Gemini image recognition: %s", image_description[:100])
+                    img_response = await client.aio.models.generate_content(
+                        model=model, contents=gemini_contents, config=img_config,
+                    )
+                    image_description = img_response.text or ""
+                    logger.info("Gemini image recognition: %s", image_description[:100])
 
-                # Step 2: Build text-only query with image description + user question
-                last_user_text = ""
-                for c in reversed(gemini_contents):
-                    if hasattr(c, "role") and c.role == "user":
-                        for p in c.parts:
-                            if hasattr(p, "text") and p.text:
-                                last_user_text = p.text
-                                break
-                        break
+                    # Step 2: Build text-only query with image description + user question
+                    last_user_text = ""
+                    for c in reversed(gemini_contents):
+                        if hasattr(c, "role") and c.role == "user":
+                            for p in c.parts:
+                                if hasattr(p, "text") and p.text:
+                                    last_user_text = p.text
+                                    break
+                            break
 
-                combined_query = f"[画像の内容: {image_description}]\n\nユーザーの質問: {last_user_text}"
-                text_contents = [genai_types.Content(role="user", parts=[genai_types.Part.from_text(text=combined_query)])]
-                text_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
-                if system_prompt:
-                    text_config.system_instruction = system_prompt
-                text_config.tools = _gemini_search_tool()
+                    combined_query = f"[画像の内容: {image_description}]\n\nユーザーの質問: {last_user_text}"
+                    text_contents = [genai_types.Content(role="user", parts=[genai_types.Part.from_text(text=combined_query)])]
+                    text_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
+                    if system_prompt:
+                        text_config.system_instruction = system_prompt
+                    text_config.tools = _gemini_search_tool()
 
-                # Stream the search-enhanced response
-                stream = await client.aio.models.generate_content_stream(
-                    model=model, contents=text_contents, config=text_config,
-                )
-                total_input = 0
-                total_output = 0
-                async for chunk in stream:
-                    if chunk.text:
-                        yield chunk.text
-                    if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
-                        um = chunk.usage_metadata
-                        total_input += getattr(um, "prompt_token_count", 0) or 0
-                        total_output += getattr(um, "candidates_token_count", 0) or 0
-                yield {"input_tokens": total_input, "output_tokens": total_output}
-                return  # Success
+                    # Stream the search-enhanced response
+                    stream = await client.aio.models.generate_content_stream(
+                        model=model, contents=text_contents, config=text_config,
+                    )
+                    total_input = 0
+                    total_output = 0
+                    async for chunk in stream:
+                        if chunk.text:
+                            yield chunk.text
+                        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                            um = chunk.usage_metadata
+                            total_input += getattr(um, "prompt_token_count", 0) or 0
+                            total_output += getattr(um, "candidates_token_count", 0) or 0
+                    yield {"input_tokens": total_input, "output_tokens": total_output}
+                    return  # Success
+                except Exception as e:
+                    # Fallback: answer with image directly, no web search
+                    logger.warning("Gemini 2-step image processing failed, falling back: %s", repr(e))
+                    fallback_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
+                    if system_prompt:
+                        fallback_config.system_instruction = system_prompt
+                    client = genai.Client(api_key=key)
+                    stream = await client.aio.models.generate_content_stream(
+                        model=model, contents=gemini_contents, config=fallback_config,
+                    )
+                    total_input = 0
+                    total_output = 0
+                    async for chunk in stream:
+                        if chunk.text:
+                            yield chunk.text
+                        if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
+                            um = chunk.usage_metadata
+                            total_input += getattr(um, "prompt_token_count", 0) or 0
+                            total_output += getattr(um, "candidates_token_count", 0) or 0
+                    yield {"input_tokens": total_input, "output_tokens": total_output}
+                    return
 
             async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search, has_tool_keywords=has_tool_keywords, func_tools_for_later=func_tools if has_flight else None):
                 yield chunk
