@@ -812,6 +812,21 @@ async def stream_google(
             if has_flight and func_tools:
                 config.tools = _gemini_search_tool()
                 enable_search = True
+                # Override system prompt for airport search phase
+                # Extract destination city from user message for targeted search
+                last_text = ""
+                for m in reversed(msg_dicts):
+                    if m.get("role") == "user":
+                        last_text = m.get("content", "")
+                        break
+                config.system_instruction = (
+                    "あなたはフライト検索アシスタントです。ユーザーのメッセージに含まれる目的地の都市について、"
+                    "その都市にある全ての空港名とIATAコードをWeb検索で調べてください。"
+                    "もし空港が2つ以上ある場合は、全ての空港名とコードを一覧にして「どちらの空港をご希望ですか？」と質問してください。"
+                    "空港が1つだけの場合は、その空港名とコードを回答してください。"
+                    "注意: カンボジアのプノンペンはPNHではなくKTI（テチョー国際空港）、シェムリアップはREPではなくSAI（シェムリアップ・アンコール国際空港）です。"
+                    "東京(NRT/HND)と大阪(KIX/ITM)の場合は質問せず、両方のコードを回答してください。"
+                )
             elif func_tools:
                 config.tools = func_tools
                 enable_search = True
