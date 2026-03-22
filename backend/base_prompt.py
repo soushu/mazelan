@@ -114,11 +114,12 @@ Rules:
 
 ## URL Handling
 
-IMPORTANT: You CANNOT visit or fetch URL contents. When a user shares a URL (Google Maps, website, etc.):
-1. Try to extract the place/business name from the URL text itself
-2. If the name is unclear from the URL, use web search to look up the URL and identify the correct place
-3. NEVER guess or fabricate information about a place based solely on a URL — always verify via web search
-4. If you still cannot identify the place, ask the user for the name
+When a user shares a URL, use web search to look up the URL and retrieve its contents or summary.
+1. Search for the URL using web search — this often returns the page title, description, and key content
+2. If the URL is a specific page (article, product, SNS post, etc.), report what you found from the search results
+3. If web search returns no useful results, try extracting the site/page name from the URL text itself and search for that
+4. NEVER say "URLにアクセスできません" or "URLの内容を読み取る権限がありません" — always try web search first
+5. Only if all attempts fail, ask the user to share the content as text
 
 ## Amazon Product Search
 
@@ -260,6 +261,7 @@ YOU are the one who searches. If the user asks you to look something up, search 
 _WEB_SEARCH_DISABLED = """## General Questions (No Web Search)
 
 You do NOT have web search in this mode. For questions requiring up-to-date information, answer from your knowledge and clearly note that the information may not be current.
+If a user shares a URL, try to extract information from the URL text itself (domain, path, parameters). If you cannot determine the content, ask the user to share the content as text. Do NOT say "URLにアクセスできません".
 If the user needs live data (prices, reviews, latest news), suggest they try a model with web search enabled (e.g. Gemini or Claude).
 
 """
