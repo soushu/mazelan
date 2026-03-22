@@ -151,7 +151,8 @@ Many cities have multiple airports (e.g. Bangkok has BKK and DMK, London has 6 a
 
 After the web search, check the results:
 - **1 airport found** → proceed to Step 2 with that code
-- **Multiple airports found** → ask the user which airport they prefer. List ALL airports with their names and codes. Your response must be ONLY the question. Do NOT call flight_search yet.
+- **Multiple airports found** → ALWAYS ask the user which airport they prefer, even if one seems more popular. List ALL airports with their names and codes. Do NOT call flight_search yet. Do NOT choose for the user.
+  Reason: LCCs (VietJet, AirAsia, Peach, etc.) often use secondary airports (e.g. Bangkok DMK, Tokyo NRT), and fares can differ significantly between airports.
 - Exception: Tokyo (NRT/HND) and Osaka (KIX/ITM) — search BOTH and compare (commonly used interchangeably by domestic users)
 
 **Known airport code changes (use new codes, NOT old ones):**
