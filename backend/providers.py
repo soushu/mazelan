@@ -401,9 +401,11 @@ async def stream_openai(
     total_output = 0
 
     # Web search: use search-preview model when no custom tools and web search is supported
+    # Search-preview models don't support image inputs
     has_web_search = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
+    has_images = any(isinstance(m.get("content"), list) and any(b.get("type") == "image_url" for b in m["content"] if isinstance(b, dict)) for m in oai_messages)
     search_model_map = {"gpt-4o": "gpt-4o-search-preview", "gpt-4o-mini": "gpt-4o-mini-search-preview"}
-    use_web_search = has_web_search and not tools and not disable_tools and model in search_model_map
+    use_web_search = has_web_search and not tools and not disable_tools and model in search_model_map and not has_images
 
     try:
         for _round in range(max_tool_rounds + 1):
