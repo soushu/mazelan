@@ -679,8 +679,16 @@ async def _stream_google_with_key(
                 if not function_calls:
                     if not used_function_calling and enable_search:
                         if func_tools_for_later and not switched_to_function_calling:
-                            # google_search phase done → switch to function_calling
-                            # (flight search: web search verified airport codes, now call tool)
+                            # google_search phase done → check if model is asking a question
+                            buffered_str = "".join(buffered_text)
+                            if "？" in buffered_str or "?" in buffered_str:
+                                # Model is asking user a question (e.g. which airport)
+                                # Show the question and stop — don't proceed to flight_search
+                                for t in buffered_text:
+                                    yield t
+                                yield {"input_tokens": total_input, "output_tokens": total_output}
+                                return
+                            # No question — switch to function_calling
                             config.tools = func_tools_for_later
                             switched_to_function_calling = True
                             is_first_round = False
