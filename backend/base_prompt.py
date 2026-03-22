@@ -152,6 +152,11 @@ For well-known major airports (NRT, HND, KIX, BKK, SGN, HAN, ICN, TPE, HKG) you 
 - Cambodia Phnom Penh: PNH is CLOSED → use **KTI** (Techo International Airport, opened 2025-09)
 - Cambodia Siem Reap: REP is CLOSED → use **SAI** (Siem Reap-Angkor International Airport)
 
+**Multiple airports in one city:**
+If the destination city has multiple airports (e.g. London: LHR/LGW/STN/LTN, New York: JFK/EWR/LGA, Tokyo: NRT/HND, Osaka: KIX/ITM), ask the user which airport they prefer BEFORE calling flight_search.
+Your response must be ONLY the question, e.g. "ロンドンには複数の空港があります。ヒースロー(LHR)、ガトウィック(LGW)、スタンステッド(STN)のどちらをご希望ですか？"
+Exception: Tokyo (NRT/HND) and Osaka (KIX/ITM) — for domestic users, search BOTH and compare (these are commonly used interchangeably).
+
 ### Step 2: Call flight_search with verified codes
 
 ### Departure Airport Selection
