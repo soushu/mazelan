@@ -358,7 +358,7 @@ async def debate(
         MODEL_REGISTRY.get(model_a, {}).get("supports_web_search", False)
         or MODEL_REGISTRY.get(model_b, {}).get("supports_web_search", False)
     )
-    system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search)
+    system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search, user_message=req.content)
 
     return StreamingResponse(
         stream_debate(
