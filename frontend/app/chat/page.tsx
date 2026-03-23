@@ -341,22 +341,78 @@ export default function ChatPage() {
     }
   }
 
-  async function fileToBase64(file: File): Promise<ImageAttachment> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // data:image/png;base64,xxxx -> extract base64 part
-        const data = result.split(",")[1];
-        resolve({
-          media_type: file.type,
-          data,
-          preview_url: URL.createObjectURL(file),
-        });
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  async function compressImage(file: File): Promise<{ data: string; media_type: string }> {
+    const MAX_BASE64 = 8 * 1024 * 1024; // 8MB (余裕を持って10MBより小さく)
+    const MAX_DIMENSION = 2048;
+
+    // まずそのまま読み込む
+    const original = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(file);
     });
+
+    const originalBase64 = original.split(",")[1];
+    // 小さければそのまま返す
+    if (originalBase64.length <= MAX_BASE64 && file.type !== "image/png") {
+      return { data: originalBase64, media_type: file.type };
+    }
+
+    // Canvas でリサイズ + JPEG圧縮
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = original;
+    });
+
+    let { width, height } = img;
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      const scale = MAX_DIMENSION / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // PNGでサイズ内ならPNGのまま、超えたらJPEG圧縮
+    if (file.type === "image/png") {
+      const pngData = canvas.toDataURL("image/png").split(",")[1];
+      if (pngData.length <= MAX_BASE64) {
+        return { data: pngData, media_type: "image/png" };
+      }
+    }
+
+    // JPEG で品質を下げながら試行
+    for (const quality of [0.85, 0.7, 0.5]) {
+      const jpegData = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+      if (jpegData.length <= MAX_BASE64) {
+        return { data: jpegData, media_type: "image/jpeg" };
+      }
+    }
+
+    // 最低品質でも超える場合はさらに縮小
+    const smallCanvas = document.createElement("canvas");
+    smallCanvas.width = Math.round(width * 0.5);
+    smallCanvas.height = Math.round(height * 0.5);
+    const sCtx = smallCanvas.getContext("2d")!;
+    sCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+    const finalData = smallCanvas.toDataURL("image/jpeg", 0.7).split(",")[1];
+    return { data: finalData, media_type: "image/jpeg" };
+  }
+
+  async function fileToBase64(file: File): Promise<ImageAttachment> {
+    const { data, media_type } = await compressImage(file);
+    return {
+      media_type,
+      data,
+      preview_url: URL.createObjectURL(file),
+    };
   }
 
   async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
@@ -516,6 +572,12 @@ export default function ChatPage() {
           ...prev,
           { role: "assistant", content: t("chat.errorApiKeyInvalid"), created_at: new Date().toISOString() },
         ]);
+      } else if (err instanceof Error && err.message.startsWith("VALIDATION:")) {
+        const detail = err.message.replace("VALIDATION: ", "");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `⚠️ ${detail}`, created_at: new Date().toISOString() },
+        ]);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -594,7 +656,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v56.0
+          DEV v56.1
         </div>
       )}
 
