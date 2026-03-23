@@ -106,17 +106,17 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 flex-shrink-0 flex flex-col h-dvh bg-theme-surface border-r border-border-primary transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 flex-shrink-0 flex flex-col h-dvh bg-theme-surface border-r border-border-primary transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header */}
         <div className="p-4 border-b border-border-primary flex items-center justify-between">
           <h1 className="text-lg font-semibold text-t-primary">{t("app.name")}</h1>
-          {/* Close button (mobile only) */}
+          {/* Close button */}
           <button
             onClick={onClose}
-            className="md:hidden p-1 text-t-tertiary hover:text-t-secondary transition-colors"
+            className="p-1 text-t-tertiary hover:text-t-secondary transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -236,20 +236,19 @@ export default function Sidebar({ sessions, activeId, onSelect, onDelete, onRena
         {/* User info */}
         {userEmail && (
           <div className="p-3 border-t border-border-primary">
-            {/* Header row: email + settings toggle (mobile) / always expanded (desktop) */}
+            {/* Header row: email + settings toggle */}
             <button
               onClick={() => setSettingsOpen((v) => !v)}
-              className="md:hidden w-full flex items-center justify-between py-1"
+              className="w-full flex items-center justify-between py-1"
             >
               <span className="text-xs text-t-muted truncate">{userEmail}</span>
               <svg className={`w-4 h-4 text-t-muted transition-transform ${settingsOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
               </svg>
             </button>
-            <p className="hidden md:block text-xs text-t-muted truncate mb-2">{userEmail}</p>
 
-            {/* Settings menu: always visible on desktop, accordion on mobile */}
-            <div className={`md:block ${settingsOpen ? "block" : "hidden"}`}>
+            {/* Settings menu: accordion */}
+            <div className={`${settingsOpen ? "block" : "hidden"}`}>
             <button
               onClick={onOpenApiKeyModal}
               className="w-full py-1.5 px-3 rounded-lg text-t-tertiary hover:bg-theme-hover hover:text-t-secondary text-sm transition-colors flex items-center gap-2 mt-1"

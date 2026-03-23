@@ -213,9 +213,14 @@ export default function ChatPage() {
     spacerRef.current.style.height = `${Math.max(0, viewportH - pairH)}px`;
   });
 
+  // Open sidebar by default on desktop
+  useEffect(() => {
+    if (window.innerWidth >= 768) setSidebarOpen(true);
+  }, []);
+
   // Prevent body scroll when sidebar is open on mobile (iOS Safari fix)
   useEffect(() => {
-    if (sidebarOpen) {
+    if (sidebarOpen && window.innerWidth < 768) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -589,26 +594,28 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v55.2
+          DEV v56.0
         </div>
       )}
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border-primary">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-1 text-t-tertiary hover:text-t-secondary transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <h1 className="text-base font-semibold text-t-primary truncate">
-            {activeId ? (sessions.find(s => s.id === activeId)?.title ?? t("app.name")) : t("app.name")}
-          </h1>
-        </div>
+        {/* Header bar with sidebar toggle */}
+        {!sidebarOpen && (
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border-primary">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-1 text-t-tertiary hover:text-t-secondary transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            <h1 className="text-base font-semibold text-t-primary truncate md:hidden">
+              {activeId ? (sessions.find(s => s.id === activeId)?.title ?? t("app.name")) : t("app.name")}
+            </h1>
+          </div>
+        )}
 
         {/* Message list */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
