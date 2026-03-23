@@ -100,6 +100,15 @@ export async function* streamChat(
   });
   if (!res.ok || !res.body) {
     if (res.status === 401) throw new Error("API_KEY_INVALID");
+    if (res.status === 422) {
+      try {
+        const detail = await res.json();
+        const msg = detail?.detail?.[0]?.msg || "Validation error";
+        throw new Error(`VALIDATION: ${msg}`);
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("VALIDATION:")) throw e;
+      }
+    }
     throw new Error("Stream failed");
   }
 
@@ -185,6 +194,15 @@ export async function* streamDebate(
   });
   if (!res.ok || !res.body) {
     if (res.status === 401) throw new Error("API_KEY_INVALID");
+    if (res.status === 422) {
+      try {
+        const detail = await res.json();
+        const msg = detail?.detail?.[0]?.msg || "Validation error";
+        throw new Error(`VALIDATION: ${msg}`);
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("VALIDATION:")) throw e;
+      }
+    }
     throw new Error("Stream failed");
   }
 
