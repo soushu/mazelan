@@ -1,4 +1,4 @@
-"""SearchApi.io usage monitoring with daily summary and threshold alerts."""
+"""API usage monitoring with daily summary and threshold alerts (SerpAPI / SearchApi.io)."""
 
 import logging
 import os
@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 _PROVIDER = os.environ.get("FLIGHT_API_PROVIDER", "serpapi").lower()
 SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 SEARCHAPI_KEY = os.environ.get("SEARCHAPI_KEY", "")
-_API_KEY = SEARCHAPI_KEY if _PROVIDER == "searchapi" else SERPAPI_KEY
+_API_KEY = SERPAPI_KEY if _PROVIDER == "serpapi" else SEARCHAPI_KEY
 SEARCHAPI_ACCOUNT_URL = "https://www.searchapi.io/api/v1/me"
 SERPAPI_ACCOUNT_URL = "https://serpapi.com/account.json"
+_PROVIDER_LABEL = "SerpAPI" if _PROVIDER == "serpapi" else "SearchApi.io"
 
 # In-memory daily counters (reset at midnight UTC)
 _lock = threading.Lock()
@@ -25,7 +26,7 @@ _daily_counts: dict[str, int] = {"flight": 0, "amazon": 0, "maps": 0}
 _daily_date: str = ""
 _alerted_thresholds: set[int] = set()
 
-ALERT_THRESHOLDS = [500, 200, 100]
+ALERT_THRESHOLDS = [50, 20, 10]
 
 
 def record_usage(tool_name: str) -> None:
@@ -47,6 +48,22 @@ def get_daily_counts() -> dict[str, int]:
         return dict(_daily_counts)
 
 
+def _normalize_account(raw: dict) -> dict:
+    """Normalize account info from either provider into a common format."""
+    if _PROVIDER == "serpapi":
+        return {
+            "remaining": raw.get("total_searches_left", 0),
+            "monthly_limit": raw.get("searches_per_month", 100),
+            "used": raw.get("this_month_usage", 0),
+        }
+    else:
+        return {
+            "remaining": raw.get("remaining_credits", 0),
+            "monthly_limit": raw.get("monthly_allowance", 10000),
+            "used": raw.get("current_month_usage", 0),
+        }
+
+
 def check_account() -> dict | None:
     """Fetch API account info."""
     if not _API_KEY:
@@ -59,7 +76,7 @@ def check_account() -> dict | None:
         with httpx.Client(timeout=10.0) as client:
             resp = client.get(url, params={"api_key": _API_KEY})
             if resp.status_code == 200:
-                return resp.json()
+                return _normalize_account(resp.json())
     except Exception as e:
         logger.warning("API account check failed (%s): %s", _PROVIDER, e)
     return None
@@ -70,16 +87,16 @@ def check_and_alert() -> None:
     account = check_account()
     if not account:
         return
-    remaining = account.get("remaining_credits", 0)
-    monthly_limit = account.get("monthly_allowance", 10000)
-    used = account.get("current_month_usage", 0)
+    remaining = account["remaining"]
+    monthly_limit = account["monthly_limit"]
+    used = account["used"]
 
     with _lock:
         for threshold in ALERT_THRESHOLDS:
             if remaining <= threshold and threshold not in _alerted_thresholds:
                 _alerted_thresholds.add(threshold)
                 notify(
-                    f"⚠️ SearchApi.io残り{remaining}回 (月{monthly_limit}回中{used}回使用)\n"
+                    f"⚠️ {_PROVIDER_LABEL}残り{remaining}回 (月{monthly_limit}回中{used}回使用)\n"
                     f"閾値: {threshold}回を下回りました"
                 )
                 break
@@ -92,17 +109,17 @@ def send_daily_summary() -> None:
     total_today = sum(counts.values())
 
     if account:
-        remaining = account.get("remaining_credits", 0)
-        monthly_limit = account.get("monthly_allowance", 10000)
-        used = account.get("current_month_usage", 0)
+        remaining = account["remaining"]
+        monthly_limit = account["monthly_limit"]
+        used = account["used"]
         summary = (
-            f"📊 SearchApi.io日次レポート\n"
+            f"📊 {_PROVIDER_LABEL}日次レポート\n"
             f"本日: flight {counts.get('flight', 0)}回, amazon {counts.get('amazon', 0)}回, maps {counts.get('maps', 0)}回 (計{total_today}回)\n"
             f"今月: {used}/{monthly_limit}回使用, 残り{remaining}回"
         )
     else:
         summary = (
-            f"📊 SearchApi.io日次レポート\n"
+            f"📊 {_PROVIDER_LABEL}日次レポート\n"
             f"本日: flight {counts.get('flight', 0)}回, amazon {counts.get('amazon', 0)}回, maps {counts.get('maps', 0)}回 (計{total_today}回)\n"
             f"(アカウント情報取得失敗)"
         )
@@ -127,24 +144,24 @@ def _scheduler_loop() -> None:
 
             time.sleep(3600)  # Check every hour
         except Exception as e:
-            logger.error("SearchApi.io monitor error: %s", e)
+            logger.error("%s monitor error: %s", _PROVIDER_LABEL, e)
             time.sleep(3600)
 
 
 def start_monitor() -> None:
     """Start the background monitoring thread."""
-    if not SEARCHAPI_KEY:
-        logger.info("SearchApi.io monitor disabled (no API key)")
+    if not _API_KEY:
+        logger.info("%s monitor disabled (no API key)", _PROVIDER_LABEL)
         return
     # Pre-populate alerted thresholds so restart doesn't re-trigger alerts
     account = check_account()
     if account:
-        remaining = account.get("remaining_credits", 0)
+        remaining = account["remaining"]
         with _lock:
             for threshold in ALERT_THRESHOLDS:
                 if remaining <= threshold:
                     _alerted_thresholds.add(threshold)
-        logger.info("SearchApi.io monitor: %d searches remaining, pre-set thresholds %s", remaining, _alerted_thresholds)
-    t = threading.Thread(target=_scheduler_loop, daemon=True, name="searchapi-monitor")
+        logger.info("%s monitor: %d searches remaining, pre-set thresholds %s", _PROVIDER_LABEL, remaining, _alerted_thresholds)
+    t = threading.Thread(target=_scheduler_loop, daemon=True, name="api-monitor")
     t.start()
-    logger.info("SearchApi.io usage monitor started")
+    logger.info("%s usage monitor started", _PROVIDER_LABEL)
