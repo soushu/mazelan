@@ -84,8 +84,9 @@ app.include_router(sessions.router)
 
 @app.on_event("startup")
 def startup():
-    from backend.serpapi_monitor import start_monitor
-    start_monitor()
+    if _is_prod:
+        from backend.serpapi_monitor import start_monitor
+        start_monitor()
 
 
 @app.get("/health")
