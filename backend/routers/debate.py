@@ -123,7 +123,7 @@ async def stream_debate(
             .order_by(Message.created_at)
             .all()
         )
-        messages = [{"role": m.role, "content": m.content} for m in history]
+        messages = [{"role": m.role, "content": m.content or " "} for m in history]
 
         # Replace last user message with multimodal content if images attached
         if images and messages and messages[-1]["role"] == "user":
