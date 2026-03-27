@@ -74,11 +74,21 @@ export default function ContextModal({ open, onClose }: Props) {
   }
 
   async function handleDelete(id: string) {
+    // Optimistic UI update to preserve scroll position (loadContexts triggers loading spinner which resets scroll)
+    setGrouped((prev) => {
+      const next = { ...prev };
+      for (const cat of Object.keys(next)) {
+        next[cat] = next[cat].filter((item) => item.id !== id);
+        if (next[cat].length === 0) delete next[cat];
+      }
+      return next;
+    });
+    setTotal((prev) => prev - 1);
     try {
       await deleteContext(id);
-      await loadContexts();
     } catch (err) {
       console.error(err);
+      await loadContexts();
     }
   }
 
