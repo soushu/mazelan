@@ -8,7 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
+        sans: ["Noto Sans JP", "sans-serif"],
         mono: ["DM Mono", "monospace"],
       },
       colors: {
