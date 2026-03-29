@@ -75,6 +75,8 @@ jobs:
           fi
           VERSION="${{ steps.info.outputs.version }}"
           CHANGES="${{ steps.info.outputs.changes }}"
+          # Sanitize: remove double quotes to prevent JSON breakage
+          CHANGES=$(echo "$CHANGES" | tr '"' "'")
           curl -sX POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \
             -d "{\"text\": \"${EMOJI} *Mazelan ステージング* デプロイ${STATUS} [${VERSION}]\n>${CHANGES}\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|Actions>\"}"
