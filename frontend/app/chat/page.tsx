@@ -145,8 +145,11 @@ export default function ChatPage() {
     if (!lastPairRef.current || !scrollContainerRef.current) return;
     const container = scrollContainerRef.current;
     const el = lastPairRef.current;
-    const offsetTop = el.offsetTop - container.offsetTop;
-    container.scrollTop = Math.max(0, offsetTop - 8); // 8px padding above
+    // Use getBoundingClientRect for reliable position regardless of nesting
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const scrollOffset = elRect.top - containerRect.top + container.scrollTop;
+    container.scrollTop = Math.max(0, scrollOffset - 8); // 8px padding above
   };
 
   // When user sends a message, scroll so the question appears at the top of the viewport
@@ -665,7 +668,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v57.1
+          DEV v57.2
         </div>
       )}
 
