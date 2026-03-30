@@ -58,7 +58,7 @@ async def search_images(query: str, max_results: int = 3) -> list[dict]:
         # Run sync DDGS in thread to avoid blocking event loop
         def _search():
             with DDGS() as ddgs:
-                return list(ddgs.images(keywords=query, max_results=max_results, safesearch="moderate"))
+                return list(ddgs.images(query=query, max_results=max_results, safesearch="moderate"))
 
         results = await asyncio.to_thread(_search)
 
