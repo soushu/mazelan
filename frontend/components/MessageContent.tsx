@@ -98,6 +98,13 @@ export default function MessageContent({ content }: { content: string }) {
         td({ children }) {
           return <td className="px-3 py-2 border-t border-border-primary text-t-secondary">{children}</td>;
         },
+        img({ src, alt }) {
+          return (
+            <a href={src} target="_blank" rel="noopener noreferrer" className="inline-block my-2">
+              <img src={src} alt={alt || ""} className="max-w-full md:max-w-[400px] max-h-[300px] object-contain rounded-lg border border-border-primary" loading="lazy" />
+            </a>
+          );
+        },
         a({ href, children }) {
           // Skip rendering broken/excessively long URLs (prevents page slowdown)
           if (href && href.length > 500) return <span className="text-t-muted">[{t("chat.linkOmitted")}]</span>;

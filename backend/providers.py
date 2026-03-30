@@ -16,6 +16,7 @@ from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError,
 from backend.amazon_search import AMAZON_SEARCH_TOOL, search_amazon, is_available as amazon_available
 from backend.flight_search import FLIGHT_SEARCH_TOOL, search_flights, is_available as flights_available
 from backend.maps_search import MAPS_SEARCH_TOOL, search_maps, is_available as maps_available
+from backend.image_search import IMAGE_SEARCH_TOOL, search_images, is_available as images_available
 from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
@@ -139,6 +140,13 @@ _FLIGHT_KEYWORDS = re.compile(
     r'行.{0,3}(飛行|便)|便.{0,3}(調|探|検索)',
     re.IGNORECASE,
 )
+_IMAGE_KEYWORDS = re.compile(
+    r'画像.{0,5}(見|探|検索|拾|持|出)|'
+    r'(見|探|検索|拾|持|出).{0,5}画像|'
+    r'スクリーンショット|スクショ|写真.{0,3}(見|探|検索)|'
+    r'image|screenshot|photo.{0,3}(search|find)',
+    re.IGNORECASE,
+)
 
 
 def _filter_tools_by_message(messages: list[dict]) -> set[str]:
@@ -161,6 +169,8 @@ def _filter_tools_by_message(messages: list[dict]) -> set[str]:
         active.add("amazon_product_search")
     if _MAPS_KEYWORDS.search(last_msg):
         active.add("google_maps_search")
+    if _IMAGE_KEYWORDS.search(last_msg):
+        active.add("image_search")
     return active
 
 
@@ -179,6 +189,9 @@ def _tool_status_message(name: str, input_data: dict) -> str:
     if name == "google_maps_search":
         query = input_data.get("query", "")
         return f"<!--STATUS:📍 「{query}」をGoogle Mapsで確認中...-->"
+    if name == "image_search":
+        query = input_data.get("query", "")
+        return f"<!--STATUS:🖼️ 「{query}」の画像を検索中...-->"
     return ""
 
 
@@ -213,6 +226,12 @@ async def _execute_tool(name: str, input_data: dict) -> str:
             return json.dumps(results, ensure_ascii=False)
         if name == "google_maps_search":
             results = await search_maps(query=input_data.get("query", ""))
+            return json.dumps(results, ensure_ascii=False)
+        if name == "image_search":
+            results = await search_images(
+                query=input_data.get("query", ""),
+                max_results=int(input_data.get("max_results", 3)),
+            )
             return json.dumps(results, ensure_ascii=False)
         return json.dumps({"error": f"Unknown tool: {name}"})
     except Exception as e:
@@ -252,6 +271,8 @@ async def stream_anthropic(
                 tools.append(FLIGHT_SEARCH_TOOL)
             if maps_available() and "google_maps_search" in active:
                 tools.append(MAPS_SEARCH_TOOL)
+            if images_available() and "image_search" in active:
+                tools.append(IMAGE_SEARCH_TOOL)
         if tools:
             kwargs["tools"] = tools
     if system_prompt:
@@ -379,6 +400,8 @@ def _openai_tools(messages: list[dict]) -> list[dict] | None:
         tools.append({"type": "function", "function": {"name": FLIGHT_SEARCH_TOOL["name"], "description": FLIGHT_SEARCH_TOOL["description"], "parameters": FLIGHT_SEARCH_TOOL["input_schema"]}})
     if maps_available() and "google_maps_search" in active:
         tools.append({"type": "function", "function": {"name": MAPS_SEARCH_TOOL["name"], "description": MAPS_SEARCH_TOOL["description"], "parameters": MAPS_SEARCH_TOOL["input_schema"]}})
+    if images_available() and "image_search" in active:
+        tools.append({"type": "function", "function": {"name": IMAGE_SEARCH_TOOL["name"], "description": IMAGE_SEARCH_TOOL["description"], "parameters": IMAGE_SEARCH_TOOL["input_schema"]}})
     return tools or None
 
 
@@ -650,6 +673,8 @@ def _gemini_function_tools(messages: list) -> list[genai_types.Tool] | None:
         declarations.append(genai_types.FunctionDeclaration(name=FLIGHT_SEARCH_TOOL["name"], description=FLIGHT_SEARCH_TOOL["description"], parameters=FLIGHT_SEARCH_TOOL["input_schema"]))
     if maps_available() and "google_maps_search" in active:
         declarations.append(genai_types.FunctionDeclaration(name=MAPS_SEARCH_TOOL["name"], description=MAPS_SEARCH_TOOL["description"], parameters=MAPS_SEARCH_TOOL["input_schema"]))
+    if images_available() and "image_search" in active:
+        declarations.append(genai_types.FunctionDeclaration(name=IMAGE_SEARCH_TOOL["name"], description=IMAGE_SEARCH_TOOL["description"], parameters=IMAGE_SEARCH_TOOL["input_schema"]))
     return [genai_types.Tool(function_declarations=declarations)] if declarations else None
 
 
