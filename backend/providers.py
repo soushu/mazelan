@@ -16,6 +16,7 @@ from anthropic import AsyncAnthropic, AuthenticationError as AnthropicAuthError,
 from backend.amazon_search import AMAZON_SEARCH_TOOL, search_amazon, is_available as amazon_available
 from backend.flight_search import FLIGHT_SEARCH_TOOL, search_flights, is_available as flights_available
 from backend.maps_search import MAPS_SEARCH_TOOL, search_maps, is_available as maps_available
+
 from openai import AsyncOpenAI, AuthenticationError as OpenAIAuthError, RateLimitError as OpenAIRateLimitError
 from google import genai
 from google.genai import types as genai_types
@@ -139,6 +140,7 @@ _FLIGHT_KEYWORDS = re.compile(
     r'行.{0,3}(飛行|便)|便.{0,3}(調|探|検索)',
     re.IGNORECASE,
 )
+
 
 
 def _filter_tools_by_message(messages: list[dict]) -> set[str]:
@@ -865,7 +867,6 @@ async def stream_google(
                 )
             elif func_tools:
                 config.tools = func_tools
-                enable_search = True
             else:
                 config.tools = _gemini_search_tool()
 
