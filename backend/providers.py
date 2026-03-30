@@ -890,7 +890,6 @@ async def stream_google(
                 )
             elif func_tools:
                 config.tools = func_tools
-                enable_search = True
             else:
                 config.tools = _gemini_search_tool()
 
