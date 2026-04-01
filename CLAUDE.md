@@ -71,6 +71,14 @@ GCP: e2-small (0.5vCPU / 2GB RAM), us-west1-b
 
 **環境変数の追加・変更時は必ず本番とステージング両方の `.env` に反映すること。**
 
+### ローカル `.env` のテスト・通知用変数
+
+| 変数 | 用途 |
+|------|------|
+| `TEST_EMAIL` | ステージング環境のブラウザテスト用ログインメール |
+| `TEST_PASSWORD` | ステージング環境のブラウザテスト用パスワード |
+| `SLACK_WEBHOOK_URL` | 動作確認完了後の Slack 通知用 Webhook URL |
+
 ## 有料APIキーの使用（厳守）
 
 フリーモデル（Gemini Flash Lite等）以外のモデル（Claude, GPT等）でテストする場合:
