@@ -72,7 +72,9 @@
     "fork": "Fork from here",
     "thinkingStatus": "Thinking...",
     "removeImage": "Remove image",
-    "imageAlt": "Attached image {number}"
+    "imageAlt": "Attached image {number}",
+    "loadOlder": "Load older messages",
+    "loadingMore": "Loading..."
   },
   "sidebar": {
     "newChat": "+ New",
