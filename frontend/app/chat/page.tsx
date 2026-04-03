@@ -297,31 +297,39 @@ export default function ChatPage() {
     setHasMore(false);
   }
 
+  // Track scroll position restore after prepending older messages
+  const pendingScrollRestore = useRef<number | null>(null);
+
   async function handleLoadMore() {
     if (!activeId || loadingMore || !hasMore || messages.length === 0) return;
     setLoadingMore(true);
     try {
       const oldestCreatedAt = messages[0].created_at;
       const container = scrollContainerRef.current;
-      const prevScrollHeight = container?.scrollHeight ?? 0;
+      // Save current scroll height before prepending
+      pendingScrollRestore.current = container?.scrollHeight ?? null;
 
       const result = await getMessagesPaginated(activeId, 5, oldestCreatedAt);
       setMessages((prev) => [...result.messages, ...prev]);
       setHasMore(result.has_more);
-
-      // Preserve scroll position after prepending messages
-      requestAnimationFrame(() => {
-        if (container) {
-          const newScrollHeight = container.scrollHeight;
-          container.scrollTop += newScrollHeight - prevScrollHeight;
-        }
-      });
     } catch (err) {
       console.error("Failed to load more messages:", err);
+      pendingScrollRestore.current = null;
     } finally {
       setLoadingMore(false);
     }
   }
+
+  // Restore scroll position after older messages are prepended (runs after DOM update)
+  useLayoutEffect(() => {
+    if (pendingScrollRestore.current !== null && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const prevHeight = pendingScrollRestore.current;
+      const newHeight = container.scrollHeight;
+      container.scrollTop += newHeight - prevHeight;
+      pendingScrollRestore.current = null;
+    }
+  }, [messages]);
 
   async function handleDelete(id: string) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
