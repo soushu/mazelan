@@ -64,6 +64,8 @@ def list_sessions(
 @router.get("/{session_id}/messages")
 def get_messages(
     session_id: uuid.UUID,
+    limit: int = 0,
+    before: str | None = None,
     current_user_id: uuid.UUID = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
@@ -72,12 +74,68 @@ def get_messages(
         raise HTTPException(status_code=404, detail="Session not found")
     if session.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    messages = (
-        db.query(Message)
-        .filter(Message.session_id == session_id)
-        .order_by(Message.created_at)
-        .all()
-    )
+
+    query = db.query(Message).filter(Message.session_id == session_id)
+
+    # Pagination: if limit > 0, return latest N messages (as Q&A pairs).
+    # limit is in pairs (e.g. limit=5 returns 5 user+assistant pairs = up to 10 messages).
+    # "before" is an ISO datetime cursor for loading older messages.
+    if limit > 0:
+        if before:
+            from datetime import datetime, timezone
+            try:
+                before_dt = datetime.fromisoformat(before.replace("Z", "+00:00"))
+            except ValueError:
+                before_dt = None
+            if before_dt:
+                query = query.filter(Message.created_at < before_dt)
+
+        # Fetch limit*2 messages (pairs) from the end, ordered DESC then reverse
+        msg_limit = limit * 2
+        messages = (
+            query.order_by(Message.created_at.desc())
+            .limit(msg_limit + 1)  # +1 to check if more exist
+            .all()
+        )
+        has_more = len(messages) > msg_limit
+        messages = messages[:msg_limit]
+        messages.reverse()  # chronological order
+
+        # Ensure we don't split a Q&A pair: if first message is assistant, include the preceding user message
+        if messages and messages[0].role == "assistant" and not before:
+            # This shouldn't normally happen, but handle gracefully
+            pass
+        elif messages and messages[0].role == "assistant" and before:
+            # We cut in the middle of a pair — fetch one more message before
+            preceding = (
+                db.query(Message)
+                .filter(Message.session_id == session_id)
+                .filter(Message.created_at < messages[0].created_at)
+                .order_by(Message.created_at.desc())
+                .first()
+            )
+            if preceding and preceding.role == "user":
+                messages.insert(0, preceding)
+
+        return {
+            "messages": [
+                {
+                    "role": m.role,
+                    "content": m.content,
+                    "created_at": m.created_at.isoformat(),
+                    **({"images": m.images} if m.images else {}),
+                    **({"model": m.model} if m.model else {}),
+                    **({"input_tokens": m.input_tokens} if m.input_tokens is not None else {}),
+                    **({"output_tokens": m.output_tokens} if m.output_tokens is not None else {}),
+                    **({"cost": m.cost} if m.cost is not None else {}),
+                }
+                for m in messages
+            ],
+            "has_more": has_more,
+        }
+
+    # No pagination — return all messages (backward compatible for export etc.)
+    messages = query.order_by(Message.created_at).all()
     return [
         {
             "role": m.role,

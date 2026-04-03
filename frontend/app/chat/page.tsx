@@ -8,7 +8,7 @@ import QAPairBlock from "@/components/QAPairBlock";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import SystemPromptModal from "@/components/SystemPromptModal";
 import ContextModal from "@/components/ContextModal";
-import { createSession, listSessions, getMessages, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate, forkSession } from "@/lib/api";
+import { createSession, listSessions, getMessages, getMessagesPaginated, deleteSession, updateSession, toggleSessionStar, streamChat, streamDebate, forkSession } from "@/lib/api";
 import { enqueue, processQueue } from "@/lib/offlineQueue";
 import { getApiKeyForProvider, getGoogleFallbackKey } from "@/lib/apiKeyStore";
 import type { Session, Message, QAPair, ImageAttachment, ModelId, DebateStepId } from "@/lib/types";
@@ -74,6 +74,8 @@ export default function ChatPage() {
   const [contextModalOpen, setContextModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [streamingDebate, setStreamingDebate] = useState<{
     modelA: string;
@@ -113,12 +115,13 @@ export default function ChatPage() {
         if (cached) setMessages(JSON.parse(cached));
       } catch {}
       setLoadingMessages(true);
-      getMessages(activeId)
-        .then((msgs) => {
-          setMessages(msgs);
+      getMessagesPaginated(activeId, 5)
+        .then((result) => {
+          setMessages(result.messages);
+          setHasMore(result.has_more);
           shouldScrollToQuestion.current = true;
           try {
-            const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+            const light = result.messages.map((m: Message) => ({ ...m, images: undefined }));
             localStorage.setItem(cacheKey, JSON.stringify(light));
           } catch {}
         })
@@ -191,11 +194,12 @@ export default function ChatPage() {
       if (document.visibilityState === "visible" && streamingRef.current && activeIdRef.current) {
         // App came back to foreground while streaming — reload from DB
         const sid = activeIdRef.current;
-        getMessages(sid).then((msgs) => {
-          if (msgs.length > 0) {
-            setMessages(msgs);
+        getMessagesPaginated(sid, 5).then((result) => {
+          if (result.messages.length > 0) {
+            setMessages(result.messages);
+            setHasMore(result.has_more);
             try {
-              const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+              const light = result.messages.map((m: Message) => ({ ...m, images: undefined }));
               localStorage.setItem(`mazelan_msgs_${sid}`, JSON.stringify(light));
             } catch {}
           }
@@ -249,6 +253,7 @@ export default function ChatPage() {
     setStreamingText("");
     setManualToggles(new Set());
     setSidebarOpen(false);
+    setHasMore(false);
 
     // Show cached messages immediately if available
     const cacheKey = `mazelan_msgs_${id}`;
@@ -267,12 +272,13 @@ export default function ChatPage() {
 
     if (!hasCached) setLoadingMessages(true);
     try {
-      const msgs = await getMessages(id);
-      setMessages(msgs);
+      const result = await getMessagesPaginated(id, 5);
+      setMessages(result.messages);
+      setHasMore(result.has_more);
       shouldScrollToQuestion.current = true;
       // Cache without image data to save localStorage space
       try {
-        const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+        const light = result.messages.map((m: Message) => ({ ...m, images: undefined }));
         localStorage.setItem(cacheKey, JSON.stringify(light));
       } catch {}
     } catch (err) {
@@ -288,6 +294,33 @@ export default function ChatPage() {
     setStreamingText("");
     setManualToggles(new Set());
     setSidebarOpen(false);
+    setHasMore(false);
+  }
+
+  async function handleLoadMore() {
+    if (!activeId || loadingMore || !hasMore || messages.length === 0) return;
+    setLoadingMore(true);
+    try {
+      const oldestCreatedAt = messages[0].created_at;
+      const container = scrollContainerRef.current;
+      const prevScrollHeight = container?.scrollHeight ?? 0;
+
+      const result = await getMessagesPaginated(activeId, 5, oldestCreatedAt);
+      setMessages((prev) => [...result.messages, ...prev]);
+      setHasMore(result.has_more);
+
+      // Preserve scroll position after prepending messages
+      requestAnimationFrame(() => {
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop += newScrollHeight - prevScrollHeight;
+        }
+      });
+    } catch (err) {
+      console.error("Failed to load more messages:", err);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -526,10 +559,11 @@ export default function ChatPage() {
           ]);
         } else {
           // Reload messages from DB to get the <!--DEBATE:--> format saved by backend
-          const msgs = await getMessages(sessionId);
-          setMessages(msgs);
+          const debateResult = await getMessagesPaginated(sessionId, 5);
+          setMessages(debateResult.messages);
+          setHasMore(debateResult.has_more);
           try {
-            const light = msgs.map((m: Message) => ({ ...m, images: undefined }));
+            const light = debateResult.messages.map((m: Message) => ({ ...m, images: undefined }));
             localStorage.setItem(`mazelan_msgs_${sessionId}`, JSON.stringify(light));
           } catch {}
         }
@@ -614,8 +648,9 @@ export default function ChatPage() {
       // Add new session to list and switch to it
       setSessions((prev) => [newSession, ...prev]);
       setActiveId(newSession.id);
-      const msgs = await getMessages(newSession.id);
-      setMessages(msgs);
+      const forkResult = await getMessagesPaginated(newSession.id, 5);
+      setMessages(forkResult.messages);
+      setHasMore(forkResult.has_more);
       setManualToggles(new Set());
     } catch (err) {
       console.error("Fork failed:", err);
@@ -670,7 +705,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v59.5
+          DEV v59.6
         </div>
       )}
 
@@ -705,6 +740,26 @@ export default function ChatPage() {
             {loadingMessages && (
               <div className="flex justify-center mt-20">
                 <div className="w-6 h-6 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+              </div>
+            )}
+
+            {/* Load more button for older messages */}
+            {hasMore && !loadingMessages && (
+              <div className="flex justify-center py-2">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="text-xs text-t-muted hover:text-t-secondary transition-colors px-4 py-2 rounded-lg hover:bg-theme-hover disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 border-2 border-spinner-track border-t-spinner-fill rounded-full animate-spin" />
+                      {t("chat.loadingMore")}
+                    </span>
+                  ) : (
+                    t("chat.loadOlder")
+                  )}
+                </button>
               </div>
             )}
 

@@ -121,6 +121,11 @@ export type QAPair = {
   assistant: Message | null;
 };
 
+export type PaginatedMessages = {
+  messages: Message[];
+  has_more: boolean;
+};
+
 export type SystemPromptResponse = {
   system_prompt: string | null;
 };
