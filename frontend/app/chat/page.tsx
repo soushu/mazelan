@@ -297,8 +297,8 @@ export default function ChatPage() {
     setHasMore(false);
   }
 
-  // Track scroll position restore after prepending older messages
-  const pendingScrollRestore = useRef<number | null>(null);
+  // Track scroll restore: save scrollHeight + scrollTop before prepending
+  const pendingScrollRestore = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
 
   async function handleLoadMore() {
     if (!activeId || loadingMore || !hasMore || messages.length === 0) return;
@@ -306,8 +306,12 @@ export default function ChatPage() {
     try {
       const oldestCreatedAt = messages[0].created_at;
       const container = scrollContainerRef.current;
-      // Save current scroll height before prepending
-      pendingScrollRestore.current = container?.scrollHeight ?? null;
+      if (container) {
+        pendingScrollRestore.current = {
+          scrollHeight: container.scrollHeight,
+          scrollTop: container.scrollTop,
+        };
+      }
 
       const result = await getMessagesPaginated(activeId, 5, oldestCreatedAt);
       setMessages((prev) => [...result.messages, ...prev]);
@@ -320,16 +324,16 @@ export default function ChatPage() {
     }
   }
 
-  // Restore scroll position after older messages are prepended (runs after DOM update)
+  // Restore scroll position after older messages are prepended (runs synchronously after DOM update)
   useLayoutEffect(() => {
     if (pendingScrollRestore.current !== null && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      const prevHeight = pendingScrollRestore.current;
-      const newHeight = container.scrollHeight;
-      container.scrollTop += newHeight - prevHeight;
+      const { scrollHeight: prevHeight, scrollTop: prevScroll } = pendingScrollRestore.current;
+      const heightDiff = container.scrollHeight - prevHeight;
+      container.scrollTop = prevScroll + heightDiff;
       pendingScrollRestore.current = null;
     }
-  }, [messages]);
+  });
 
   async function handleDelete(id: string) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
