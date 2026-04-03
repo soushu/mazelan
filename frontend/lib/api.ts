@@ -1,4 +1,4 @@
-import type { Session, Message, ImageAttachment, ModelId, SystemPromptResponse, ContextItem, ContextsResponse } from "./types";
+import type { Session, Message, PaginatedMessages, ImageAttachment, ModelId, SystemPromptResponse, ContextItem, ContextsResponse } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -19,6 +19,20 @@ export async function listSessions(): Promise<Session[]> {
 
 export async function getMessages(sessionId: string): Promise<Message[]> {
   const res = await fetch(`${BACKEND}/sessions/${sessionId}/messages`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch messages");
+  return res.json();
+}
+
+export async function getMessagesPaginated(
+  sessionId: string,
+  limit: number = 5,
+  before?: string,
+): Promise<PaginatedMessages> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set("before", before);
+  const res = await fetch(`${BACKEND}/sessions/${sessionId}/messages?${params}`, {
     credentials: "include",
   });
   if (!res.ok) throw new Error("Failed to fetch messages");
