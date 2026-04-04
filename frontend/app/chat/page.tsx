@@ -899,7 +899,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <ChatInput onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} onOpenApiKeyModal={(provider) => { setApiKeyModalTab(provider); setApiKeyModalOpen(true); }} />
+        <ChatInput key={activeId || "new"} onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} onOpenApiKeyModal={(provider) => { setApiKeyModalTab(provider); setApiKeyModalOpen(true); }} />
       </div>
     </div>
   );
