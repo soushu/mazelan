@@ -105,6 +105,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     const { model, model2 } = getSessionModel(sessionId);
     setSelectedModel(model);
     setSecondModel(model2);
+    setDebateMode(false);
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
   }, [sessionId]);
@@ -150,6 +151,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
+    if (debateMode) setDebateMode(false);
     setPreviews([]);
   }
 
