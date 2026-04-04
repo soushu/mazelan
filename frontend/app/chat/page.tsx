@@ -77,6 +77,7 @@ export default function ChatPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [inputResetKey, setInputResetKey] = useState(0);
   const [streamingDebate, setStreamingDebate] = useState<{
     modelA: string;
     modelB: string;
@@ -295,6 +296,7 @@ export default function ChatPage() {
     setManualToggles(new Set());
     setSidebarOpen(false);
     setHasMore(false);
+    setInputResetKey(k => k + 1);
   }
 
   // Track scroll restore: save scrollHeight + scrollTop before prepending
@@ -899,7 +901,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <ChatInput key={activeId || "new"} onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} onOpenApiKeyModal={(provider) => { setApiKeyModalTab(provider); setApiKeyModalOpen(true); }} />
+        <ChatInput key={`${activeId || "new"}-${inputResetKey}`} onSubmit={handleSubmit} disabled={streaming || status === "loading"} sessionId={activeId} onOpenApiKeyModal={(provider) => { setApiKeyModalTab(provider); setApiKeyModalOpen(true); }} />
       </div>
     </div>
   );
