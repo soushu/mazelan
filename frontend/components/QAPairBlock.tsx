@@ -9,7 +9,7 @@ import ProviderIcon from "@/components/ProviderIcon";
 import TokenUsageTooltip from "@/components/TokenUsageTooltip";
 import { useTranslations } from "next-intl";
 
-function MessageCopyButton({ text }: { text: string }) {
+function MessageCopyButton({ text, className }: { text: string; className?: string }) {
   const t = useTranslations();
   const [copied, setCopied] = useState(false);
 
@@ -23,7 +23,7 @@ function MessageCopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       title={t("copy.copy")}
-      className="opacity-0 group-hover/msg:opacity-100 p-1 rounded text-t-muted hover:text-t-secondary hover:bg-theme-hover transition-all text-xs"
+      className={className || "opacity-0 group-hover/msg:opacity-100 p-1 rounded text-t-muted hover:text-t-secondary hover:bg-theme-hover transition-all text-xs"}
     >
       {copied ? (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -52,7 +52,7 @@ function UserBubble({ user }: { user: QAPair["user"] }) {
   }, [user.content]);
 
   return (
-    <div className="flex gap-3 justify-end">
+    <div className="flex gap-3 justify-end group/user">
       <div className="max-w-[95%] md:max-w-[80%] rounded-2xl px-3 py-2.5 md:px-4 md:py-3 text-sm bg-theme-user-bubble text-t-user-bubble rounded-br-sm">
         {user.images && user.images.length > 0 && (
           <div className="flex gap-2 flex-wrap mb-2">
@@ -93,6 +93,11 @@ function UserBubble({ user }: { user: QAPair["user"] }) {
           </div>
         )}
       </div>
+      {user.content && (
+        <div className="flex items-end opacity-0 group-hover/user:opacity-100 transition-opacity">
+          <MessageCopyButton text={user.content} className="p-1 rounded text-t-muted hover:text-t-secondary hover:bg-theme-hover transition-all text-xs" />
+        </div>
+      )}
     </div>
   );
 }
