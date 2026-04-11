@@ -70,13 +70,17 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         db.add(user_msg)
         db.commit()
 
-        history = (
-            db.query(Message)
+        # Load only the latest 20 messages (10 Q&A pairs) to reduce latency.
+        # Exclude image data from history — only the current message carries images.
+        history_query = (
+            db.query(Message.role, Message.content)
             .filter(Message.session_id == session_id)
-            .order_by(Message.created_at)
+            .order_by(Message.created_at.desc())
+            .limit(20)
             .all()
         )
-        messages = [{"role": m.role, "content": m.content or " "} for m in history]
+        history_query.reverse()  # chronological order
+        messages = [{"role": m.role, "content": m.content or " "} for m in history_query]
 
         # Replace the last user message with multimodal content if images are attached
         if images and messages and messages[-1]["role"] == "user":

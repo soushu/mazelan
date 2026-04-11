@@ -116,13 +116,15 @@ async def stream_debate(
         db.add(user_msg)
         db.commit()
 
-        # Build message history
+        # Build message history (latest 20 messages only, no image data)
         history = (
-            db.query(Message)
+            db.query(Message.role, Message.content)
             .filter(Message.session_id == session_id)
-            .order_by(Message.created_at)
+            .order_by(Message.created_at.desc())
+            .limit(20)
             .all()
         )
+        history.reverse()
         messages = [{"role": m.role, "content": m.content or " "} for m in history]
 
         # Replace last user message with multimodal content if images attached
