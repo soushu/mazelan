@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -125,7 +126,15 @@ async def stream_debate(
             .all()
         )
         history.reverse()
-        messages = [{"role": m.role, "content": m.content or " "} for m in history]
+        messages = []
+        for m in history:
+            text = m.content or " "
+            # Strip debate markers from history
+            if text.startswith("<!--DEBATE:"):
+                text = re.sub(r"<!--DEBATE:[^>]+-->", "", text)
+                text = re.sub(r"<!--STEP:\w+-->", "", text)
+                text = text.strip() or " "
+            messages.append({"role": m.role, "content": text})
 
         # Replace last user message with multimodal content if images attached
         if images and messages and messages[-1]["role"] == "user":

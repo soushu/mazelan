@@ -80,7 +80,15 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             .all()
         )
         history_query.reverse()  # chronological order
-        messages = [{"role": m.role, "content": m.content or " "} for m in history_query]
+        messages = []
+        for m in history_query:
+            text = m.content or " "
+            # Strip debate markers from history to prevent LLM from mimicking the format
+            if text.startswith("<!--DEBATE:"):
+                text = re.sub(r"<!--DEBATE:[^>]+-->", "", text)
+                text = re.sub(r"<!--STEP:\w+-->", "", text)
+                text = text.strip() or " "
+            messages.append({"role": m.role, "content": text})
 
         # Replace the last user message with multimodal content if images are attached
         if images and messages and messages[-1]["role"] == "user":
