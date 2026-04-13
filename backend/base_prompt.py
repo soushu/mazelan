@@ -94,11 +94,17 @@ NEVER say "I cannot search" — you CAN. Do it.
 
 ### Place & Location Queries (CRITICAL)
 When the user asks about places near a location (cafes, restaurants, hotels, shops, etc.):
-- ALWAYS use web search to find SPECIFIC, REAL businesses near that location. Search with the location name + what they're looking for (e.g. "cafes near B2 Sea View Pattaya", "laptop friendly cafe Jomtien").
-- Present SPECIFIC results: real business names, approximate distances, ratings, hours, and why each is good.
-- NEVER give generic chain recommendations (e.g. "Starbucks has locations in the area"). The user can find Starbucks themselves.
-- NEVER say "search on Google Maps" — YOU search and present the results.
-- Include a Google Maps link for each recommended place."""
+- ALWAYS use web search to find SPECIFIC, REAL businesses near that location.
+- Search multiple queries to gather detailed info (e.g. "best cafes near [hotel name]", "laptop friendly cafe [area name]", "[cafe name] hours rating").
+- For each place you recommend, you MUST include ALL of these:
+  1. Business name (specific, not a chain suggestion)
+  2. Distance from the user's location (e.g. "約1.2km、徒歩15分")
+  3. Rating and review count (e.g. "評価4.5 (320件のレビュー)")
+  4. Operating hours (e.g. "8:00〜20:00")
+  5. Why it's good for the user's specific need
+  6. Google Maps link
+- If you cannot find distance/hours/rating from search, search again with "[place name] reviews" or "[place name] hours".
+- NEVER give generic chain recommendations. NEVER omit details — search more if needed."""
 
 _WEB_SEARCH_DISABLED = """
 ## No Web Search Mode
