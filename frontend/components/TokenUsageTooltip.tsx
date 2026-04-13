@@ -26,7 +26,7 @@ export default function TokenUsageTooltip({ usage, modelId }: Props) {
   const debateModels = modelId ? parseDebateModelId(modelId) : null;
 
   // Only Flash Lite is free (Tier 1: Flash/Pro are paid)
-  const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite"]);
+  const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
   const isFree = (() => {
     if (!modelId) return false;
     const hasGoogleKey = !!getApiKeyForProvider("google");
