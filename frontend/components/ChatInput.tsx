@@ -17,8 +17,8 @@ const COST_LABELS: Record<string, string> = {
   "claude-opus-4-6": "x19",
 };
 
-// Only Flash Lite is free on Tier 1 (Flash/Pro are paid)
-const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite"]);
+// TEMPORARY: Flash added for A/B testing
+const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
 
 function getCostLabel(modelId: string, isGoogleFree: boolean): string {
   const cost = COST_LABELS[modelId] || "";

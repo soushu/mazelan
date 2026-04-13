@@ -481,7 +481,7 @@ export default function ChatPage() {
   async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
     // Pre-flight: check if API key is needed
     const provider = getProviderForModel(model);
-    const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite"]);
+    const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
     const needsKey = (provider === "anthropic" && !getApiKeyForProvider("anthropic"))
       || (provider === "openai" && !getApiKeyForProvider("openai"))
       || (provider === "google" && !GEMINI_FREE_MODELS.has(model) && !getApiKeyForProvider("google"));
@@ -721,7 +721,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v60.2
+          DEV v60.3
         </div>
       )}
 
