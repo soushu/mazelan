@@ -92,7 +92,8 @@ Search for the URL via web search to retrieve contents. NEVER say "URLにアク�
 
 _WEB_SEARCH_ENABLED = """
 ## Web Search
-ALWAYS use web search for facts that could have changed (events, prices, hours, availability, products, places, reviews, news). Use knowledge only for unchanging facts (geography, history, grammar, etc.).
+Use web search for EVERY question unless it is about unchanging facts (math, grammar, geography basics).
+For travel, places, food, hotels, transport, events, prices, hours, availability, products, reviews, news, weather — ALWAYS search. Do NOT rely on your training data for these.
 NEVER say "I cannot search" — you CAN. Do it.
 
 ### Place & Location Queries (CRITICAL)
