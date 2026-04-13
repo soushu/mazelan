@@ -115,20 +115,9 @@ def build_system_prompt(user_prompt: str | None = None, context_block: str | Non
     from datetime import date
     today = date.today()
 
-    parts = [_BASE.format(today=today.isoformat(), year=today.year)]
-
-    # Conditionally include tool-specific sections
-    if _FLIGHT_KEYWORDS.search(user_message):
-        parts.append(_FLIGHT_SECTION)
-    if _AMAZON_KEYWORDS.search(user_message):
-        parts.append(_AMAZON_SECTION)
-    if _MAPS_KEYWORDS.search(user_message):
-        parts.append(_MAPS_SECTION)
-    if _URL_PATTERN.search(user_message):
-        parts.append(_URL_SECTION)
-
-    # Web search section
-    parts.append(_WEB_SEARCH_ENABLED if has_web_search else _WEB_SEARCH_DISABLED)
+    # === TEMPORARY: System prompt disabled for A/B testing ===
+    # To test if the system prompt is hurting response quality on flash-lite
+    parts = [f"Today is {today.isoformat()}. Always reply in the same language as the user."]
 
     if user_prompt:
         parts.append(user_prompt)
@@ -136,3 +125,26 @@ def build_system_prompt(user_prompt: str | None = None, context_block: str | Non
         parts.append(context_block)
 
     return "\n".join(parts)
+
+    # === Original system prompt (disabled for testing) ===
+    # parts = [_BASE.format(today=today.isoformat(), year=today.year)]
+    #
+    # # Conditionally include tool-specific sections
+    # if _FLIGHT_KEYWORDS.search(user_message):
+    #     parts.append(_FLIGHT_SECTION)
+    # if _AMAZON_KEYWORDS.search(user_message):
+    #     parts.append(_AMAZON_SECTION)
+    # if _MAPS_KEYWORDS.search(user_message):
+    #     parts.append(_MAPS_SECTION)
+    # if _URL_PATTERN.search(user_message):
+    #     parts.append(_URL_SECTION)
+    #
+    # # Web search section
+    # parts.append(_WEB_SEARCH_ENABLED if has_web_search else _WEB_SEARCH_DISABLED)
+    #
+    # if user_prompt:
+    #     parts.append(user_prompt)
+    # if context_block:
+    #     parts.append(context_block)
+    #
+    # return "\n".join(parts)
