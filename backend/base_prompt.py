@@ -88,8 +88,7 @@ Search for the URL via web search to retrieve contents. NEVER say "URLにアク�
 
 _WEB_SEARCH_ENABLED = """
 ## Web Search
-Use web search for EVERY question unless it is about unchanging facts (math, grammar, geography basics).
-For travel, places, food, hotels, transport, events, prices, hours, availability, products, reviews, news, weather — ALWAYS search. Do NOT rely on your training data for these.
+ALWAYS use web search for EVERY question. No exceptions. Even if you think you know the answer, search first to ensure accuracy and freshness.
 NEVER say "I cannot search" — you CAN. Do it.
 
 ### Place & Location Queries (CRITICAL)
