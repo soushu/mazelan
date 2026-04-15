@@ -853,7 +853,7 @@ async def stream_google(
     enable_search = False
     has_flight = False
     func_tools = None
-    # Detect if message contains images (google_search grounding is incompatible with images)
+    # Detect if message contains images
     has_images = any(
         hasattr(p, "inline_data") and p.inline_data
         for c in gemini_contents if hasattr(c, "parts")
@@ -861,9 +861,8 @@ async def stream_google(
     )
     if not disable_tools:
         if has_images:
-            # google_search grounding is incompatible with image inputs.
-            # 2-step approach: first recognize image (no tools), then search with text.
-            # Image recognition happens in the streaming loop below.
+            # Image requests are handled separately in the streaming loop below
+            # (single request with google_search, fallback to image-only)
             pass
         elif web_search_only:
             config.tools = _gemini_search_tool()
@@ -929,42 +928,21 @@ async def stream_google(
         try:
             logger.info("Gemini: trying key [%s] for model %s", label, model)
 
-            # 2-step image handling: recognize image first, then search with text
+            # Image handling: try single request (image + google_search), fallback to image-only
             if has_images and not disable_tools:
+                client = genai.Client(api_key=key)
+                total_input = 0
+                total_output = 0
+
+                # Attempt 1: image + google_search in a single request
                 try:
-                    client = genai.Client(api_key=key)
-                    # Step 1: Image recognition (no tools, with image)
-                    img_config = genai_types.GenerateContentConfig(max_output_tokens=1024)
-                    img_config.system_instruction = "Describe what you see in the image concisely in the same language as the user's message."
-                    img_response = await client.aio.models.generate_content(
-                        model=model, contents=gemini_contents, config=img_config,
-                    )
-                    image_description = img_response.text or ""
-                    logger.info("Gemini image recognition: %s", image_description[:100])
-
-                    # Step 2: Build text-only query with image description + user question
-                    last_user_text = ""
-                    for c in reversed(gemini_contents):
-                        if hasattr(c, "role") and c.role == "user":
-                            for p in c.parts:
-                                if hasattr(p, "text") and p.text:
-                                    last_user_text = p.text
-                                    break
-                            break
-
-                    combined_query = f"[画像の内容: {image_description}]\n\nユーザーの質問: {last_user_text}"
-                    text_contents = [genai_types.Content(role="user", parts=[genai_types.Part.from_text(text=combined_query)])]
-                    text_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
+                    search_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
                     if system_prompt:
-                        text_config.system_instruction = system_prompt
-                    text_config.tools = _gemini_search_tool()
-
-                    # Stream the search-enhanced response
+                        search_config.system_instruction = system_prompt
+                    search_config.tools = _gemini_search_tool()
                     stream = await client.aio.models.generate_content_stream(
-                        model=model, contents=text_contents, config=text_config,
+                        model=model, contents=gemini_contents, config=search_config,
                     )
-                    total_input = 0
-                    total_output = 0
                     async for chunk in stream:
                         if chunk.text:
                             yield chunk.text
@@ -975,17 +953,14 @@ async def stream_google(
                     yield {"input_tokens": total_input, "output_tokens": total_output}
                     return  # Success
                 except Exception as e:
-                    # Fallback: answer with image directly, no web search
-                    logger.warning("Gemini 2-step image processing failed, falling back: %s", repr(e))
+                    # Attempt 2: image without google_search (API may not support image + search)
+                    logger.warning("Gemini image+search failed, falling back to image-only: %s", repr(e))
                     fallback_config = genai_types.GenerateContentConfig(max_output_tokens=4096)
                     if system_prompt:
                         fallback_config.system_instruction = system_prompt
-                    client = genai.Client(api_key=key)
                     stream = await client.aio.models.generate_content_stream(
                         model=model, contents=gemini_contents, config=fallback_config,
                     )
-                    total_input = 0
-                    total_output = 0
                     async for chunk in stream:
                         if chunk.text:
                             yield chunk.text
