@@ -14,7 +14,11 @@ _MAPS_KEYWORDS = re.compile(
     r'営業|開い[てる]|閉[まめ店]|やって[るい]|閉業|閉店|'
     r'(確認|チェック).{0,5}(店|レストラン|カフェ|ホテル)|'
     r'(店|レストラン|カフェ|ホテル).{0,5}(確認|チェック)|'
-    r'google\s*maps|グーグルマップ',
+    r'google\s*maps|グーグルマップ|'
+    r'近く.{0,10}(カフェ|レストラン|店|食事|ご飯|食べ)|'
+    r'(カフェ|レストラン|店|食事|ご飯).{0,10}(探|教|おすすめ|ありま)|'
+    r'(おすすめ|人気|良い|いい).{0,5}(カフェ|レストラン|店|食堂|居酒屋)|'
+    r'(cafe|restaurant|food|eat).{0,10}near',
     re.IGNORECASE,
 )
 _URL_PATTERN = re.compile(r'https?://')
@@ -74,9 +78,20 @@ Only use amazon_product_search when user explicitly asks for links (e.g. "リン
 # ── Maps section ──
 
 _MAPS_SECTION = """
-## Place Verification
-When recommending places: use google_maps_search to verify they're open (max 3-5). Skip for airports/landmarks.
-Include [Place Name](https://www.google.com/maps/search/?api=1&query=FULL+NAME+CITY+COUNTRY) links."""
+## Place Recommendation (CRITICAL — follow this exact flow)
+When the user asks for places (cafes, restaurants, shops, etc.):
+
+**Step 1: Web search** — Search multiple queries to find candidates with reviews/ratings (e.g. "best cafes near [location]", "[area] laptop friendly cafe reviews", "[area] cafe rating"). This is FREE — search as much as needed.
+**Step 2: Pick TOP 3** — From search results, select the 3 best candidates based on reviews, ratings, relevance to user's needs.
+**Step 3: Verify with google_maps_search** — Call google_maps_search for EACH of the 3 candidates to get accurate address, rating, hours, and Maps link. MAX 3 calls (to conserve API quota).
+**Step 4: Present results** — For each verified place, include:
+  - Business name + Google Maps link (use the maps_link from tool result)
+  - Distance from user's location
+  - Rating and review count
+  - Operating hours
+  - Why it matches the user's needs
+
+NEVER skip Step 3. NEVER present places without verifying via google_maps_search first. Skip verification only for well-known landmarks/airports."""
 
 # ── URL section ──
 

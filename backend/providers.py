@@ -131,7 +131,11 @@ _MAPS_KEYWORDS = re.compile(
     r'営業|開い[てる]|閉[まめ店]|やって[るい]|閉業|閉店|'
     r'(確認|チェック).{0,5}(店|レストラン|カフェ|ホテル)|'
     r'(店|レストラン|カフェ|ホテル).{0,5}(確認|チェック)|'
-    r'google\s*maps|グーグルマップ',
+    r'google\s*maps|グーグルマップ|'
+    r'近く.{0,10}(カフェ|レストラン|店|食事|ご飯|食べ)|'
+    r'(カフェ|レストラン|店|食事|ご飯).{0,10}(探|教|おすすめ|ありま)|'
+    r'(おすすめ|人気|良い|いい).{0,5}(カフェ|レストラン|店|食堂|居酒屋)|'
+    r'(cafe|restaurant|food|eat).{0,10}near',
     re.IGNORECASE,
 )
 _FLIGHT_KEYWORDS = re.compile(
@@ -851,6 +855,7 @@ async def stream_google(
                     msg_dicts.append({"role": c.role, "content": text})
             active_tools = _filter_tools_by_message(msg_dicts)
             has_flight = "flight_search" in active_tools
+            has_maps = "google_maps_search" in active_tools
             func_tools = _gemini_function_tools(gemini_contents)
 
             if has_flight and func_tools:
@@ -874,6 +879,10 @@ async def stream_google(
                     "注意: カンボジアのプノンペンはPNHではなくKTI（テチョー国際空港）、シェムリアップはREPではなくSAI（シェムリアップ・アンコール国際空港）です。"
                     "東京(NRT/HND)と大阪(KIX/ITM)の場合は質問せず、両方のコードを回答してください。"
                 )
+            elif has_maps and func_tools:
+                # 2-step: google_search first (find candidates), then function_calling (verify with Maps)
+                config.tools = _gemini_search_tool()
+                enable_search = True
             elif func_tools:
                 config.tools = func_tools
             else:
@@ -967,7 +976,7 @@ async def stream_google(
                     yield {"input_tokens": total_input, "output_tokens": total_output}
                     return
 
-            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search, has_tool_keywords=has_tool_keywords, func_tools_for_later=func_tools if has_flight else None):
+            async for chunk in _stream_google_with_key(model, gemini_contents, config, key, enable_search=enable_search, has_tool_keywords=has_tool_keywords, func_tools_for_later=func_tools if (has_flight or has_maps) else None):
                 yield chunk
             return  # Success
         except (ProviderSpendLimitError, ProviderRateLimitError) as e:
