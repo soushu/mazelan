@@ -695,8 +695,11 @@ async def _stream_google_with_key(
                 usage_data = None
                 function_calls = []
                 buffered_text = []
+                has_any_text = False
+                finish_reason = None
                 async for chunk in stream:
                     if chunk.text:
+                        has_any_text = True
                         if may_switch_tools and not used_function_calling:
                             # Buffer text until we know the final tool path
                             buffered_text.append(chunk.text)
@@ -708,13 +711,23 @@ async def _stream_google_with_key(
                             "input_tokens": getattr(um, "prompt_token_count", 0) or 0,
                             "output_tokens": getattr(um, "candidates_token_count", 0) or 0,
                         }
-                    # Detect function calls
+                    # Detect function calls and finish reason
                     if chunk.candidates:
                         for candidate in chunk.candidates:
+                            if hasattr(candidate, "finish_reason") and candidate.finish_reason:
+                                finish_reason = candidate.finish_reason
                             if candidate.content and candidate.content.parts:
                                 for part in candidate.content.parts:
                                     if hasattr(part, "function_call") and part.function_call and part.function_call.name:
                                         function_calls.append(part.function_call)
+
+                # Check for safety block or empty response
+                if finish_reason and str(finish_reason).upper() in ("SAFETY", "2"):
+                    logger.warning("Gemini response blocked by safety filter (finish_reason=%s)", finish_reason)
+                    yield "\n\n⚠️ 申し訳ありません。安全性フィルターにより回答が生成できませんでした。質問を言い換えてお試しください。"
+                    yield {"input_tokens": total_input + (usage_data["input_tokens"] if usage_data else 0),
+                           "output_tokens": total_output + (usage_data["output_tokens"] if usage_data else 0)}
+                    return
 
                 if usage_data:
                     total_input += usage_data["input_tokens"]
@@ -757,6 +770,10 @@ async def _stream_google_with_key(
                     # Done — flush any buffered text
                     for t in buffered_text:
                         yield t
+                    # Guard: if no text was produced at all, log and yield error
+                    if not has_any_text and not buffered_text:
+                        logger.warning("Gemini returned empty response (model=%s, finish_reason=%s)", model, finish_reason)
+                        yield "\n\n⚠️ 回答を生成できませんでした。もう一度お試しください。"
                     yield {"input_tokens": total_input, "output_tokens": total_output}
                     return
 

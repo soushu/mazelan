@@ -129,6 +129,12 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
         # Strip status markers and excessively long URLs before saving to DB
         clean_response = re.sub(r"<!--STATUS:.*?-->", "", full_response)
         clean_response = re.sub(r"\[([^\]]*)\]\(https?://[^\)]{500,}\)", r"[\1](リンク省略)", clean_response)
+
+        # Don't save empty assistant messages to DB
+        if not clean_response.strip():
+            logger.warning("Empty assistant response for session %s, skipping DB save", session_id)
+            return
+
         assistant_msg = Message(
             session_id=session_id, role="assistant", content=clean_response, model=model,
             input_tokens=usage_info.get("input_tokens") if usage_info else None,
