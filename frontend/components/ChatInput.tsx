@@ -157,6 +157,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter") return;
+    // IME変換中（日本語入力等）はEnterで送信しない
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     // Mobile: Enter = newline (send via button only)
     if (isMobile) return;
     // PC: Ctrl/Cmd/Shift+Enter = insert newline
