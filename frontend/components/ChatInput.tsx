@@ -114,7 +114,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [thinking, setThinking] = useState(false);
   const [translationMode, setTranslationMode] = useState(() => getSessionTranslationMode(sessionId));
   const [isRecording, setIsRecording] = useState(false);
-  const [recordError, setRecordError] = useState<string | null>(null);
+  const [micErrorModal, setMicErrorModal] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const hasGoogleKey = !!getApiKeyForProvider("google");
@@ -197,9 +197,9 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   }
 
   async function startRecording() {
-    setRecordError(null);
+    setMicErrorModal(null);
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setRecordError("このブラウザはマイク入力に対応していません");
+      setMicErrorModal("このブラウザはマイク入力に対応していません");
       return;
     }
     try {
@@ -221,10 +221,10 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch (err) {
-      setRecordError(
+      setMicErrorModal(
         err instanceof DOMException && err.name === "NotAllowedError"
-          ? "マイクのアクセスが拒否されました。ブラウザの設定から許可してください"
-          : "マイクを起動できませんでした"
+          ? "マイクのアクセスが拒否されています。ブラウザのサイト設定からマイクを許可してください。"
+          : "マイクを起動できませんでした。"
       );
     }
   }
@@ -629,12 +629,28 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             ⚠️ 翻訳精度を重視するなら <strong>Gemini 2.5 Pro</strong> 推奨（Flash Lite はベトナム語→日本語の方向判定が弱いことがあります）
           </p>
         )}
-
-        {/* Mic / recording error message */}
-        {recordError && (
-          <p className="text-xs text-red-500 mt-1 ml-1">⚠️ {recordError}</p>
-        )}
       </div>
+
+      {/* Mic permission / device error modal */}
+      {micErrorModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay"
+          onClick={() => setMicErrorModal(null)}
+        >
+          <div
+            className="bg-theme-elevated rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-t-primary mb-4">⚠️ {micErrorModal}</p>
+            <button
+              onClick={() => setMicErrorModal(null)}
+              className="w-full py-2 bg-theme-active text-t-primary rounded-lg text-sm hover:opacity-80 transition-opacity"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
