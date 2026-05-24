@@ -671,12 +671,12 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           </button>
         </div>
 
-        {/* Translation mode quality nudge: 2.5 Flash variants are weaker than Pro for
-            Vietnamese nuance. 3.5 Flash is newer (May 2026) and likely competitive
-            with Pro, so excluded from the warning. */}
+        {/* Translation mode quality nudge: 2.5 Flash variants are weaker than newer
+            generation models. Tested 3.5 Flash matches 2.5 Pro quality with faster
+            response and similar cost, so recommend 3.5 Flash. */}
         {translationMode && (selectedModel === "gemini-2.5-flash-lite" || selectedModel === "gemini-2.5-flash") && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-1">
-            ⚠️ 翻訳精度を重視するなら <strong>Gemini 2.5 Pro</strong> 推奨（2.5 Flash系はベトナム語の文化的ニュアンスや方向判定が劣ることがあります）
+            ⚠️ 翻訳精度を重視するなら <strong>Gemini 3.5 Flash</strong> 推奨（最新世代で精度高く、応答も速い）
           </p>
         )}
       </div>
