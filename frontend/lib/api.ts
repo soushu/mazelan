@@ -85,6 +85,7 @@ export async function* streamChat(
   anthropicKey?: string | null,
   thinking?: boolean,
   googleFallbackKey?: string | null,
+  translationMode?: boolean,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
@@ -92,6 +93,9 @@ export async function* streamChat(
   }
   if (thinking) {
     body.thinking = true;
+  }
+  if (translationMode) {
+    body.translation_mode = true;
   }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));

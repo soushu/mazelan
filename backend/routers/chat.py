@@ -43,6 +43,7 @@ class ChatRequest(BaseModel):
     images: list[ImageAttachment] = []
     model: str = "gemini-2.5-flash-lite"
     thinking: bool = False
+    translation_mode: bool = False
 
     @field_validator("content")
     @classmethod
@@ -57,7 +58,7 @@ class ChatRequest(BaseModel):
         return validate_image_count(v)
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-2.5-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-2.5-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None, disable_tools: bool = False):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -113,7 +114,7 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
             return
 
         usage_info = None
-        async for chunk in stream_provider(model, messages, api_key, system_prompt, thinking=thinking, google_fallback=google_fallback):
+        async for chunk in stream_provider(model, messages, api_key, system_prompt, thinking=thinking, google_fallback=google_fallback, disable_tools=disable_tools):
             if isinstance(chunk, dict):
                 usage_info = chunk
             else:
@@ -237,9 +238,13 @@ async def chat(
         context_block = "<context_memory>\nHere are things you know about the user:\n" + "\n".join(context_lines) + "\n</context_memory>"
 
     has_web_search = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
-    system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search, user_message=req.content)
+    # Translation mode: disable web search + user/context prompts, use pure translation prompt
+    if req.translation_mode:
+        system_prompt = build_system_prompt(translation_mode=True)
+    else:
+        system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search, user_message=req.content)
 
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking, google_fallback=google_fallback),
+        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking, google_fallback=google_fallback, disable_tools=req.translation_mode),
         media_type="text/plain",
     )

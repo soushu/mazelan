@@ -478,7 +478,7 @@ export default function ChatPage() {
     };
   }
 
-  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) {
+  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean) {
     // Pre-flight: check if API key is needed
     const provider = getProviderForModel(model);
     const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
@@ -600,7 +600,7 @@ export default function ChatPage() {
         }
         let thinkingCleared = false;
         if (thinking) setToolStatus(t("chat.thinkingStatus"));
-        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey())) {
+        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey(), translationMode)) {
           full += chunk;
           // Clear thinking status once first real text arrives
           const displayCheck = full.replace(/<!--STATUS:.*?-->/g, "").replace(/\n<!--USAGE:\{.*?\}-->$/, "");
@@ -721,7 +721,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v60.8
+          DEV v60.9
         </div>
       )}
 
