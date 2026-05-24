@@ -1,6 +1,6 @@
 # Mazelan 詳細設計書
 
-最終更新: 2026-03-21
+最終更新: 2026-05-24
 
 ---
 
@@ -13,7 +13,7 @@ backend/
 ├── main.py              # FastAPI アプリ初期化、ミドルウェア、例外ハンドラ
 ├── database.py          # SQLAlchemy エンジン、セッション管理
 ├── models.py            # ORM モデル（User, ChatSession, Message, Context）
-├── schemas.py           # Pydantic バリデーション（画像）
+├── schemas.py           # Pydantic バリデーション（画像・音声）
 ├── dependencies.py      # JWT 認証依存（NextAuth JWT）
 ├── providers.py         # マルチプロバイダー LLM 抽象化
 ├── base_prompt.py       # システムプロンプトテンプレート
@@ -233,7 +233,68 @@ Step 5: スコアリング（price×1.0 + duration×50 + stops×10000）
 4. コンテキストメモリブロック（<context_memory>タグ）
 ```
 
-### 1.8 エラーハンドリング
+### 1.8 翻訳モード処理フロー（base_prompt.py + chat.py + providers.py）
+
+翻訳モードは通常チャットを完全に置き換える特殊モード。
+
+#### リクエストフィールド（ChatRequest）
+
+| フィールド | 型 | デフォルト | 説明 |
+|----------|-----|---------|------|
+| `translation_mode` | bool | `false` | 翻訳モードON/OFF |
+| `translation_fast_mode` | bool | `false` | true=高速（翻訳1行のみ） / false=詳細（翻訳+解説） |
+| `audio` | `AudioAttachment` | `null` | 音声入力（翻訳モード時のみ、Gemini限定） |
+
+#### プロンプト切替
+
+```python
+if req.translation_mode:
+    # 通常の base_prompt / user_prompt / context_block を全部スキップ
+    system_prompt = build_system_prompt(
+        translation_mode=True,
+        translation_fast_mode=req.translation_fast_mode,
+    )
+    # ツールも全部無効化
+    disable_tools = True
+else:
+    system_prompt = build_system_prompt(user_prompt, context_block, ...)
+    disable_tools = False
+```
+
+#### プロンプト内容
+
+| モード | 大きさ | 含む内容 |
+|--------|--------|---------|
+| 高速モード | 約50トークン | 言語判定指示 + 話者前提固定 + カジュアル指示 + 「1行のみ返答」 |
+| 詳細モード | 約130トークン | 上記 + 出力フォーマット定義（翻訳→別表現→ポイント） + 解説言語=入力言語ルール |
+
+両モードとも共通の話者前提:
+- 日本語側 = 年上男性（自分=anh、相手=em）
+- ベトナム語側 = 年下女性（自分=em、相手=anh）
+
+#### 音声入力（マルチモーダル翻訳）
+
+```
+[マイク録音 (MediaRecorder)] → [base64エンコード] → [POST /chat/{id}]
+                                       ↓
+[ChatRequest.audio] → [Gemini Part.from_bytes(audio/webm)]
+                                       ↓
+[Gemini が音声を直接処理して翻訳出力（中間文字起こしなし）]
+```
+
+非Geminiプロバイダーで音声送信時は HTTP 400 を返す。
+
+#### Nginx 設定の重要点
+
+マイクを使うためには `Permissions-Policy` ヘッダで microphone を許可する必要がある:
+
+```nginx
+add_header Permissions-Policy "camera=(), microphone=(self), geolocation=()" always;
+```
+
+`microphone=()` の場合、ブラウザは `getUserMedia` を完全ブロックし、許可ダイアログすら出ない。
+
+### 1.9 エラーハンドリング
 
 #### プロバイダー例外クラス
 
@@ -250,7 +311,7 @@ Step 5: スコアリング（price×1.0 + duration×50 + stops×10000）
 - 方式: 指数バックオフ（2^attempt 秒）
 - 最大リトライ: 3回
 
-### 1.9 レートリミット設定
+### 1.10 レートリミット設定
 
 | エンドポイント | 制限 |
 |---------------|------|
@@ -455,8 +516,12 @@ html 要素にクラスを付与して切替
 
 - **ライブラリ**: next-intl v4
 - **ロケール検出**: Cookie → Accept-Language → デフォルト(en)
-- **翻訳ファイル**: `messages/en.json`, `messages/ja.json`
+- **翻訳ファイル**: `messages/en.json`, `messages/ja.json`, `messages/vi.json`
 - **使用方法**: `useTranslations('namespace')` フック
+- **対応言語**: 英語 / 日本語 / ベトナム語（ブラウザ言語に応じて自動切替、`locale` cookie で上書き可）
+- **言語切替UI**: 現状なし（ブラウザ依存）
+
+ベトナム語 UI は翻訳機能とは別概念。翻訳機能は AI が翻訳する機能であり、i18n UI は画面表示そのものをユーザー言語に合わせる機能。
 
 ### 2.7 認証フロー
 
