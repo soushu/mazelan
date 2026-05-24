@@ -97,6 +97,8 @@ MODEL_REGISTRY: dict[str, dict] = {
     "gemini-2.5-flash-lite":      {"provider": "google",    "label": "Gemini 2.5 Flash Lite", "supports_images": True, "supports_web_search": True,  "input_price": 0.075, "output_price": 0.30},
     "gemini-2.5-flash":           {"provider": "google",    "label": "Gemini 2.5 Flash", "supports_images": True, "supports_web_search": True,  "input_price": 0.15,  "output_price": 0.60},
     "gemini-2.5-pro":             {"provider": "google",    "label": "Gemini 2.5 Pro",   "supports_images": True, "supports_web_search": True,  "input_price": 1.25,  "output_price": 10.0},
+    "gemini-3.5-flash":           {"provider": "google",    "label": "Gemini 3.5 Flash", "supports_images": True, "supports_web_search": True,  "input_price": 1.50,  "output_price": 9.0},
+    "gemini-3.1-pro-preview":     {"provider": "google",    "label": "Gemini 3.1 Pro (Preview)", "supports_images": True, "supports_web_search": True,  "input_price": 2.0,   "output_price": 12.0},
 }
 
 
