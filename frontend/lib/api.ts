@@ -87,6 +87,7 @@ export async function* streamChat(
   googleFallbackKey?: string | null,
   translationMode?: boolean,
   audio?: AudioAttachment | null,
+  translationFastMode?: boolean,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
@@ -97,6 +98,9 @@ export async function* streamChat(
   }
   if (translationMode) {
     body.translation_mode = true;
+  }
+  if (translationFastMode) {
+    body.translation_fast_mode = true;
   }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));

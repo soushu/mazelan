@@ -126,54 +126,36 @@ Answer from knowledge. Note info may not be current."""
 
 # ── Translation mode (replaces the entire base prompt when enabled) ──
 
-_TRANSLATION_PROMPT = """You are a Japanese ⇄ Vietnamese translation specialist.
+_TRANSLATION_PROMPT_FAST = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+Casual, conversational style. Output ONLY the translation on one line. No headers, no notes, no commentary."""
 
-# Direction
-Auto-detect the input language. If the user writes Japanese, translate to Vietnamese. If the user writes Vietnamese, translate to Japanese. If the input is mixed or ambiguous, prefer Japanese → Vietnamese.
+_TRANSLATION_PROMPT_DETAILED = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+Casual, conversational style.
 
-# Output Format (ALWAYS follow this structure)
-[Natural translation on one line]
+Output format:
+[Translation on one line]
 
-より自然な表現:
-[Colloquial / native-sounding version]
+(Header meaning "more natural expression" - in input language)
+[Alternative phrasing, only if meaningfully different]
 
-または:
-[Alternative variation — only if meaningfully different]
+(Header meaning "points" - in input language)
+- [2-3 brief notes about word choice, nuance, or culture]
 
-ポイント:
-- [Vocabulary choice rationale]
-- [Cultural nuance]
-- [North/South dialect note if relevant]
-- [Pronoun / 一人称・二人称 usage note]
-(3-5 bullet points; skip points that don't apply)
-
-# Conversation Partner Profile (fixed for Phase 1)
-- Gender/Age: 女性 / 30代
-- Region: ホーチミン（南部）
-- Self → Partner pronoun: em
-- Partner → Self pronoun: anh
-- Relationship: 親しい友人
-- Formality: カジュアル
-- Notes: なし
-
-# Translation Guidelines
-- Prefer "what a local would actually say" over literal translation.
-- Use 南部 (Saigon) dialect vocabulary and grammar by default.
-- Casual register: use 語尾 like "nha", "nhé", "đó", "luôn", "đâu có" naturally.
-- Vietnamese pronouns reflect the relationship (em ↔ anh fixed above) — apply consistently.
-- For Japanese output: use casual but polite tone befitting close friends (です/ます softened, no 敬語).
-- Do NOT add commentary outside the format above. Do NOT explain that you are translating. Just output the format.
-- Do NOT use any tools or web search. Translate from your own knowledge."""
+CRITICAL: All headers and explanations MUST be written in the INPUT language
+(the language the user wrote in), not the target language.
+- Japanese input → Japanese headers + Japanese explanations
+- Vietnamese input → Vietnamese headers + Vietnamese explanations
+No commentary outside the format above."""
 
 
-def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None, has_web_search: bool = True, user_message: str = "", translation_mode: bool = False) -> str:
+def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None, has_web_search: bool = True, user_message: str = "", translation_mode: bool = False, translation_fast_mode: bool = False) -> str:
     """Build system prompt with only relevant sections based on user message."""
     from datetime import date
     today = date.today()
 
     # Translation mode replaces the entire base prompt — no tools, no web search, no context.
     if translation_mode:
-        return _TRANSLATION_PROMPT
+        return _TRANSLATION_PROMPT_FAST if translation_fast_mode else _TRANSLATION_PROMPT_DETAILED
 
     parts = [_BASE.format(today=today.isoformat(), year=today.year)]
 
