@@ -45,6 +45,7 @@ class ChatRequest(BaseModel):
     model: str = "gemini-2.5-flash-lite"
     thinking: bool = False
     translation_mode: bool = False
+    translation_fast_mode: bool = False  # When true, output only the translation (no headers/explanations)
 
     @field_validator("content")
     @classmethod
@@ -267,7 +268,7 @@ async def chat(
     has_web_search = MODEL_REGISTRY.get(model, {}).get("supports_web_search", False)
     # Translation mode: disable web search + user/context prompts, use pure translation prompt
     if req.translation_mode:
-        system_prompt = build_system_prompt(translation_mode=True)
+        system_prompt = build_system_prompt(translation_mode=True, translation_fast_mode=req.translation_fast_mode)
     else:
         system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search, user_message=req.content)
 

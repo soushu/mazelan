@@ -30,7 +30,7 @@ function getCostLabel(modelId: string, isGoogleFree: boolean): string {
 }
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean, audioBlob?: Blob | null) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean, audioBlob?: Blob | null, translationFastMode?: boolean) => void;
   disabled: boolean;
   sessionId: string | null;
   onOpenApiKeyModal?: (provider?: string) => void;
@@ -97,6 +97,34 @@ function saveSessionTranslationMode(sessionId: string | null, enabled: boolean) 
   } catch {}
 }
 
+// Translation fast mode (per-session, mirrors the translation mode pattern so the toggle
+// state survives the ChatInput remount that happens when a new session is created).
+function getSessionTranslationFastMode(sessionId: string | null): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_fast_modes") || "{}");
+    if (sessionId && data[sessionId] !== undefined) return !!data[sessionId];
+    if (sessionId && data["__pending__"]) {
+      data[sessionId] = true;
+      delete data["__pending__"];
+      localStorage.setItem("mazelan_translation_fast_modes", JSON.stringify(data));
+      return true;
+    }
+    if (!sessionId && data["__pending__"]) return true;
+    return false;
+  } catch { return false; }
+}
+
+function saveSessionTranslationFastMode(sessionId: string | null, enabled: boolean) {
+  try {
+    const key = sessionId || "__pending__";
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_fast_modes") || "{}");
+    if (enabled) data[key] = true;
+    else delete data[key];
+    localStorage.setItem("mazelan_translation_fast_modes", JSON.stringify(data));
+  } catch {}
+}
+
 export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyModal }: Props) {
   const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -113,6 +141,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
   const [translationMode, setTranslationMode] = useState(() => getSessionTranslationMode(sessionId));
+  const [translationFastMode, setTranslationFastMode] = useState(() => getSessionTranslationFastMode(sessionId));
   const [isRecording, setIsRecording] = useState(false);
   const [micErrorModal, setMicErrorModal] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -147,6 +176,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     // preserving the toggle state through the remount that happens after handleSubmit
     // creates a session (parent's key prop changes from "new-X" to "<id>-X").
     setTranslationMode(getSessionTranslationMode(sessionId));
+    setTranslationFastMode(getSessionTranslationFastMode(sessionId));
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
   }, [sessionId]);
@@ -188,7 +218,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   function submit(audioBlob?: Blob | null) {
     const value = ref.current?.value.trim();
     if (!value && attachedImages.length === 0 && !audioBlob) return;
-    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode, audioBlob);
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode, audioBlob, translationFastMode);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
@@ -572,23 +602,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             🔀 {t("input.debate")}
           </button>
 
-          <button
-            onClick={() => {
-              const next = !translationMode;
-              setTranslationMode(next);
-              saveSessionTranslationMode(sessionId, next);
-            }}
-            disabled={disabled}
-            className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-              translationMode
-                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
-                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-            }`}
-            title="日本語 ⇄ ベトナム語 翻訳モード（ホーチミン / em-anh / カジュアル）"
-          >
-            🌐 翻訳 {translationMode ? "(JP⇄VI)" : ""}
-          </button>
-
           {debateMode && (
             <>
               <span className="text-t-muted text-xs select-none">{t("input.vs")}</span>
@@ -620,6 +633,42 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                 ))}
               </select>
             </>
+          )}
+
+          <button
+            onClick={() => {
+              const next = !translationMode;
+              setTranslationMode(next);
+              saveSessionTranslationMode(sessionId, next);
+            }}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+              translationMode
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
+                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+            }`}
+            title="日本語 ⇄ ベトナム語 翻訳モード（ホーチミン / em-anh / カジュアル）"
+          >
+            🌐 翻訳 {translationMode ? "(JP⇄VI)" : ""}
+          </button>
+
+          {translationMode && (
+            <button
+              onClick={() => {
+                const next = !translationFastMode;
+                setTranslationFastMode(next);
+                saveSessionTranslationFastMode(sessionId, next);
+              }}
+              disabled={disabled}
+              className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                translationFastMode
+                  ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/40"
+                  : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+              }`}
+              title="高速モード: 翻訳結果1行のみ、解説なし（応答が速い）"
+            >
+              ⚡ 高速
+            </button>
           )}
         </div>
 
