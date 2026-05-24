@@ -127,9 +127,19 @@ Answer from knowledge. Note info may not be current."""
 # ── Translation mode (replaces the entire base prompt when enabled) ──
 
 _TRANSLATION_PROMPT_FAST = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+
+Speakers (fixed):
+- Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
+- Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
+
 Casual, conversational style. Output ONLY the translation on one line. No headers, no notes, no commentary."""
 
 _TRANSLATION_PROMPT_DETAILED = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+
+Speakers (fixed):
+- Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
+- Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
+
 Casual, conversational style.
 
 Output format:
