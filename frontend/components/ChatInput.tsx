@@ -120,14 +120,24 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     return false;
   }, [selectedModel]);
 
+  const prevSessionIdRef = useRef<string | null>(sessionId);
   useEffect(() => {
+    const prev = prevSessionIdRef.current;
+    prevSessionIdRef.current = sessionId;
     const { model, model2 } = getSessionModel(sessionId);
     setSelectedModel(model);
     setSecondModel(model2);
     setDebateMode(false);
-    setTranslationMode(getSessionTranslationMode(sessionId));
+    // null → newId means a session was just created mid-conversation.
+    // Persist the current toggle state rather than resetting it.
+    if (prev === null && sessionId !== null) {
+      saveSessionTranslationMode(sessionId, translationMode);
+    } else {
+      setTranslationMode(getSessionTranslationMode(sessionId));
+    }
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   useEffect(() => {
