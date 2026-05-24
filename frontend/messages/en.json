@@ -98,9 +98,23 @@
     "thinkingMode": "Thinking mode",
     "fastDescription": "Quick response",
     "thinkingDescription": "Solve complex problems",
+    "fastDescriptionTranslation": "Translation only, no explanations",
+    "thinkingDescriptionTranslation": "Translation + explanations (more detailed)",
     "debateMode": "Debate mode",
     "debate": "Debate",
     "vs": "vs"
+  },
+  "translation": {
+    "toggleLabel": "🌐 Translate",
+    "toggleActiveSuffix": "(JP⇄VI)",
+    "toggleTitle": "Japanese ⇄ Vietnamese translation mode (Ho Chi Minh / em-anh / casual)",
+    "qualityWarning": "For better accuracy, use <strong>Gemini 3.5 Flash</strong> (newer generation, more accurate and faster)",
+    "voicePlaceholder": "🎤 [Voice input]",
+    "voiceTitleStart": "Voice input (press to start recording, press again to send)",
+    "voiceTitleStop": "Stop recording",
+    "voiceErrorNoSupport": "This browser does not support microphone input",
+    "voiceErrorDenied": "Microphone access denied. Please allow microphone in your browser's site settings.",
+    "voiceErrorGeneric": "Could not start the microphone."
   },
   "apiKey": {
     "title": "API Key Settings",

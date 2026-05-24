@@ -98,9 +98,23 @@
     "thinkingMode": "思考モード",
     "fastDescription": "素早く回答",
     "thinkingDescription": "複雑な問題を解決",
+    "fastDescriptionTranslation": "翻訳結果1行のみ、解説なし",
+    "thinkingDescriptionTranslation": "翻訳結果＋解説（より丁寧な応答）",
     "debateMode": "議論モード",
     "debate": "議論",
     "vs": "vs"
+  },
+  "translation": {
+    "toggleLabel": "🌐 翻訳",
+    "toggleActiveSuffix": "(JP⇄VI)",
+    "toggleTitle": "日本語 ⇄ ベトナム語 翻訳モード（ホーチミン / em-anh / カジュアル）",
+    "qualityWarning": "翻訳精度を重視するなら <strong>Gemini 3.5 Flash</strong> 推奨（最新世代で精度高く、応答も速い）",
+    "voicePlaceholder": "🎤 [音声入力]",
+    "voiceTitleStart": "音声入力（押すと録音開始、もう一度押すと送信）",
+    "voiceTitleStop": "録音停止",
+    "voiceErrorNoSupport": "このブラウザはマイク入力に対応していません",
+    "voiceErrorDenied": "マイクのアクセスが拒否されています。ブラウザのサイト設定からマイクを許可してください。",
+    "voiceErrorGeneric": "マイクを起動できませんでした。"
   },
   "apiKey": {
     "title": "API Key 設定",

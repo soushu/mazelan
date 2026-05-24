@@ -98,9 +98,23 @@
     "thinkingMode": "Chế độ suy nghĩ",
     "fastDescription": "Trả lời nhanh",
     "thinkingDescription": "Giải quyết vấn đề phức tạp",
+    "fastDescriptionTranslation": "Chỉ 1 dòng dịch, không giải thích",
+    "thinkingDescriptionTranslation": "Bản dịch + giải thích (chi tiết hơn)",
     "debateMode": "Chế độ tranh luận",
     "debate": "Tranh luận",
     "vs": "vs"
+  },
+  "translation": {
+    "toggleLabel": "🌐 Dịch",
+    "toggleActiveSuffix": "(JP⇄VI)",
+    "toggleTitle": "Chế độ dịch Nhật ⇄ Việt (Hồ Chí Minh / em-anh / thân mật)",
+    "qualityWarning": "Để dịch chính xác hơn, nên dùng <strong>Gemini 3.5 Flash</strong> (thế hệ mới, độ chính xác cao và phản hồi nhanh)",
+    "voicePlaceholder": "🎤 [Nhập bằng giọng nói]",
+    "voiceTitleStart": "Nhập bằng giọng nói (nhấn để bắt đầu ghi âm, nhấn lại để gửi)",
+    "voiceTitleStop": "Dừng ghi âm",
+    "voiceErrorNoSupport": "Trình duyệt này không hỗ trợ nhập bằng giọng nói",
+    "voiceErrorDenied": "Quyền truy cập micro bị từ chối. Vui lòng cấp quyền micro trong cài đặt trang của trình duyệt.",
+    "voiceErrorGeneric": "Không thể khởi động micro."
   },
   "apiKey": {
     "title": "Cài đặt API Key",
