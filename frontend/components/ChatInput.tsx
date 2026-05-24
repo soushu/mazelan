@@ -65,20 +65,32 @@ function saveSessionModel(sessionId: string | null, model: ModelId, model2: Mode
   } catch {}
 }
 
+// Translation mode is persisted per session. For new chats (sessionId=null), we save
+// to a "__pending__" key so the state survives the ChatInput remount that happens when
+// activeId changes (the parent's key prop includes activeId, forcing a fresh mount).
 function getSessionTranslationMode(sessionId: string | null): boolean {
-  if (typeof window === "undefined" || !sessionId) return false;
+  if (typeof window === "undefined") return false;
   try {
     const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
-    return !!data[sessionId];
+    if (sessionId && data[sessionId] !== undefined) return !!data[sessionId];
+    // New session just created (sessionId set, no entry yet) → adopt pending state
+    if (sessionId && data["__pending__"]) {
+      data[sessionId] = true;
+      delete data["__pending__"];
+      localStorage.setItem("mazelan_translation_modes", JSON.stringify(data));
+      return true;
+    }
+    if (!sessionId && data["__pending__"]) return true;
+    return false;
   } catch { return false; }
 }
 
 function saveSessionTranslationMode(sessionId: string | null, enabled: boolean) {
-  if (!sessionId) return;
   try {
+    const key = sessionId || "__pending__";
     const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
-    if (enabled) data[sessionId] = true;
-    else delete data[sessionId];
+    if (enabled) data[key] = true;
+    else delete data[key];
     localStorage.setItem("mazelan_translation_modes", JSON.stringify(data));
   } catch {}
 }
@@ -98,7 +110,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
-  const [translationMode, setTranslationMode] = useState(false);
+  const [translationMode, setTranslationMode] = useState(() => getSessionTranslationMode(sessionId));
   const hasGoogleKey = !!getApiKeyForProvider("google");
 
   function isModelLocked(modelId: string, provider: string): boolean {
@@ -120,24 +132,17 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     return false;
   }, [selectedModel]);
 
-  const prevSessionIdRef = useRef<string | null>(sessionId);
   useEffect(() => {
-    const prev = prevSessionIdRef.current;
-    prevSessionIdRef.current = sessionId;
     const { model, model2 } = getSessionModel(sessionId);
     setSelectedModel(model);
     setSecondModel(model2);
     setDebateMode(false);
-    // null → newId means a session was just created mid-conversation.
-    // Persist the current toggle state rather than resetting it.
-    if (prev === null && sessionId !== null) {
-      saveSessionTranslationMode(sessionId, translationMode);
-    } else {
-      setTranslationMode(getSessionTranslationMode(sessionId));
-    }
+    // getSessionTranslationMode adopts __pending__ when sessionId is newly set,
+    // preserving the toggle state through the remount that happens after handleSubmit
+    // creates a session (parent's key prop changes from "new-X" to "<id>-X").
+    setTranslationMode(getSessionTranslationMode(sessionId));
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   useEffect(() => {

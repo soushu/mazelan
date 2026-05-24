@@ -211,7 +211,7 @@ async def chat(
     # For Google models, allow access without user API key if free pool is available (Flash Lite only)
     if not x_api_key:
         if get_provider(model) == "google" and gemini_free_pool.available and model in GEMINI_FREE_POOL_MODELS:
-            pass  # Will use free pool keys (Tier 1: only Flash Lite is $0)
+            pass  # Will use free pool keys (Flash Lite always $0; Flash within Tier 1 free quota, paid on overflow — added 2026-04-13 for A/B test)
         else:
             raise HTTPException(status_code=400, detail="APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。")
 
