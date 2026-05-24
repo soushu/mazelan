@@ -10,10 +10,10 @@ main(本番) → develop(統合) → feature/*(機能) の3層構成。
 4. マージは **必ず `--no-ff`** で行う（`git merge --no-ff feature/*`）。fast-forwardマージ禁止。マージコミットを必ず残すこと
 
 **例外:**
-- CLAUDE.md・ドキュメントのみの変更は develop に直接コミット可（デプロイに影響しないため）
+- CLAUDE.md・ドキュメント類（README.md / doc/*.md など）のみの変更は **main に直接コミット可**（develop を経由しない、デプロイには影響しないため）。コミット後 main を push。develop には次の develop→main マージ時にまとめて反映される
 
 **禁止事項:**
-- main に直接コミットしない
+- main に直接コミットしない（ドキュメントのみの変更は例外）
 - develop に直接コミットしない（必ず feature/* 経由。上記例外を除く）
 - feature ブランチはマージ後も削除しない
 - fast-forwardマージしない（必ず `--no-ff` を付ける）
