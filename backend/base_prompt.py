@@ -124,11 +124,48 @@ _WEB_SEARCH_DISABLED = """
 ## No Web Search Mode
 Answer from knowledge. Note info may not be current."""
 
+# ── Translation mode (replaces the entire base prompt when enabled) ──
 
-def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None, has_web_search: bool = True, user_message: str = "") -> str:
+_TRANSLATION_PROMPT_FAST = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+
+Speakers (fixed):
+- Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
+- Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
+
+Casual, conversational style. Output ONLY the translation on one line. No headers, no notes, no commentary."""
+
+_TRANSLATION_PROMPT_DETAILED = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
+
+Speakers (fixed):
+- Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
+- Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
+
+Casual, conversational style.
+
+Output format:
+[Translation on one line]
+
+(Header meaning "more natural expression" - in input language)
+[Alternative phrasing, only if meaningfully different]
+
+(Header meaning "points" - in input language)
+- [2-3 brief notes about word choice, nuance, or culture]
+
+CRITICAL: All headers and explanations MUST be written in the INPUT language
+(the language the user wrote in), not the target language.
+- Japanese input → Japanese headers + Japanese explanations
+- Vietnamese input → Vietnamese headers + Vietnamese explanations
+No commentary outside the format above."""
+
+
+def build_system_prompt(user_prompt: str | None = None, context_block: str | None = None, has_web_search: bool = True, user_message: str = "", translation_mode: bool = False, translation_fast_mode: bool = False) -> str:
     """Build system prompt with only relevant sections based on user message."""
     from datetime import date
     today = date.today()
+
+    # Translation mode replaces the entire base prompt — no tools, no web search, no context.
+    if translation_mode:
+        return _TRANSLATION_PROMPT_FAST if translation_fast_mode else _TRANSLATION_PROMPT_DETAILED
 
     parts = [_BASE.format(today=today.isoformat(), year=today.year)]
 

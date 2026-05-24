@@ -9,6 +9,8 @@ const COST_LABELS: Record<string, string> = {
   "gemini-2.5-flash-lite": "x1",
   "gemini-2.5-flash": "x2",
   "gemini-2.5-pro": "x30",
+  "gemini-3.5-flash": "x28",
+  "gemini-3.1-pro-preview": "x37",
   "gpt-4o-mini": "x1",
   "o3-mini": "x7",
   "gpt-4o": "x17",
@@ -28,7 +30,7 @@ function getCostLabel(modelId: string, isGoogleFree: boolean): string {
 }
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean, audioBlob?: Blob | null, translationFastMode?: boolean) => void;
   disabled: boolean;
   sessionId: string | null;
   onOpenApiKeyModal?: (provider?: string) => void;
@@ -65,6 +67,64 @@ function saveSessionModel(sessionId: string | null, model: ModelId, model2: Mode
   } catch {}
 }
 
+// Translation mode is persisted per session. For new chats (sessionId=null), we save
+// to a "__pending__" key so the state survives the ChatInput remount that happens when
+// activeId changes (the parent's key prop includes activeId, forcing a fresh mount).
+function getSessionTranslationMode(sessionId: string | null): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
+    if (sessionId && data[sessionId] !== undefined) return !!data[sessionId];
+    // New session just created (sessionId set, no entry yet) → adopt pending state
+    if (sessionId && data["__pending__"]) {
+      data[sessionId] = true;
+      delete data["__pending__"];
+      localStorage.setItem("mazelan_translation_modes", JSON.stringify(data));
+      return true;
+    }
+    if (!sessionId && data["__pending__"]) return true;
+    return false;
+  } catch { return false; }
+}
+
+function saveSessionTranslationMode(sessionId: string | null, enabled: boolean) {
+  try {
+    const key = sessionId || "__pending__";
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
+    if (enabled) data[key] = true;
+    else delete data[key];
+    localStorage.setItem("mazelan_translation_modes", JSON.stringify(data));
+  } catch {}
+}
+
+// Translation fast mode (per-session, mirrors the translation mode pattern so the toggle
+// state survives the ChatInput remount that happens when a new session is created).
+function getSessionTranslationFastMode(sessionId: string | null): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_fast_modes") || "{}");
+    if (sessionId && data[sessionId] !== undefined) return !!data[sessionId];
+    if (sessionId && data["__pending__"]) {
+      data[sessionId] = true;
+      delete data["__pending__"];
+      localStorage.setItem("mazelan_translation_fast_modes", JSON.stringify(data));
+      return true;
+    }
+    if (!sessionId && data["__pending__"]) return true;
+    return false;
+  } catch { return false; }
+}
+
+function saveSessionTranslationFastMode(sessionId: string | null, enabled: boolean) {
+  try {
+    const key = sessionId || "__pending__";
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_fast_modes") || "{}");
+    if (enabled) data[key] = true;
+    else delete data[key];
+    localStorage.setItem("mazelan_translation_fast_modes", JSON.stringify(data));
+  } catch {}
+}
+
 export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyModal }: Props) {
   const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -80,6 +140,12 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
+  const [translationMode, setTranslationMode] = useState(() => getSessionTranslationMode(sessionId));
+  const [translationFastMode, setTranslationFastMode] = useState(() => getSessionTranslationFastMode(sessionId));
+  const [isRecording, setIsRecording] = useState(false);
+  const [micErrorModal, setMicErrorModal] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const hasGoogleKey = !!getApiKeyForProvider("google");
 
   function isModelLocked(modelId: string, provider: string): boolean {
@@ -106,6 +172,11 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     setSelectedModel(model);
     setSecondModel(model2);
     setDebateMode(false);
+    // getSessionTranslationMode adopts __pending__ when sessionId is newly set,
+    // preserving the toggle state through the remount that happens after handleSubmit
+    // creates a session (parent's key prop changes from "new-X" to "<id>-X").
+    setTranslationMode(getSessionTranslationMode(sessionId));
+    setTranslationFastMode(getSessionTranslationFastMode(sessionId));
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
   }, [sessionId]);
@@ -144,16 +215,67 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function submit() {
+  function submit(audioBlob?: Blob | null) {
     const value = ref.current?.value.trim();
-    if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking);
+    if (!value && attachedImages.length === 0 && !audioBlob) return;
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode, audioBlob, translationFastMode);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
     if (debateMode) setDebateMode(false);
     setPreviews([]);
   }
+
+  async function startRecording() {
+    setMicErrorModal(null);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setMicErrorModal(t("translation.voiceErrorNoSupport"));
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        // Stop the underlying tracks so the mic indicator goes away
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        audioChunksRef.current = [];
+        // Auto-submit the audio (translation mode handles the rest)
+        if (blob.size > 0) submit(blob);
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (err) {
+      setMicErrorModal(
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? t("translation.voiceErrorDenied")
+          : t("translation.voiceErrorGeneric")
+      );
+    }
+  }
+
+  function stopRecording() {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+  }
+
+  // Stop recording cleanly if the component unmounts mid-recording
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter") return;
@@ -205,7 +327,19 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     handleFiles(e.dataTransfer?.files || null);
   }, []);
 
-  const modeLabel = thinking && supportsThinking ? t("input.thinkingMode") : t("input.fastMode");
+  // When translation mode is ON, the mode toggle controls translation detail level
+  // (高速 = 翻訳1行のみ / 思考 = 翻訳+解説). Otherwise it controls the model's thinking flag.
+  const isThinkingSelected = translationMode ? !translationFastMode : (thinking && supportsThinking);
+  const modeLabel = isThinkingSelected ? t("input.thinkingMode") : t("input.fastMode");
+
+  function setFastModeSelection(useFast: boolean) {
+    // useFast=true means user picked 高速モード; false means 思考モード
+    setThinking(!useFast);
+    if (translationMode) {
+      setTranslationFastMode(useFast);
+      saveSessionTranslationFastMode(sessionId, useFast);
+    }
+  }
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Push input area above mobile keyboard/predictive bar using visualViewport
@@ -346,14 +480,16 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Right group: mode selector + send */}
-            {supportsThinking && (
+            {/* Right group: mode selector + send.
+                Shown when the model supports thinking OR translation mode is on
+                (in translation mode the menu controls translation detail level). */}
+            {(supportsThinking || translationMode) && (
               <div className="relative" ref={modeMenuRef}>
                 <button
                   onClick={() => setModeMenuOpen(!modeMenuOpen)}
                   disabled={disabled}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                    thinking
+                    isThinkingSelected
                       ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
                       : "text-t-muted hover:text-t-secondary bg-theme-hover/50"
                   }`}
@@ -367,41 +503,63 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                 {modeMenuOpen && (
                   <div className="absolute bottom-full right-0 mb-2 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
                     <button
-                      onClick={() => { setThinking(false); setModeMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-3 transition-colors ${!thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                      onClick={() => { setFastModeSelection(true); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${!isThinkingSelected ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-t-secondary">{t("input.fastMode")}</span>
-                        {!thinking && (
+                        {!isThinkingSelected && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">{t("input.fastDescription")}</p>
+                      <p className="text-xs text-t-muted mt-0.5">
+                        {translationMode ? t("input.fastDescriptionTranslation") : t("input.fastDescription")}
+                      </p>
                     </button>
                     <button
-                      onClick={() => { setThinking(true); setModeMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-3 transition-colors ${thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                      onClick={() => { setFastModeSelection(false); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${isThinkingSelected ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-t-secondary">{t("input.thinkingMode")}</span>
-                        {thinking && (
+                        {isThinkingSelected && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">{t("input.thinkingDescription")}</p>
+                      <p className="text-xs text-t-muted mt-0.5">
+                        {translationMode ? t("input.thinkingDescriptionTranslation") : t("input.thinkingDescription")}
+                      </p>
                     </button>
                   </div>
                 )}
               </div>
             )}
 
+            {/* Mic button: voice input for translation mode (audio sent to Gemini multimodal) */}
+            {translationMode && (
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={disabled}
+                className={`p-1.5 rounded-full disabled:opacity-50 transition-colors ${
+                  isRecording
+                    ? "bg-red-500/20 text-red-500 animate-pulse"
+                    : "text-t-muted hover:text-t-secondary"
+                }`}
+                title={isRecording ? t("translation.voiceTitleStop") : t("translation.voiceTitleStart")}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                </svg>
+              </button>
+            )}
+
             {/* Right: send */}
             <button
-              onClick={submit}
+              onClick={() => submit()}
               disabled={disabled}
               className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
               title={t("chat.send")}
@@ -494,8 +652,55 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
               </select>
             </>
           )}
+
+          <button
+            onClick={() => {
+              const next = !translationMode;
+              setTranslationMode(next);
+              saveSessionTranslationMode(sessionId, next);
+            }}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+              translationMode
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
+                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+            }`}
+            title={t("translation.toggleTitle")}
+          >
+            {t("translation.toggleLabel")} {translationMode ? t("translation.toggleActiveSuffix") : ""}
+          </button>
         </div>
+
+        {/* Translation mode quality nudge: 2.5 Flash variants are weaker than newer
+            generation models. Tested 3.5 Flash matches 2.5 Pro quality with faster
+            response and similar cost, so recommend 3.5 Flash. */}
+        {translationMode && (selectedModel === "gemini-2.5-flash-lite" || selectedModel === "gemini-2.5-flash") && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-1">
+            ⚠️ {t.rich("translation.qualityWarning", { strong: (chunks) => <strong>{chunks}</strong> })}
+          </p>
+        )}
       </div>
+
+      {/* Mic permission / device error modal */}
+      {micErrorModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay"
+          onClick={() => setMicErrorModal(null)}
+        >
+          <div
+            className="bg-theme-elevated rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-t-primary mb-4">⚠️ {micErrorModal}</p>
+            <button
+              onClick={() => setMicErrorModal(null)}
+              className="w-full py-2 bg-theme-active text-t-primary rounded-lg text-sm hover:opacity-80 transition-opacity"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
