@@ -9,6 +9,8 @@ const COST_LABELS: Record<string, string> = {
   "gemini-2.5-flash-lite": "x1",
   "gemini-2.5-flash": "x2",
   "gemini-2.5-pro": "x30",
+  "gemini-3.5-flash": "x28",
+  "gemini-3.1-pro-preview": "x37",
   "gpt-4o-mini": "x1",
   "o3-mini": "x7",
   "gpt-4o": "x17",
