@@ -671,10 +671,11 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           </button>
         </div>
 
-        {/* Translation mode quality nudge: Flash Lite handles JP→VI OK but is unreliable for VI→JP */}
-        {translationMode && selectedModel === "gemini-2.5-flash-lite" && (
+        {/* Translation mode quality nudge: Flash variants are cheaper but less reliable
+            than Pro for translation (especially VI→JP nuance). Show for any Flash model. */}
+        {translationMode && /flash/.test(selectedModel) && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-1">
-            ⚠️ 翻訳精度を重視するなら <strong>Gemini 2.5 Pro</strong> 推奨（Flash Lite はベトナム語→日本語の方向判定が弱いことがあります）
+            ⚠️ 翻訳精度を重視するなら <strong>Gemini 2.5 Pro</strong> 推奨（Flash系はベトナム語の文化的ニュアンスや方向判定が劣ることがあります）
           </p>
         )}
       </div>
