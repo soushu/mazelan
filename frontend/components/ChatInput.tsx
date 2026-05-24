@@ -229,7 +229,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   async function startRecording() {
     setMicErrorModal(null);
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setMicErrorModal("このブラウザはマイク入力に対応していません");
+      setMicErrorModal(t("translation.voiceErrorNoSupport"));
       return;
     }
     try {
@@ -253,8 +253,8 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     } catch (err) {
       setMicErrorModal(
         err instanceof DOMException && err.name === "NotAllowedError"
-          ? "マイクのアクセスが拒否されています。ブラウザのサイト設定からマイクを許可してください。"
-          : "マイクを起動できませんでした。"
+          ? t("translation.voiceErrorDenied")
+          : t("translation.voiceErrorGeneric")
       );
     }
   }
@@ -515,7 +515,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                         )}
                       </div>
                       <p className="text-xs text-t-muted mt-0.5">
-                        {translationMode ? "翻訳結果1行のみ、解説なし" : t("input.fastDescription")}
+                        {translationMode ? t("input.fastDescriptionTranslation") : t("input.fastDescription")}
                       </p>
                     </button>
                     <button
@@ -531,7 +531,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                         )}
                       </div>
                       <p className="text-xs text-t-muted mt-0.5">
-                        {translationMode ? "翻訳結果＋解説（より丁寧な応答）" : t("input.thinkingDescription")}
+                        {translationMode ? t("input.thinkingDescriptionTranslation") : t("input.thinkingDescription")}
                       </p>
                     </button>
                   </div>
@@ -549,7 +549,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                     ? "bg-red-500/20 text-red-500 animate-pulse"
                     : "text-t-muted hover:text-t-secondary"
                 }`}
-                title={isRecording ? "録音停止" : "音声入力（押すと録音開始、もう一度押すと送信）"}
+                title={isRecording ? t("translation.voiceTitleStop") : t("translation.voiceTitleStart")}
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
@@ -665,9 +665,9 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
                 : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
             }`}
-            title="日本語 ⇄ ベトナム語 翻訳モード（ホーチミン / em-anh / カジュアル）"
+            title={t("translation.toggleTitle")}
           >
-            🌐 翻訳 {translationMode ? "(JP⇄VI)" : ""}
+            {t("translation.toggleLabel")} {translationMode ? t("translation.toggleActiveSuffix") : ""}
           </button>
         </div>
 
@@ -676,7 +676,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             response and similar cost, so recommend 3.5 Flash. */}
         {translationMode && (selectedModel === "gemini-2.5-flash-lite" || selectedModel === "gemini-2.5-flash") && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-1">
-            ⚠️ 翻訳精度を重視するなら <strong>Gemini 3.5 Flash</strong> 推奨（最新世代で精度高く、応答も速い）
+            ⚠️ {t.rich("translation.qualityWarning", { strong: (chunks) => <strong>{chunks}</strong> })}
           </p>
         )}
       </div>
