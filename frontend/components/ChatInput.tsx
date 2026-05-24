@@ -327,7 +327,19 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     handleFiles(e.dataTransfer?.files || null);
   }, []);
 
-  const modeLabel = thinking && supportsThinking ? t("input.thinkingMode") : t("input.fastMode");
+  // When translation mode is ON, the mode toggle controls translation detail level
+  // (高速 = 翻訳1行のみ / 思考 = 翻訳+解説). Otherwise it controls the model's thinking flag.
+  const isThinkingSelected = translationMode ? !translationFastMode : (thinking && supportsThinking);
+  const modeLabel = isThinkingSelected ? t("input.thinkingMode") : t("input.fastMode");
+
+  function setFastModeSelection(useFast: boolean) {
+    // useFast=true means user picked 高速モード; false means 思考モード
+    setThinking(!useFast);
+    if (translationMode) {
+      setTranslationFastMode(useFast);
+      saveSessionTranslationFastMode(sessionId, useFast);
+    }
+  }
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Push input area above mobile keyboard/predictive bar using visualViewport
@@ -468,14 +480,16 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Right group: mode selector + send */}
-            {supportsThinking && (
+            {/* Right group: mode selector + send.
+                Shown when the model supports thinking OR translation mode is on
+                (in translation mode the menu controls translation detail level). */}
+            {(supportsThinking || translationMode) && (
               <div className="relative" ref={modeMenuRef}>
                 <button
                   onClick={() => setModeMenuOpen(!modeMenuOpen)}
                   disabled={disabled}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                    thinking
+                    isThinkingSelected
                       ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
                       : "text-t-muted hover:text-t-secondary bg-theme-hover/50"
                   }`}
@@ -489,32 +503,36 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
                 {modeMenuOpen && (
                   <div className="absolute bottom-full right-0 mb-2 w-56 bg-theme-input border border-border-secondary rounded-xl shadow-lg overflow-hidden z-20">
                     <button
-                      onClick={() => { setThinking(false); setModeMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-3 transition-colors ${!thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                      onClick={() => { setFastModeSelection(true); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${!isThinkingSelected ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-t-secondary">{t("input.fastMode")}</span>
-                        {!thinking && (
+                        {!isThinkingSelected && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">{t("input.fastDescription")}</p>
+                      <p className="text-xs text-t-muted mt-0.5">
+                        {translationMode ? "翻訳結果1行のみ、解説なし" : t("input.fastDescription")}
+                      </p>
                     </button>
                     <button
-                      onClick={() => { setThinking(true); setModeMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-3 transition-colors ${thinking ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
+                      onClick={() => { setFastModeSelection(false); setModeMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition-colors ${isThinkingSelected ? "bg-theme-hover" : "hover:bg-theme-hover"}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-t-secondary">{t("input.thinkingMode")}</span>
-                        {thinking && (
+                        {isThinkingSelected && (
                           <svg className="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
-                      <p className="text-xs text-t-muted mt-0.5">{t("input.thinkingDescription")}</p>
+                      <p className="text-xs text-t-muted mt-0.5">
+                        {translationMode ? "翻訳結果＋解説（より丁寧な応答）" : t("input.thinkingDescription")}
+                      </p>
                     </button>
                   </div>
                 )}
@@ -651,25 +669,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
           >
             🌐 翻訳 {translationMode ? "(JP⇄VI)" : ""}
           </button>
-
-          {translationMode && (
-            <button
-              onClick={() => {
-                const next = !translationFastMode;
-                setTranslationFastMode(next);
-                saveSessionTranslationFastMode(sessionId, next);
-              }}
-              disabled={disabled}
-              className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                translationFastMode
-                  ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/40"
-                  : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-              }`}
-              title="高速モード: 翻訳結果1行のみ、解説なし（応答が速い）"
-            >
-              ⚡ 高速
-            </button>
-          )}
         </div>
 
         {/* Translation mode quality nudge: Flash Lite handles JP→VI OK but is unreliable for VI→JP */}
