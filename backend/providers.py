@@ -852,6 +852,7 @@ async def stream_google(
         config.system_instruction = system_prompt
     enable_search = False
     has_flight = False
+    has_maps = False
     func_tools = None
     # Detect if message contains images
     has_images = any(
