@@ -33,14 +33,15 @@ from backend.providers import (
     ProviderError,
 )
 
-from backend.schemas import ImageAttachment, validate_image_count
+from backend.schemas import ImageAttachment, AudioAttachment, validate_image_count
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 class ChatRequest(BaseModel):
-    content: str
+    content: str = ""  # Audio-only requests may have empty content
     images: list[ImageAttachment] = []
+    audio: AudioAttachment | None = None
     model: str = "gemini-2.5-flash-lite"
     thinking: bool = False
     translation_mode: bool = False
@@ -58,7 +59,7 @@ class ChatRequest(BaseModel):
         return validate_image_count(v)
 
 
-async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], api_key: str | None = None, model: str = "gemini-2.5-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None, disable_tools: bool = False):
+async def stream_response(session_id: uuid.UUID, content: str, images: list[ImageAttachment] = [], audio: AudioAttachment | None = None, api_key: str | None = None, model: str = "gemini-2.5-flash-lite", system_prompt: str | None = None, user_id: uuid.UUID | None = None, anthropic_key: str | None = None, thinking: bool = False, google_fallback: str | None = None, disable_tools: bool = False):
     # StreamingResponse はルートハンドラの return 後に実行されるため
     # Depends(get_db) のセッションは既に閉じられている。
     # ジェネレーター内で独自にセッションを作成する。
@@ -67,7 +68,10 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
 
     try:
         images_data = [{"media_type": img.media_type, "data": img.data} for img in images] if images else None
-        user_msg = Message(session_id=session_id, role="user", content=content, images=images_data)
+        # For audio-only requests (translation mode), save a placeholder so the user
+        # message bubble shows something meaningful. The audio itself is not persisted.
+        display_content = content if content else ("🎤 [音声入力]" if audio else content)
+        user_msg = Message(session_id=session_id, role="user", content=display_content, images=images_data)
         db.add(user_msg)
         db.commit()
 
@@ -108,6 +112,29 @@ async def stream_response(session_id: uuid.UUID, content: str, images: list[Imag
                 *image_blocks,
                 {"type": "text", "text": content},
             ]
+
+        # Audio attachment (translation mode): inject as a multimodal part.
+        # Preserve any image blocks already set above; use the original content text
+        # (not the DB-loaded placeholder, which would pollute the LLM input).
+        if audio and messages and messages[-1]["role"] == "user":
+            audio_block = {
+                "type": "audio",
+                "source": {
+                    "type": "base64",
+                    "media_type": audio.media_type,
+                    "data": audio.data,
+                },
+            }
+            existing = messages[-1]["content"]
+            if isinstance(existing, list):
+                # Keep image/other blocks, drop the auto-added text (we rebuild from content)
+                preserved = [b for b in existing if isinstance(b, dict) and b.get("type") != "text"]
+            else:
+                preserved = []
+            blocks = [*preserved, audio_block]
+            if content:
+                blocks.append({"type": "text", "text": content})
+            messages[-1]["content"] = blocks
 
         if not api_key and not (get_provider(model) == "google" and gemini_free_pool.available and model in GEMINI_FREE_POOL_MODELS):
             yield "\n\n⚠️ APIキーが設定されていません。サイドバーの「API Key 設定」からキーを設定してください。"
@@ -244,7 +271,11 @@ async def chat(
     else:
         system_prompt = build_system_prompt(user_prompt, context_block, has_web_search=has_web_search, user_message=req.content)
 
+    # Audio attachments require Gemini (multimodal). Reject early for other providers.
+    if req.audio and get_provider(model) != "google":
+        raise HTTPException(status_code=400, detail="音声入力は現在 Gemini モデルでのみ対応しています。")
+
     return StreamingResponse(
-        stream_response(session_id, req.content, req.images, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking, google_fallback=google_fallback, disable_tools=req.translation_mode),
+        stream_response(session_id, req.content, req.images, audio=req.audio, api_key=x_api_key, model=model, system_prompt=system_prompt, user_id=current_user_id, anthropic_key=x_anthropic_key, thinking=req.thinking, google_fallback=google_fallback, disable_tools=req.translation_mode),
         media_type="text/plain",
     )

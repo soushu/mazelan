@@ -30,7 +30,7 @@ function getCostLabel(modelId: string, isGoogleFree: boolean): string {
 }
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean, audioBlob?: Blob | null) => void;
   disabled: boolean;
   sessionId: string | null;
   onOpenApiKeyModal?: (provider?: string) => void;
@@ -113,6 +113,10 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
   const [translationMode, setTranslationMode] = useState(() => getSessionTranslationMode(sessionId));
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordError, setRecordError] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const hasGoogleKey = !!getApiKeyForProvider("google");
 
   function isModelLocked(modelId: string, provider: string): boolean {
@@ -181,16 +185,67 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function submit() {
+  function submit(audioBlob?: Blob | null) {
     const value = ref.current?.value.trim();
-    if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode);
+    if (!value && attachedImages.length === 0 && !audioBlob) return;
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode, audioBlob);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
     if (debateMode) setDebateMode(false);
     setPreviews([]);
   }
+
+  async function startRecording() {
+    setRecordError(null);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setRecordError("このブラウザはマイク入力に対応していません");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        // Stop the underlying tracks so the mic indicator goes away
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        audioChunksRef.current = [];
+        // Auto-submit the audio (translation mode handles the rest)
+        if (blob.size > 0) submit(blob);
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (err) {
+      setRecordError(
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? "マイクのアクセスが拒否されました。ブラウザの設定から許可してください"
+          : "マイクを起動できませんでした"
+      );
+    }
+  }
+
+  function stopRecording() {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+  }
+
+  // Stop recording cleanly if the component unmounts mid-recording
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter") return;
@@ -436,9 +491,27 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
               </div>
             )}
 
+            {/* Mic button: voice input for translation mode (audio sent to Gemini multimodal) */}
+            {translationMode && (
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={disabled}
+                className={`p-1.5 rounded-full disabled:opacity-50 transition-colors ${
+                  isRecording
+                    ? "bg-red-500/20 text-red-500 animate-pulse"
+                    : "text-t-muted hover:text-t-secondary"
+                }`}
+                title={isRecording ? "録音停止" : "音声入力（押すと録音開始、もう一度押すと送信）"}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                </svg>
+              </button>
+            )}
+
             {/* Right: send */}
             <button
-              onClick={submit}
+              onClick={() => submit()}
               disabled={disabled}
               className="p-1.5 text-t-muted hover:text-t-secondary disabled:opacity-50 transition-colors"
               title={t("chat.send")}
@@ -549,6 +622,18 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             </>
           )}
         </div>
+
+        {/* Translation mode quality nudge: Flash Lite handles JP→VI OK but is unreliable for VI→JP */}
+        {translationMode && selectedModel === "gemini-2.5-flash-lite" && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-1">
+            ⚠️ 翻訳精度を重視するなら <strong>Gemini 2.5 Pro</strong> 推奨（Flash Lite はベトナム語→日本語の方向判定が弱いことがあります）
+          </p>
+        )}
+
+        {/* Mic / recording error message */}
+        {recordError && (
+          <p className="text-xs text-red-500 mt-1 ml-1">⚠️ {recordError}</p>
+        )}
       </div>
     </div>
   );

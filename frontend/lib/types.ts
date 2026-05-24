@@ -76,6 +76,11 @@ export type ImageAttachment = {
   preview_url?: string;
 };
 
+export type AudioAttachment = {
+  media_type: string;
+  data: string;  // base64-encoded
+};
+
 export type Message = {
   role: "user" | "assistant";
   content: string;
