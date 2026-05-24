@@ -478,7 +478,18 @@ export default function ChatPage() {
     };
   }
 
-  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean) {
+  async function blobToBase64(blob: Blob): Promise<{ media_type: string; data: string }> {
+    const arrayBuffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return {
+      media_type: blob.type || "audio/webm",
+      data: btoa(binary),
+    };
+  }
+
+  async function handleSubmit(content: string, imageFiles: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean, audioBlob?: Blob | null) {
     // Pre-flight: check if API key is needed
     const provider = getProviderForModel(model);
     const GEMINI_FREE_MODELS = new Set(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
@@ -511,7 +522,8 @@ export default function ChatPage() {
     try {
     let sessionId = activeId;
     if (!sessionId) {
-      const session = await createSession(content.slice(0, 60) || t("chat.imageQuestion"));
+      const title = content.slice(0, 60) || (audioBlob ? "🎤 音声入力" : t("chat.imageQuestion"));
+      const session = await createSession(title);
       setSessions((prev) => [session, ...prev]);
       setActiveId(session.id);
       sessionId = session.id;
@@ -521,9 +533,13 @@ export default function ChatPage() {
       imageFiles.map(fileToBase64)
     );
 
+    const audio = audioBlob ? await blobToBase64(audioBlob) : null;
+    // For audio-only requests, show a placeholder in the user bubble so it isn't empty.
+    const displayContent = content || (audio ? "🎤 [音声入力]" : "");
+
     setMessages((prev) => [
       ...prev,
-      { role: "user", content, created_at: new Date().toISOString(), images: images.length > 0 ? images : undefined },
+      { role: "user", content: displayContent, created_at: new Date().toISOString(), images: images.length > 0 ? images : undefined },
     ]);
     shouldScrollToQuestion.current = true;
     needsStreamingScroll.current = true;
@@ -600,7 +616,7 @@ export default function ChatPage() {
         }
         let thinkingCleared = false;
         if (thinking) setToolStatus(t("chat.thinkingStatus"));
-        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey(), translationMode)) {
+        for await (const chunk of streamChat(sessionId, content, images.length > 0 ? images : undefined, apiKey, model, anthropicKey, thinking, getGoogleFallbackKey(), translationMode, audio)) {
           full += chunk;
           // Clear thinking status once first real text arrives
           const displayCheck = full.replace(/<!--STATUS:.*?-->/g, "").replace(/\n<!--USAGE:\{.*?\}-->$/, "");
@@ -721,7 +737,7 @@ export default function ChatPage() {
       {/* DEV badge for staging environment */}
       {process.env.NEXT_PUBLIC_ENV === "staging" && (
         <div className="fixed top-2 right-2 z-50 bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded shadow">
-          DEV v60.94
+          DEV v60.95
         </div>
       )}
 

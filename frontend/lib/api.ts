@@ -1,4 +1,4 @@
-import type { Session, Message, PaginatedMessages, ImageAttachment, ModelId, SystemPromptResponse, ContextItem, ContextsResponse } from "./types";
+import type { Session, Message, PaginatedMessages, ImageAttachment, AudioAttachment, ModelId, SystemPromptResponse, ContextItem, ContextsResponse } from "./types";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
@@ -86,6 +86,7 @@ export async function* streamChat(
   thinking?: boolean,
   googleFallbackKey?: string | null,
   translationMode?: boolean,
+  audio?: AudioAttachment | null,
 ): AsyncGenerator<string> {
   const body: Record<string, unknown> = { content };
   if (model) {
@@ -99,6 +100,9 @@ export async function* streamChat(
   }
   if (images && images.length > 0) {
     body.images = images.map(({ media_type, data }) => ({ media_type, data }));
+  }
+  if (audio) {
+    body.audio = { media_type: audio.media_type, data: audio.data };
   }
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) {

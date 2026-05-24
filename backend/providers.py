@@ -603,6 +603,12 @@ def _build_gemini_parts(content) -> list[genai_types.Part]:
                     data=base64.b64decode(source.get("data", "")),
                     mime_type=source.get("media_type", "image/png"),
                 ))
+            elif block.get("type") == "audio":
+                source = block.get("source", {})
+                parts.append(genai_types.Part.from_bytes(
+                    data=base64.b64decode(source.get("data", "")),
+                    mime_type=source.get("media_type", "audio/webm"),
+                ))
     else:
         parts.append(genai_types.Part.from_text(text=content))
     return parts
