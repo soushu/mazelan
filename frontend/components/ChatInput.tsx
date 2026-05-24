@@ -28,7 +28,7 @@ function getCostLabel(modelId: string, isGoogleFree: boolean): string {
 }
 
 type Props = {
-  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean) => void;
+  onSubmit: (content: string, images: File[], model: ModelId, debateMode?: boolean, secondModel?: ModelId, thinking?: boolean, translationMode?: boolean) => void;
   disabled: boolean;
   sessionId: string | null;
   onOpenApiKeyModal?: (provider?: string) => void;
@@ -65,6 +65,24 @@ function saveSessionModel(sessionId: string | null, model: ModelId, model2: Mode
   } catch {}
 }
 
+function getSessionTranslationMode(sessionId: string | null): boolean {
+  if (typeof window === "undefined" || !sessionId) return false;
+  try {
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
+    return !!data[sessionId];
+  } catch { return false; }
+}
+
+function saveSessionTranslationMode(sessionId: string | null, enabled: boolean) {
+  if (!sessionId) return;
+  try {
+    const data = JSON.parse(localStorage.getItem("mazelan_translation_modes") || "{}");
+    if (enabled) data[sessionId] = true;
+    else delete data[sessionId];
+    localStorage.setItem("mazelan_translation_modes", JSON.stringify(data));
+  } catch {}
+}
+
 export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyModal }: Props) {
   const t = useTranslations();
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -80,6 +98,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   const [debateMode, setDebateMode] = useState(false);
   const [secondModel, setSecondModel] = useState<ModelId>(() => getSessionModel(null).model2);
   const [thinking, setThinking] = useState(false);
+  const [translationMode, setTranslationMode] = useState(false);
   const hasGoogleKey = !!getApiKeyForProvider("google");
 
   function isModelLocked(modelId: string, provider: string): boolean {
@@ -106,6 +125,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
     setSelectedModel(model);
     setSecondModel(model2);
     setDebateMode(false);
+    setTranslationMode(getSessionTranslationMode(sessionId));
     // Auto-focus input when opening a new/different session
     ref.current?.focus();
   }, [sessionId]);
@@ -147,7 +167,7 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
   function submit() {
     const value = ref.current?.value.trim();
     if (!value && attachedImages.length === 0) return;
-    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking);
+    onSubmit(value || "", [...attachedImages], selectedModel, debateMode, debateMode ? secondModel : undefined, thinking && supportsThinking, translationMode);
     if (ref.current) ref.current.value = "";
     previews.forEach((url) => URL.revokeObjectURL(url));
     setAttachedImages([]);
@@ -460,6 +480,23 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             title={t("input.debateMode")}
           >
             🔀 {t("input.debate")}
+          </button>
+
+          <button
+            onClick={() => {
+              const next = !translationMode;
+              setTranslationMode(next);
+              saveSessionTranslationMode(sessionId, next);
+            }}
+            disabled={disabled}
+            className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
+              translationMode
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
+                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+            }`}
+            title="日本語 ⇄ ベトナム語 翻訳モード（ホーチミン / em-anh / カジュアル）"
+          >
+            🌐 翻訳 {translationMode ? "(JP⇄VI)" : ""}
           </button>
 
           {debateMode && (
