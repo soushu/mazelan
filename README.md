@@ -1,6 +1,6 @@
 # Mazelan
 
-AI-powered travel planning assistant.
+AI-powered travel planning assistant with Japanese ⇄ Vietnamese translation (text + voice).
 
 ## Stack
 
@@ -8,7 +8,8 @@ AI-powered travel planning assistant.
 - **Backend**: FastAPI (Python)
 - **Auth**: Google OAuth 2.0 + Email/Password (NextAuth.js)
 - **DB**: PostgreSQL + SQLAlchemy + Alembic
-- **AI**: Anthropic Claude + OpenAI GPT + Google Gemini
+- **AI**: Anthropic Claude + OpenAI GPT + Google Gemini (incl. 3.5 Flash / 3.1 Pro Preview)
+- **i18n**: Japanese / English / Vietnamese (browser-detected)
 - **Hosting**: GCP Compute Engine (e2-small)
 
 ## Development
