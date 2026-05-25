@@ -477,6 +477,24 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
               }}
             />
 
+            {/* Translation toggle (placed inline with the attach icon for easy access) */}
+            <button
+              onClick={() => {
+                const next = !translationMode;
+                setTranslationMode(next);
+                saveSessionTranslationMode(sessionId, next);
+              }}
+              disabled={disabled}
+              className={`ml-1 flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                translationMode
+                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
+                  : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
+              }`}
+              title={t("translation.toggleTitle")}
+            >
+              {t("translation.toggleLabel")} {translationMode ? t("translation.toggleActiveSuffix") : ""}
+            </button>
+
             {/* Spacer */}
             <div className="flex-1" />
 
@@ -653,22 +671,6 @@ export default function ChatInput({ onSubmit, disabled, sessionId, onOpenApiKeyM
             </>
           )}
 
-          <button
-            onClick={() => {
-              const next = !translationMode;
-              setTranslationMode(next);
-              saveSessionTranslationMode(sessionId, next);
-            }}
-            disabled={disabled}
-            className={`flex items-center gap-1 px-2 py-1.5 md:py-0.5 rounded-full text-xs transition-colors disabled:opacity-50 ${
-              translationMode
-                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40"
-                : "text-t-muted hover:text-t-secondary hover:bg-theme-hover border border-transparent"
-            }`}
-            title={t("translation.toggleTitle")}
-          >
-            {t("translation.toggleLabel")} {translationMode ? t("translation.toggleActiveSuffix") : ""}
-          </button>
         </div>
 
         {/* Translation mode quality nudge: 2.5 Flash variants are weaker than newer
