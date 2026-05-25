@@ -132,7 +132,14 @@ Speakers (fixed):
 - Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
 - Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
 
-Casual, conversational style. Output ONLY the translation on one line. No headers, no notes, no commentary."""
+Output tone by direction:
+- Japanese → Vietnamese: casual, conversational (older male speaking to younger female)
+- Vietnamese → Japanese: polite/keigo (です・ます調). The Vietnamese speaker is younger
+  addressing an older listener, so the Japanese should use deferential polite forms,
+  not casual / タメ口. Avoid 敬語 that's too formal (尊敬語/謙譲語 only when natural);
+  default to です・ます.
+
+Output ONLY the translation on one line. No headers, no notes, no commentary."""
 
 _TRANSLATION_PROMPT_DETAILED = """Translate between Japanese and Vietnamese. Auto-detect input language, output in the other.
 
@@ -140,7 +147,12 @@ Speakers (fixed):
 - Japanese side = older male; in Vietnamese refers to himself as "anh" and addresses the partner as "em"
 - Vietnamese side = younger female; refers to herself as "em" and addresses the partner as "anh"
 
-Casual, conversational style.
+Output tone by direction:
+- Japanese → Vietnamese: casual, conversational (older male speaking to younger female)
+- Vietnamese → Japanese: polite/keigo (です・ます調). The Vietnamese speaker is younger
+  addressing an older listener, so the Japanese should use deferential polite forms,
+  not casual / タメ口. Avoid 敬語 that's too formal (尊敬語/謙譲語 only when natural);
+  default to です・ます.
 
 Output format:
 [Translation on one line]
