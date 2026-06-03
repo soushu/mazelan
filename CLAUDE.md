@@ -1,46 +1,40 @@
 # Mazelan プロジェクトルール
 
-## ブランチ戦略（厳守）
+最終更新: 2026-05-27
 
-main(本番) → develop(統合) → feature/*(機能) の3層構成。
+## 情報の置き場所
 
-1. ソースコードの修正・追加は **必ず feature/* ブランチを切って行う**
-2. feature/* → develop にマージ → ステージングで動作確認
-3. ユーザーが **明示的に「mainにマージして」と指示するまで** develop → main へのマージは行わない
-4. マージは **必ず `--no-ff`** で行う（`git merge --no-ff feature/*`）。fast-forwardマージ禁止。マージコミットを必ず残すこと
+- **詳細な開発・デプロイ手順**: [doc/dev-workflow.md](doc/dev-workflow.md)
+- **基本設計・詳細設計**: [doc/basic-design.md](doc/basic-design.md) / [doc/detailed-design.md](doc/detailed-design.md)
+- **Claude 向けの作業 feedback / プロジェクト状態**: `~/.claude/projects/c--Users-yutoo-dev-mazelan/memory/MEMORY.md`
 
-**例外:**
-- CLAUDE.md・ドキュメント類（README.md / doc/*.md など）のみの変更は **main に直接コミット可**（develop を経由しない、デプロイには影響しないため）。コミット後 main を push。develop には次の develop→main マージ時にまとめて反映される
+## 環境
 
-**禁止事項:**
-- main に直接コミットしない（ドキュメントのみの変更は例外）
-- develop に直接コミットしない（必ず feature/* 経由。上記例外を除く）
-- feature ブランチはマージ後も削除しない
-- fast-forwardマージしない（必ず `--no-ff` を付ける）
-- feature ブランチの作業が全て完了してから develop にマージする（途中で何度もマージしない。develop への push のたびにデプロイが走るため）
+| 環境 | ブランチ | ドメイン | Backend | Frontend | DB |
+|------|----------|----------|---------|----------|-----|
+| 本番 | main | mazelan.ai | :8000 | :3000 | claudia |
+| ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging |
 
-## 開発フロー（厳守）
+GCP: e2-small (us-west1-b)、インスタンス名 `bitpoint-bot`（複数プロジェクト同居）。
 
-コード修正・機能追加する場合は以下のフローを必ず守る:
+## ブランチ戦略（要点）
 
-1. develop から feature/* ブランチを切る
-2. コード修正・機能追加
-3. TypeScript型チェック + ロジック確認
-4. DEV バージョンインクリメント
-5. feature/* → develop にマージ（`--no-ff`）→ ステージングにデプロイ
-6. **Playwright MCP でブラウザ動作確認**（dev.mazelan.ai）
-7. 問題があれば 2 に戻り、**問題がなくなるまで繰り返す**
-8. 問題がなくなったら **Slack 通知を送信**（SLACK_OPS_WEBHOOK_URL 経由、Python で送信。curl は Windows で日本語が文字化けするため使わない）
-9. **main へのマージはユーザーの明示的な指示があるまで行わない**
+main(本番) → develop(統合) → feature/*(機能) の3層。
 
-## デプロイ前チェック（厳守）
+- ソース変更は **feature/* → develop → main**、すべて **`--no-ff`** マージ
+- main マージは **ユーザーの明示的指示**まで待つ
+- **例外**: ドキュメントのみ（README.md / doc/*.md / CLAUDE.md）は **main 直接コミット可**
+- 詳細手順: [doc/dev-workflow.md](doc/dev-workflow.md)
 
-feature/* を develop にマージする前に必ず以下を実行:
-1. TypeScript型チェック: `npx tsc --noEmit`
-2. ロジックのダブルチェック（全変更ファイルを読み直し、全パターン確認）
-3. DEV バッジバージョンのインクリメント（`frontend/app/chat/page.tsx` 内の `DEV vX.X` を +0.1）
+## デプロイ前の必須チェック
 
-## コーディングルール
+1. `npx tsc --noEmit`（frontend）
+2. 全変更ファイルの読み直し
+3. DEV バッジバージョンを `frontend/app/chat/page.tsx` 内で +0.1
+
+詳細フロー（9ステップ）は [doc/dev-workflow.md](doc/dev-workflow.md) 参照。
+
+## コーディングルール（コード依存）
 
 - モバイル100vh問題: `h-screen` ではなく `h-dvh` を使う
 - メッセージ取得: 必ず `order_by(created_at)` で取得
@@ -52,52 +46,36 @@ feature/* を develop にマージする前に必ず以下を実行:
 - OpenAI o-series: `max_tokens` ではなく `max_completion_tokens` を使う
 - Gemini streaming: `client.aio.models.generate_content_stream()` は `await` してから `async for`
 
-## デプロイ
+## 環境変数
 
-- 本番: main に push → GitHub Actions 自動デプロイ
-- ステージング: develop に push → GitHub Actions 自動デプロイ
-- Nginx conf はデプロイスクリプトで上書きしない（SSL設定が消える）
-- concurrency group `deploy-gce` を他プロジェクトと共有（同時ビルド禁止、OOM対策）
+**追加・変更時は本番とステージング両方の `.env` に必ず反映する。**
 
-## 環境
-
-| 環境 | ブランチ | ドメイン | Backend | Frontend | DB |
-|------|----------|----------|---------|----------|-----|
-| 本番 | main | mazelan.ai | :8000 | :3000 | claudia |
-| ステージング | develop | dev.mazelan.ai | :8002 | :3002 | claudia_staging |
-
-GCP: e2-small (0.5vCPU / 2GB RAM), us-west1-b
-全プロジェクト共有のポート管理表: `~/.claude/PORT_REGISTRY.md`
-
-**環境変数の追加・変更時は必ず本番とステージング両方の `.env` に反映すること。**
-
-### ローカル `.env` のテスト・通知用変数
+ローカル `.env` のテスト・通知用:
 
 | 変数 | 用途 |
 |------|------|
-| `TEST_EMAIL` | ステージング環境のブラウザテスト用ログインメール |
-| `TEST_PASSWORD` | ステージング環境のブラウザテスト用パスワード |
-| `SLACK_WEBHOOK_URL` | 動作確認完了後の Slack 通知用 Webhook URL |
-| `SCRAPEDO_TOKEN` | Scrape.do Amazon検索API トークン（月1,000回無料） |
+| `TEST_MAIL` / `TEST_PASS` | ステージングのブラウザテスト用ログイン |
+| `SLACK_OPS_WEBHOOK_URL` | 動作確認完了後の運用通知（Python で送信、curl不可） |
+| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | 各プロバイダーAPI |
+| `SCRAPEDO_TOKEN` | Scrape.do Amazon検索API |
 
-## 有料APIキーの使用（厳守）
+## セキュリティ（最低限）
 
-フリーモデル（Gemini Flash Lite等）以外のモデル（Claude, GPT等）でテストする場合:
+- APIキー・パスワード・トークンなど機密はチャット出力やツールパラメータに**絶対に含めない**
+- .env の中身を表示しない
+- Bashで env から読み取り変数経由で使う
 
-1. **コード解析を最優先** — APIを使う前に、コードを読んで原因を特定し、修正を完了させる
-2. **修正が完了したと確信してから**初めてAPIを使って動作確認を行う（推測段階でAPIを消費しない）
-3. **リクエスト回数は最小限** — 1回のテストで確認できるよう、事前に十分な解析を行う
-4. APIキーはローカルの `.env` ファイルを参照する（設定されていない場合はユーザーに変数名を伝えて設定を依頼する）
-5. **APIキーの値をチャットに絶対に表示しない** — Bashで読み取り、変数経由で使用する
+詳細: [doc/dev-workflow.md](doc/dev-workflow.md#セキュリティ詳細)
 
-## セキュリティ
+## 有料API使用の原則
 
-- APIキー、シークレット、パスワード、トークンなどの機密情報をチャット出力に **絶対に** 表示しない
-- .env ファイルの中身を表示・出力しない
-- コマンド実行結果に機密情報が含まれる場合は、該当部分を伏せて報告する
-- Playwright evaluate やツールのパラメータにもAPIキーを含めない
+フリーモデル（Gemini Flash Lite等）以外のモデルでテストする場合:
 
-## DEV バッジバージョン
+- **コード解析を優先**、修正を確信してから API を使う
+- **リクエスト回数は最小限**
 
-ステージング環境の DEV バッジにバージョン番号を表示する（`frontend/app/chat/page.tsx` 内）。
-- develop にマージするたびにパッチ番号をインクリメントする（例: v30.4 → v30.5）
+詳細: [doc/dev-workflow.md](doc/dev-workflow.md#有料apiキーの使用詳細ルール)
+
+## Nginx 設定
+
+サーバー側の Nginx conf はデプロイスクリプトで上書きしない（SSL設定が消える）。手動で更新する。マイク機能のため `Permissions-Policy` の `microphone=(self)` が必須。
