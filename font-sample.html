@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mazelan Font Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&family=Outfit:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020509; color: #e2e8f0; padding: 24px; }
+  h1 { text-align: center; font-size: 20px; margin-bottom: 32px; color: #94a3b8; font-family: system-ui; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; max-width: 1400px; margin: 0 auto; }
+  .card { background: #0f172a; border-radius: 16px; padding: 24px; border: 1px solid #1e293b; }
+  .card:hover { border-color: #334155; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #1e293b; }
+  .font-name { font-size: 14px; color: #0ea5e9; font-family: system-ui; font-weight: 600; }
+  .badge { font-size: 11px; color: #94a3b8; background: #1e293b; padding: 2px 8px; border-radius: 8px; font-family: system-ui; }
+  .current { color: #facc15; background: #422006; }
+
+  .sample-title { font-size: 22px; font-weight: 600; margin-bottom: 12px; }
+  .sample-subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+  .sample-body { font-size: 14px; line-height: 1.7; color: #cbd5e1; margin-bottom: 12px; }
+  .sample-small { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+  .chat-demo { background: #020509; border-radius: 12px; padding: 16px; }
+  .user-bubble { background: #334155; color: #f1f5f9; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 14px; max-width: 80%; margin-left: auto; margin-bottom: 12px; }
+  .ai-bubble { background: rgba(30,41,59,0.6); color: #cbd5e1; padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 14px; max-width: 85%; line-height: 1.6; }
+  .ai-bubble strong { color: #e2e8f0; }
+</style>
+</head>
+<body>
+
+<h1>Mazelan Font Comparison</h1>
+
+<div class="grid">
+
+  <!-- DM Sans (current) -->
+  <div class="card" style="font-family: 'DM Sans', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">1. DM Sans</span>
+      <span class="badge current">現在使用中</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+  <!-- Inter -->
+  <div class="card" style="font-family: 'Inter', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">2. Inter</span>
+      <span class="badge">クリーン・プロ</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+  <!-- Noto Sans JP -->
+  <div class="card" style="font-family: 'Noto Sans JP', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">3. Noto Sans JP</span>
+      <span class="badge">日本語最適</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+  <!-- Plus Jakarta Sans -->
+  <div class="card" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">4. Plus Jakarta Sans</span>
+      <span class="badge">フレンドリー</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+  <!-- Outfit -->
+  <div class="card" style="font-family: 'Outfit', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">5. Outfit</span>
+      <span class="badge">スタイリッシュ</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+  <!-- Space Grotesk -->
+  <div class="card" style="font-family: 'Space Grotesk', sans-serif;">
+    <div class="card-header">
+      <span class="font-name">6. Space Grotesk</span>
+      <span class="badge">未来的</span>
+    </div>
+    <div class="sample-title">Mazelan - AIと旅を計画しよう</div>
+    <div class="sample-subtitle">あなたの旅行をもっと便利に、もっと楽しく</div>
+    <div class="sample-body">ハノイには個性的なホステルがたくさんあります。PC作業スペースとビリヤード台があるホステルをいくつかご紹介します。</div>
+    <div class="sample-small">Gemini 2.5 Flash Lite (Free) x1 | トークン: 1,234</div>
+    <div class="chat-demo">
+      <div class="user-bubble">バンコク行きの航空券を調べて</div>
+      <div class="ai-bubble"><strong>おすすめ TOP3</strong><br>1. AirAsia: ¥15,800 / 広島→バンコク (8h30m, 1stop)<br>2. VietJet: ¥18,200 / 広島→バンコク (7h15m, 1stop)</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
